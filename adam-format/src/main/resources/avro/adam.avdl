@@ -129,13 +129,44 @@ record ADAMPileup {
     union { null, string } recordGroupSample = null;
 }
 
-record ADAMNestedPileup {
-     // nested pileup data type - contains reference to list of overlapping reads
-     // note: cannot be used with databases (e.g. hive/shark)
-     ADAMPileup pileup;
-     array<ADAMRecord> readEvidence;
+record ADAMResidue {
+
+    union { null, string } readBase = null;
+    union { null, int } sangerQuality = null;
+    union { null, int } mapQuality = null;
+
+    union { null, int } rangeOffset = null;
+    union { null, int } rangeLength = null;
+
+    union { null, string } readName = null;
+    union { null, long } readStart = null;
+    union { null, long } readEnd = null;
+
+    union { null, boolean } softClipped = null;
+    union { null, boolean } reverseStrand = null;
+
+    // record group identifer from sequencing run
+    union { null, string } recordGroupSequencingCenter = null;
+    union { null, string } recordGroupDescription = null;
+    union { null, long } recordGroupRunDateEpoch = null;
+    union { null, string } recordGroupFlowOrder = null;
+    union { null, string } recordGroupKeySequence = null;
+    union { null, string } recordGroupLibrary = null;
+    union { null, int } recordGroupPredictedMedianInsertSize = null;
+    union { null, string } recordGroupPlatform = null;
+    union { null, string } recordGroupPlatformUnit = null;
+    union { null, string } recordGroupSample = null;
+
 }
 
+record ADAMResiduePileup {
+    union { null, ADAMContig } contig = null;
+    union { null, long } position = null;
+
+    union { null, string } referenceBase = null;
+    union { null, int } countAtPosition = null;
+    array<ADAMResidue> residues = null;
+}
 
 record ADAMVariant {
   union { null, ADAMContig } contig = null;

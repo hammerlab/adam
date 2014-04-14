@@ -67,6 +67,8 @@ class ADAMKryoRegistrator extends KryoRegistrator {
   override def registerClasses(kryo: Kryo) {
     kryo.register(classOf[ADAMRecord], new AvroSerializer[ADAMRecord]())
     kryo.register(classOf[ADAMPileup], new AvroSerializer[ADAMPileup]())
+    kryo.register(classOf[ADAMResidue], new AvroSerializer[ADAMResidue]())
+    kryo.register(classOf[ADAMResiduePileup], new AvroSerializer[ADAMResiduePileup]())
     kryo.register(classOf[ADAMGenotype], new AvroSerializer[ADAMGenotype]())
     kryo.register(classOf[ADAMVariant], new AvroSerializer[ADAMVariant]())
     kryo.register(classOf[ADAMDatabaseVariantAnnotation], new AvroSerializer[ADAMDatabaseVariantAnnotation]())

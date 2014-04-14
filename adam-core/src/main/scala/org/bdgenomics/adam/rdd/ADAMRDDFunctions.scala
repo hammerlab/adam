@@ -24,13 +24,7 @@ import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.Logging
 import org.apache.spark.SparkContext._
 import org.apache.spark.rdd.RDD
-import org.bdgenomics.adam.avro.{
-  ADAMContig,
-  ADAMPileup,
-  ADAMRecord,
-  ADAMNucleotideContigFragment,
-  Base
-}
+import org.bdgenomics.adam.avro._
 import org.bdgenomics.adam.converters.GenotypesToVariantsConverter
 import org.bdgenomics.adam.models.{
   SequenceRecord,
@@ -51,6 +45,8 @@ import parquet.hadoop.ParquetOutputFormat
 import parquet.hadoop.metadata.CompressionCodecName
 import parquet.hadoop.util.ContextUtil
 import scala.math.{ min, max }
+import scala.Some
+import org.bdgenomics.adam.models.ADAMRod
 
 class ADAMRDDFunctions[T <% SpecificRecord: Manifest](rdd: RDD[T]) extends Serializable {
 
@@ -217,6 +213,15 @@ class ADAMRecordRDDFunctions(rdd: RDD[ADAMRecord]) extends ADAMSequenceDictionar
   def adamRecords2Pileup(secondaryAlignments: Boolean = false): RDD[ADAMPileup] = {
     val helper = new Reads2PileupProcessor(secondaryAlignments)
     helper.process(rdd)
+  }
+
+  def adamRecords2ResiduePileup(secondaryAlignments: Boolean = false, preserveSorted: Boolean): RDD[ADAMResiduePileup] = {
+    val helper = new Reads2ResiduePileup(secondaryAlignments)
+    if (preserveSorted) {
+      helper.readToPartitionedPileups(rdd)
+    } else {
+      helper.readToPileups(rdd)
+    }
   }
 
   /**

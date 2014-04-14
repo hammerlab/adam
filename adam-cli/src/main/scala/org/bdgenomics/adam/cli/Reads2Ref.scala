@@ -19,7 +19,7 @@ import org.apache.hadoop.mapreduce.Job
 import org.bdgenomics.adam.predicates.{ UniqueMappedReadPredicate, LocusPredicate }
 import org.kohsuke.args4j.{ Option => option, Argument }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.avro.{ ADAMPileup, ADAMRecord }
+import org.bdgenomics.adam.avro.{ ADAMResiduePileup, ADAMPileup, ADAMRecord }
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 
@@ -51,6 +51,12 @@ class Reads2RefArgs extends Args4jBase with ParquetArgs with SparkArgs {
 
   @option(name = "-allowNonPrimaryAlignments", usage = "Converts reads that are not at their primary alignment positions to pileups.")
   var nonPrimary: Boolean = true
+
+  @option(name = "-residue", usage = "Create residue pileups")
+  var residue: Boolean = false
+
+  @option(name = "-presort", usage = "Presort reads!")
+  var presort: Boolean = false
 }
 
 class Reads2Ref(protected val args: Reads2RefArgs) extends ADAMSparkCommand[Reads2RefArgs] {
@@ -60,20 +66,31 @@ class Reads2Ref(protected val args: Reads2RefArgs) extends ADAMSparkCommand[Read
     val reads: RDD[ADAMRecord] = sc.adamLoad(args.readInput, Some(classOf[UniqueMappedReadPredicate]))
 
     val readCount = reads.count()
-
-    val pileups: RDD[ADAMPileup] = reads.adamRecords2Pileup(args.nonPrimary)
-
-    val pileupCount = pileups.count()
-
-    val coverage = pileupCount / readCount
-
-    if (args.aggregate) {
-      pileups.adamAggregatePileups(coverage.toInt).adamSave(args.pileupOutput,
-        blockSize = args.blockSize, pageSize = args.pageSize, compressCodec = args.compressionCodec,
-        disableDictionaryEncoding = args.disableDictionary)
-    } else {
+    if (args.residue) {
+      val useReads = if (args.presort) {
+        reads.adamSortReadsByReferencePosition()
+      } else {
+        reads
+      }
+      val pileups: RDD[ADAMResiduePileup] = useReads.adamRecords2ResiduePileup(args.nonPrimary, args.presort)
       pileups.adamSave(args.pileupOutput, blockSize = args.blockSize, pageSize = args.pageSize,
         compressCodec = args.compressionCodec, disableDictionaryEncoding = args.disableDictionary)
+    } else {
+
+      val pileups: RDD[ADAMPileup] = reads.adamRecords2Pileup(args.nonPrimary)
+
+      val pileupCount = pileups.count()
+
+      val coverage = pileupCount / readCount
+
+      if (args.aggregate) {
+        pileups.adamAggregatePileups(coverage.toInt).adamSave(args.pileupOutput,
+          blockSize = args.blockSize, pageSize = args.pageSize, compressCodec = args.compressionCodec,
+          disableDictionaryEncoding = args.disableDictionary)
+      } else {
+        pileups.adamSave(args.pileupOutput, blockSize = args.blockSize, pageSize = args.pageSize,
+          compressCodec = args.compressionCodec, disableDictionaryEncoding = args.disableDictionary)
+      }
     }
   }
 }
