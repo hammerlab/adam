@@ -35,7 +35,8 @@ case class InputStreamWithDecoder(size: Int) {
 
 // NOTE: This class is not thread-safe; however, Spark guarantees that only a single thread will access it.
 class AvroSerializer[T <: SpecificRecord: ClassTag] extends Serializer[T] {
-  val reader = new SpecificDatumReader[T](scala.reflect.classTag[T].runtimeClass.asInstanceOf[Class[T]])
+  val
+  reader = new SpecificDatumReader[T](scala.reflect.classTag[T].runtimeClass.asInstanceOf[Class[T]])
   val writer = new SpecificDatumWriter[T](scala.reflect.classTag[T].runtimeClass.asInstanceOf[Class[T]])
   var in = InputStreamWithDecoder(1024)
   val outstream = new FastByteArrayOutputStream()
