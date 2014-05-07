@@ -144,21 +144,21 @@ class RichADAMRecord(val record: ADAMRecord) {
     }
   }
 
-  def getReferenceContext(readOffset: Int, referencePosition: Long, cigarElem: CigarElement, elemOffset: Int): ReferenceSequenceContext = {
-    val position = if (ReferencePosition.mappedPositionCheck(record)) {
-      Some(new ReferencePosition(record.getContig.getContigName.toString, referencePosition))
+  def getReferenceContext(readOffset: Option[Int], referencePosition: Option[Long], cigarElem: CigarElement, elemOffset: Int, elemPos: Long): ReferenceSequenceContext = {
+    val position = if (ReferencePosition.mappedPositionCheck(record) && referencePosition.isDefined) {
+      Some(new ReferencePosition(record.getContig.getContigName.toString, referencePosition.get))
     } else {
       None
     }
 
-    def getReferenceBase(cigarElement: CigarElement, refPos: Long, readPos: Int): Option[Char] = {
+    def getReferenceBase(cigarElement: CigarElement, refPos: Long, readPos: Option[Int]): Option[Char] = {
       mdTag.flatMap(tag => {
         cigarElement.getOperator match {
           case CigarOperator.M => {
             if (!tag.isMatch(refPos)) {
               tag.mismatchedBase(refPos)
             } else {
-              Some(record.getSequence()(readPos))
+              readPos.map(record.getSequence()(_))
             }
           }
           case CigarOperator.D => {
@@ -170,39 +170,73 @@ class RichADAMRecord(val record: ADAMRecord) {
       })
     }
 
-    val referenceBase = getReferenceBase(cigarElem, referencePosition, readOffset)
-    ReferenceSequenceContext(position, referenceBase, cigarElem, elemOffset)
+    val referenceBase = referencePosition.flatMap(p => getReferenceBase(cigarElem, p, readOffset))
+    val cigarStart = new ReferencePosition(record.getContig.getContigName.toString, elemPos)
+    ReferenceSequenceContext(readOffset, position, referenceBase, cigarElem, elemOffset, cigarStart)
   }
 
-  lazy val referencePositions: Seq[Option[ReferencePosition]] = referenceContexts.map(ref => ref.flatMap(_.pos))
+  lazy val referencePositions: Seq[Option[ReferencePosition]] = if (record.getReadMapped) residueReference.get.map(_.pos) else qualityScores.map(x => None)
 
-  lazy val referenceContexts: Seq[Option[ReferenceSequenceContext]] = {
+  /*
+   * Filter reference information to ONLY residues that exist in the reads (exlcude deletions)
+   */
+  lazy val residueReference: Option[Seq[ReferenceSequenceContext]] = referenceContexts.map(_.filter(_.offset.isDefined))
+
+  /*
+   * Reference information for every reference or read base covered by the read
+   */
+  lazy val referenceContexts: Option[Seq[ReferenceSequenceContext]] = {
     if (record.getReadMapped) {
-      val resultTuple = samtoolsCigar.getCigarElements.foldLeft((unclippedStart.get, List[Option[ReferenceSequenceContext]]()))((runningPos, elem) => {
+      val resultTuple = samtoolsCigar.getCigarElements.foldLeft((unclippedStart.get, List[ReferenceSequenceContext](), 0))((runningPos, elem) => {
         // runningPos is a tuple, the first element holds the starting position of the next CigarOperator
         // and the second element is the list of positions up to this point
         val op = elem.getOperator
         val currentRefPos = runningPos._1
         val resultAccum = runningPos._2
+        val currentReadPos = runningPos._3
         val advanceReference = op.consumesReferenceBases || op == CigarOperator.S
         val newRefPos = currentRefPos + (if (advanceReference) elem.getLength else 0)
-        val resultParts: Seq[Option[ReferenceSequenceContext]] =
+        val newReadPos = currentReadPos + (if (op.consumesReadBases()) elem.getLength else 0)
+        val resultParts: Seq[ReferenceSequenceContext] = {
+          val range = NumericRange(currentRefPos, currentRefPos + elem.getLength, 1L)
           if (op.consumesReadBases) {
-            val range = NumericRange(currentRefPos, currentRefPos + elem.getLength, 1L)
             range.zipWithIndex.map(kv =>
               if (advanceReference)
-                Some(getReferenceContext(resultAccum.size + kv._2, kv._1, elem, kv._2))
-              else None)
+                getReferenceContext(Some(currentReadPos + kv._2), Some(kv._1), elem, kv._2, kv._1)
+              else
+                getReferenceContext(Some(currentReadPos + kv._2), None, elem, kv._2, currentRefPos))
           } else {
-            Seq.empty
+            range.zipWithIndex.map(kv => getReferenceContext(None, Some(kv._1), elem, kv._2, currentRefPos))
           }
-        (newRefPos, resultAccum ++ resultParts)
+        }
+        (newRefPos, resultAccum ++ resultParts, newReadPos)
       })
       val results = resultTuple._2
-      results.toIndexedSeq
+      Some(results.toIndexedSeq)
     } else {
-      qualityScores.map(t => None)
+      None
     }
+  }
+
+  def parseCigarElements(cigarElements: List[CigarElement], readPos: Int = 0, referencePos: Long = unclippedStart.get): Seq[ReferenceSequenceContext] = {
+    val elem = cigarElements.head
+    val op = elem.getOperator
+    val advanceReference = op.consumesReferenceBases || op == CigarOperator.S
+    val newRefPos = referencePos + (if (advanceReference) elem.getLength else 0)
+    val newReadPos = readPos + (if (op.consumesReadBases()) elem.getLength else 0)
+    val resultParts: Seq[ReferenceSequenceContext] = {
+      val range = NumericRange(referencePos, referencePos + elem.getLength, 1L)
+      if (op.consumesReadBases) {
+        range.zipWithIndex.map(kv =>
+          if (advanceReference)
+            getReferenceContext(Some(readPos + kv._2), Some(kv._1), elem, kv._2, kv._1)
+          else
+            getReferenceContext(Some(readPos + kv._2), None, elem, kv._2, readPos))
+      } else {
+        range.zipWithIndex.map(kv => getReferenceContext(None, Some(kv._1), elem, kv._2, readPos))
+      }
+    }
+    resultParts ++ parseCigarElements(cigarElements.tail, newReadPos, newRefPos)
   }
 
   def readOffsetToReferencePosition(offset: Int): Option[ReferencePosition] = {
@@ -214,11 +248,7 @@ class RichADAMRecord(val record: ADAMRecord) {
   }
 
   def readOffsetToReferenceSequenceContext(offset: Int): Option[ReferenceSequenceContext] = {
-    if (record.getReadMapped) {
-      referenceContexts(offset)
-    } else {
-      None
-    }
+    residueReference.map(_(offset))
   }
 
 }

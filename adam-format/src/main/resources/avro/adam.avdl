@@ -131,6 +131,7 @@ record ADAMPileup {
 
 record ADAMResidue {
 
+    union { null, string } referenceBase = null;
     union { null, string } readBase = null;
     union { null, int } sangerQuality = null;
     union { null, int } mapQuality = null;
@@ -163,7 +164,6 @@ record ADAMResiduePileup {
     union { null, ADAMContig } contig = null;
     union { null, long } position = null;
 
-    union { null, string } referenceBase = null;
     union { null, int } countAtPosition = null;
     array<ADAMResidue> residues = null;
 }

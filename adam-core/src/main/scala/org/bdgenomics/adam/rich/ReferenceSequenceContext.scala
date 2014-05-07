@@ -23,4 +23,9 @@ import net.sf.samtools.CigarElement
  * Represents information on the reference relative to a particular residue
  */
 
-private[rich] case class ReferenceSequenceContext(pos: Option[ReferencePosition], referenceBase: Option[Char], cigarElement: CigarElement, cigarElementOffset: Int)
+private[rich] case class ReferenceSequenceContext(offset: Option[Int],
+                                                  pos: Option[ReferencePosition],
+                                                  referenceBase: Option[Char],
+                                                  cigarElement: CigarElement,
+                                                  cigarElementOffset: Int,
+                                                  cigarReferencePosition: ReferencePosition)

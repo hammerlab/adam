@@ -154,4 +154,100 @@ class RichADAMRecordSuite extends FunSuite {
     assert(record.overlapsReferencePosition(ReferencePosition("chr2", 10)) == Some(false))
   }
 
+  test("get reference context match") {
+
+    val contig = ADAMContig.newBuilder.setContigName("chr1").build
+    val sequence = "TCGATCGATC"
+    val record = RichADAMRecord(ADAMRecord.newBuilder()
+      .setReadMapped(true)
+      .setCigar("10M")
+      .setStart(10)
+      .setSequence(sequence)
+      .setMismatchingPositions("10")
+      .setContig(contig)
+      .build())
+
+    assert(record.referenceContexts.get.size === 10)
+    assert(record.residueReference.get.size === 10)
+    assert(record.referencePositions.size === 10)
+
+    assert(record.referenceContexts.get.map(_.referenceBase.get.toString).fold("")(_ + _) === sequence)
+    assert(record.residueReference.get.map(_.referenceBase.get.toString).fold("")(_ + _) === sequence)
+
+    assert(record.referenceContexts.get.last.offset.get == 9)
+  }
+
+  test("get reference context insertion") {
+
+    val contig = ADAMContig.newBuilder.setContigName("chr1").build
+    val sequence = "TCGATAAACGATC"
+    val record = RichADAMRecord(ADAMRecord.newBuilder()
+      .setReadMapped(true)
+      .setCigar("5M3I5M")
+      .setStart(10)
+      .setSequence(sequence)
+      .setMismatchingPositions("10")
+      .setContig(contig)
+      .build())
+
+    assert(record.referenceContexts.get.size === 13)
+    assert(record.residueReference.get.size === 13)
+    assert(record.referencePositions.size === 13)
+
+    assert(record.referencePositions.slice(5, 8) === Seq(None, None, None))
+
+    assert(record.referenceContexts.get.last.offset.get === 12)
+    assert(record.referenceContexts.get.last.pos.get.pos === 19L)
+
+  }
+
+  test("get reference context insertion at end") {
+
+    val contig = ADAMContig.newBuilder.setContigName("chr1").build
+    val sequence = "TCGATCGATCAAA"
+    val record = RichADAMRecord(ADAMRecord.newBuilder()
+      .setReadMapped(true)
+      .setCigar("10M3I")
+      .setStart(10)
+      .setSequence(sequence)
+      .setMismatchingPositions("10")
+      .setContig(contig)
+      .build())
+
+    assert(record.referenceContexts.get.size === 13)
+    assert(record.residueReference.get.size === 13)
+    assert(record.referencePositions.size === 13)
+
+    assert(record.referencePositions.slice(10, 13) === Seq(None, None, None))
+
+    assert(record.referenceContexts.get.last.offset.get === 12)
+    assert(record.referenceContexts.get.last.pos === None)
+    assert(record.referenceContexts.get.last.cigarElementOffset === 2)
+    assert(record.referenceContexts.get.last.cigarReferencePosition.pos === 20L)
+
+  }
+
+  test("get reference context deletion") {
+    val contig = ADAMContig.newBuilder.setContigName("chr1").build
+    val sequence = "TCGATCGATC"
+    val record = RichADAMRecord(ADAMRecord.newBuilder()
+      .setReadMapped(true)
+      .setCigar("5M3D5M")
+      .setStart(10)
+      .setSequence(sequence)
+      .setMismatchingPositions("5^TTT5")
+      .setContig(contig)
+      .build())
+
+    assert(record.referenceContexts.get.size === 13)
+    assert(record.residueReference.get.size === 10)
+    assert(record.referencePositions.size === 10)
+
+    assert(record.residueReference.get.map(_.referenceBase.get.toString).fold("")(_ + _) === sequence)
+
+    assert(record.referenceContexts.get.slice(5, 8).map(_.referenceBase.get.toString).fold("")(_ + _) === "TTT")
+    assert(record.referenceContexts.get.last.offset.get === 9)
+    assert(record.referenceContexts.get.last.pos.get.pos === 22L)
+  }
+
 }

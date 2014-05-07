@@ -1,6 +1,6 @@
 package org.bdgenomics.adam.rdd
 
-import org.bdgenomics.adam.rich.DecadentRead
+import org.bdgenomics.adam.rich.RichADAMRecord
 import org.bdgenomics.adam.models.ReferencePosition
 import org.bdgenomics.adam.avro.{ ADAMRecord, ADAMContig, ADAMResiduePileup, ADAMResidue }
 import org.apache.spark.rdd.RDD
@@ -11,15 +11,12 @@ import org.apache.spark.SparkContext._
 
 private[rdd] class Reads2ResiduePileup(createSecondaryAlignments: Boolean = false) extends Serializable with Logging {
 
-  def buildResiduePileup(reference: (String, ReferencePosition), residues: Seq[ADAMResidue]): ADAMResiduePileup = {
+  def buildResiduePileup(referencePos: ReferencePosition, residues: Seq[ADAMResidue]): ADAMResiduePileup = {
 
-    val referenceBase = reference._1
-    val referencePos = reference._2
     val contig = ADAMContig.newBuilder
       .setContigName(referencePos.referenceName)
       .build
     ADAMResiduePileup.newBuilder
-      .setReferenceBase(referenceBase)
       .setPosition(referencePos.pos)
       .setResidues(residues.toList)
       .setCountAtPosition(residues.size)
@@ -27,18 +24,43 @@ private[rdd] class Reads2ResiduePileup(createSecondaryAlignments: Boolean = fals
       .build()
   }
 
+  def buildResidue(record: RichADAMRecord, referenceBase: Option[Char], offset: Option[Int], setRecordGroupFields: Boolean = true): ADAMResidue = {
+    val residue = ADAMResidue.newBuilder
+      .setMapQuality(record.mapq)
+      .setReadStart(record.start)
+
+    offset.foreach(idx => residue.setReadBase(record.sequence(idx).toString))
+    offset.foreach(idx => residue.setSangerQuality(record.qualityScores(idx)))
+    referenceBase.foreach(base => residue.setReferenceBase(base.toString))
+    if (setRecordGroupFields) {
+      residue
+        .setRecordGroupDescription(record.recordGroupDescription)
+        .setRecordGroupFlowOrder(record.recordGroupFlowOrder)
+        .setRecordGroupKeySequence(record.recordGroupKeySequence)
+        .setRecordGroupLibrary(record.recordGroupLibrary)
+        .setRecordGroupPlatform(record.recordGroupPlatform)
+        .setRecordGroupPlatformUnit(record.recordGroupPlatformUnit)
+        .setRecordGroupPredictedMedianInsertSize(record.recordGroupPredictedMedianInsertSize)
+        .setRecordGroupRunDateEpoch(record.recordGroupRunDateEpoch)
+        .setRecordGroupSample(record.recordGroupSample)
+        .setRecordGroupSequencingCenter(record.recordGroupSequencingCenter)
+    }
+    record.end.foreach(residue.setReadEnd(_))
+    residue.build
+  }
+
   /*
    * Convert reads to pileup by grouping residues by reference position
    */
   def readToPileups(reads: RDD[ADAMRecord]): RDD[ADAMResiduePileup] = {
-    val richReads = DecadentRead.cloy(reads)
+    val richReads = reads.map(RichADAMRecord(_))
     val residues = richReads
       .flatMap(read =>
-        read.residues.map(b =>
-          ((b.referenceBase.get.toString, b.referencePosition), b.toPileupResidue())))
+        read.referenceContexts.get
+          .map(b => (b.cigarReferencePosition, buildResidue(read, b.referenceBase, b.offset))))
 
     residues
-      .groupBy(_._1) //group by reference base and position
+      .groupBy(_._1) //group by position
       .map(kv => (kv._1, kv._2.map(_._2))) //drop key fields
       .map(Function.tupled(buildResiduePileup _))
 
@@ -51,14 +73,13 @@ private[rdd] class Reads2ResiduePileup(createSecondaryAlignments: Boolean = fals
    */
 
   def readToPartitionedPileups(reads: RDD[ADAMRecord]): RDD[ADAMResiduePileup] = {
-    val sortedReads: RDD[(ReferencePosition, DecadentRead)] =
+    val sortedReads: RDD[(ReferencePosition, RichADAMRecord)] =
       if (reads.partitioner.isEmpty) {
         // Sort reads to partition by genomic region
         // We are not using
-        reads.keyBy(r => ReferencePosition(r).get).sortByKey().mapValues(DecadentRead.apply)
-        //reads.adamSortReadsByReferencePosition()
+        reads.keyBy(r => ReferencePosition(r).get).sortByKey().mapValues(RichADAMRecord(_))
       } else {
-        reads.keyBy(r => ReferencePosition(r).get).mapValues(DecadentRead.apply)
+        reads.mapPartitions(itr => itr.map(r => (ReferencePosition(r).get, RichADAMRecord(r))), preservesPartitioning = true)
       }
 
     val orderedPartitioner = sortedReads.partitioner.get
@@ -66,8 +87,8 @@ private[rdd] class Reads2ResiduePileup(createSecondaryAlignments: Boolean = fals
     val residues =
       sortedReads.flatMapValues(
         read =>
-          read.residues.map(b =>
-            (orderedPartitioner.getPartition(b.referencePosition), b.referenceBase.get.toString, b.referencePosition, b.toPileupResidue())))
+          read.referenceContexts.get
+            .map(b => (orderedPartitioner.getPartition(b.cigarReferencePosition), b.cigarReferencePosition, buildResidue(read, b.referenceBase, b.offset))))
 
     val partitionAndResidues =
       residues.mapPartitions(_.map(_._2), preservesPartitioning = true) // drop read reference position key
@@ -77,25 +98,25 @@ private[rdd] class Reads2ResiduePileup(createSecondaryAlignments: Boolean = fals
      */
     val overhangResidues =
       partitionAndResidues.mapPartitionsWithIndex(
-        (currentPartition: Int, residues: Iterator[(Int, String, ReferencePosition, ADAMResidue)]) => {
+        (currentPartition: Int, residues: Iterator[(Int, ReferencePosition, ADAMResidue)]) => {
           residues.filter(_._1 != currentPartition).map(r => (r._1, r))
         }).collect()
 
     /*
      * Create a broadcasted map from partition to the overhanging partitions
      */
-    val overhangByPosition: Broadcast[Map[Int, Seq[(Int, String, ReferencePosition, ADAMResidue)]]] =
+    val overhangByPosition: Broadcast[Map[Int, Seq[(Int, ReferencePosition, ADAMResidue)]]] =
       reads.sparkContext.broadcast(
         overhangResidues
           .groupBy(_._1) // Group by partition
           .map(kv => (kv._1, kv._2.map(_._2).toSeq))) // Create map from position to list of residues
 
-    def buildPartitionedPileups(currentPartition: Int, residues: Iterator[(Int, String, ReferencePosition, ADAMResidue)]): Iterator[ADAMResiduePileup] = {
+    def buildPartitionedPileups(currentPartition: Int, residues: Iterator[(Int, ReferencePosition, ADAMResidue)]): Iterator[ADAMResiduePileup] = {
 
       val properResidues = residues.filter(_._1 == currentPartition) ++ overhangByPosition.value.getOrElse(currentPartition, Seq.empty)
       properResidues.toSeq
-        .groupBy(b => (b._2, b._3)) // group by reference base and reference positions
-        .map(kv => (kv._1, kv._2.map(_._4))) //drop grouping keys
+        .groupBy(b => b._2) // group by reference positions
+        .map(kv => (kv._1, kv._2.map(_._3))) //drop grouping keys
         .map(Function.tupled(buildResiduePileup _)).toIterator
     }
 

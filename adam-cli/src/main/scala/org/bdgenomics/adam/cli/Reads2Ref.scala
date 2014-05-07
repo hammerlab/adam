@@ -22,6 +22,9 @@ import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.avro.{ ADAMResiduePileup, ADAMPileup, ADAMRecord }
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
+import org.bdgenomics.adam.models.{ ADAMRod, ReferencePosition }
+import org.bdgenomics.adam.rich.RichADAMRecord
+import org.apache.spark.SparkContext._
 
 object Reads2Ref extends ADAMCommandCompanion {
   val commandName: String = "reads2ref"
@@ -63,12 +66,14 @@ class Reads2Ref(protected val args: Reads2RefArgs) extends ADAMSparkCommand[Read
   val companion = Reads2Ref
 
   def run(sc: SparkContext, job: Job) {
-    val reads: RDD[ADAMRecord] = sc.adamLoad(args.readInput, Some(classOf[UniqueMappedReadPredicate]))
-
-    val readCount = reads.count()
+    var reads: RDD[ADAMRecord] = sc.adamLoad(args.readInput, Some(classOf[UniqueMappedReadPredicate]))
+    if (args.repartition != -1) {
+      println("Repartitioning reads to to '%d' partitions".format(args.repartition))
+      reads = reads.repartition(args.repartition)
+    }
     if (args.residue) {
-      val useReads = if (args.presort) {
-        reads.adamSortReadsByReferencePosition()
+      val useReads: RDD[ADAMRecord] = if (args.presort) {
+        reads.keyBy(r => ReferencePosition(r).get).sortByKey().mapPartitions(_.map(_._2), preservesPartitioning = true)
       } else {
         reads
       }
@@ -77,20 +82,16 @@ class Reads2Ref(protected val args: Reads2RefArgs) extends ADAMSparkCommand[Read
         compressCodec = args.compressionCodec, disableDictionaryEncoding = args.disableDictionary)
     } else {
 
-      val pileups: RDD[ADAMPileup] = reads.adamRecords2Pileup(args.nonPrimary)
+      val pileups = reads.adamRecords2Rods(secondaryAlignments = args.nonPrimary).flatMap(_.pileups)
+      //      if (args.aggregate) {
+      //        pileups.adamAggregatePileups(coverage.toInt).adamSave(args.pileupOutput,
+      //          blockSize = args.blockSize, pageSize = args.pageSize, compressCodec = args.compressionCodec,
+      //          disableDictionaryEncoding = args.disableDictionary)
+      //      } else {
 
-      val pileupCount = pileups.count()
-
-      val coverage = pileupCount / readCount
-
-      if (args.aggregate) {
-        pileups.adamAggregatePileups(coverage.toInt).adamSave(args.pileupOutput,
-          blockSize = args.blockSize, pageSize = args.pageSize, compressCodec = args.compressionCodec,
-          disableDictionaryEncoding = args.disableDictionary)
-      } else {
-        pileups.adamSave(args.pileupOutput, blockSize = args.blockSize, pageSize = args.pageSize,
-          compressCodec = args.compressionCodec, disableDictionaryEncoding = args.disableDictionary)
-      }
+      pileups.adamSave(args.pileupOutput, blockSize = args.blockSize, pageSize = args.pageSize,
+        compressCodec = args.compressionCodec, disableDictionaryEncoding = args.disableDictionary)
+      //      }
     }
   }
 }

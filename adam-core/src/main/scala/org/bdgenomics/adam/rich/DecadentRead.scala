@@ -118,29 +118,6 @@ class DecadentRead(val record: RichADAMRecord) extends Logging {
       referencePositionOption.getOrElse(
         throw new IllegalArgumentException("Residue has no reference location (may be an insertion)"))
 
-    def toPileupResidue(setRecordGroupFields: Boolean = true): ADAMResidue = {
-      val residue = ADAMResidue.newBuilder
-        .setReadBase(base.toString)
-        .setSangerQuality(quality.phred)
-        .setMapQuality(record.mapq)
-        .setReadStart(record.start)
-
-      if (setRecordGroupFields) {
-        residue
-          .setRecordGroupDescription(record.recordGroupDescription)
-          .setRecordGroupFlowOrder(record.recordGroupFlowOrder)
-          .setRecordGroupKeySequence(record.recordGroupKeySequence)
-          .setRecordGroupLibrary(record.recordGroupLibrary)
-          .setRecordGroupPlatform(record.recordGroupPlatform)
-          .setRecordGroupPlatformUnit(record.recordGroupPlatformUnit)
-          .setRecordGroupPredictedMedianInsertSize(record.recordGroupPredictedMedianInsertSize)
-          .setRecordGroupRunDateEpoch(record.recordGroupRunDateEpoch)
-          .setRecordGroupSample(record.recordGroupSample)
-          .setRecordGroupSequencingCenter(record.recordGroupSequencingCenter)
-      }
-      record.end.foreach(residue.setReadEnd(_))
-      residue.build
-    }
   }
 
   lazy val readGroup: String = record.getRecordGroupName.toString
