@@ -17,17 +17,21 @@
  */
 package org.bdgenomics.adam.rdd.read
 
-import org.apache.spark.rdd.RDD
+import org.apache.spark.Logging
 import org.apache.spark.SparkContext._
+import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.{ ReferencePositionPair, ReferencePositionWithOrientation, SingleReadBucket }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.rdd.read.AlignmentRecordContext._
 import org.bdgenomics.formats.avro.AlignmentRecord
 
 object DuplicateReadInfo {
   def apply(record: AlignmentRecord): DuplicateReadInfo = {
     DuplicateReadInfo(
+      if (record.getContig != null) record.getContig.getContigName else null,
       record.getStart,
+      record.getPrimaryAlignment,
+      record.getRecordGroupName,
+      record.getRecordGroupLibrary,
       record.getMateMapped,
       record.getReadNegativeStrand,
       record.getReadPaired,
@@ -38,13 +42,52 @@ object DuplicateReadInfo {
   }
 }
 
-case class DuplicateReadInfo(getStart: Long,
+case class DuplicateReadInfo(contigName: String,
+                             getStart: Long,
+                             getPrimaryAlignment: Boolean,
+                             getRecordGroupName: String,
+                             getRecordGroupLibrary: String,
                              getReadMapped: Boolean,
                              getReadNegativeStrand: Boolean,
                              getReadPaired: Boolean,
                              getMateMapped: Boolean,
                              getReadName: String,
-                             qualityScores: Array[Int])
+                             qualityScores: Array[Int]) {
+
+  // Return the 5 prime position.
+  def fivePrimePosition: Option[Long] = {
+    if (getReadMapped) {
+      if (getReadNegativeStrand) Some(getStart + qualityScores.length) else Some(getStart)
+    } else {
+      None
+    }
+  }
+}
+
+object DuplicateReadSingleReadBucket extends Logging {
+  def apply(rdd: RDD[DuplicateReadInfo]): RDD[DuplicateReadSingleReadBucket] = {
+    rdd.groupBy(p => (p.getRecordGroupName, p.getReadName))
+      .map(kv => {
+        val (_, reads) = kv
+
+        // split by mapping
+        val (mapped, unmapped) = reads.partition(_.getReadMapped)
+        val (primaryMapped, secondaryMapped) = mapped.partition(_.getPrimaryAlignment)
+
+        // TODO: consider doing validation here (e.g. read says mate mapped but it doesn't exist)
+        new DuplicateReadSingleReadBucket(primaryMapped, secondaryMapped, unmapped)
+      })
+  }
+}
+
+case class DuplicateReadSingleReadBucket(primaryMapped: Iterable[DuplicateReadInfo] = Seq.empty,
+                                         secondaryMapped: Iterable[DuplicateReadInfo] = Seq.empty,
+                                         unmapped: Iterable[DuplicateReadInfo] = Seq.empty) {
+  // Note: not a val in order to save serialization/memory cost
+  def allReads = {
+    primaryMapped ++ secondaryMapped ++ unmapped
+  }
+}
 
 private[rdd] object MarkDuplicatesWithBroadcast extends Serializable {
 
@@ -61,11 +104,11 @@ private[rdd] object MarkDuplicatesWithBroadcast extends Serializable {
   }
 
   // Calculates the sum of the phred scores that are greater than or equal to 15
-  def score(record: AlignmentRecord): Int = {
+  def score(record: DuplicateReadInfo): Int = {
     record.qualityScores.filter(15 <=).sum
   }
 
-  private def scoreBucket(bucket: SingleReadBucket): Int = {
+  private def scoreBucket(bucket: DuplicateReadSingleReadBucket): Int = {
     bucket.primaryMapped.map(score).sum
   }
 
@@ -79,26 +122,40 @@ private[rdd] object MarkDuplicatesWithBroadcast extends Serializable {
       if (ignore.isEmpty || read != ignore.get) {
         markReadsInBucket(read._2, primaryAreDups, secondaryAreDups)
       }
+
     })
   }
 
   def apply(rdd: RDD[AlignmentRecord]): RDD[AlignmentRecord] = {
 
     // Group by library and left position
-    def leftPositionAndLibrary(p: (ReferencePositionPair, SingleReadBucket)): (Option[ReferencePositionWithOrientation], String) = {
+    def leftPositionAndLibrary(p: (ReferencePositionPair, DuplicateReadSingleReadBucket)): (Option[ReferencePositionWithOrientation], String) = {
       (p._1.read1refPos, p._2.allReads.head.getRecordGroupLibrary)
     }
 
     // Group by right position
-    def rightPosition(p: (ReferencePositionPair, SingleReadBucket)): Option[ReferencePositionWithOrientation] = {
+    def rightPosition(p: (ReferencePositionPair, DuplicateReadSingleReadBucket)): Option[ReferencePositionWithOrientation] = {
       p._1.read2refPos
     }
+    //    val duplicateReadInfoProjection = Projection(
+    //      AlignmentRecordField.readName,
+    //      AlignmentRecordField.readName,
+    //      AlignmentRecordField.start,
+    //      AlignmentRecordField.readMapped,
+    //
+    //      AlignmentRecordField.recordGroupName,
+    //      AlignmentRecordField.recordGroupLibrary,
+    //      AlignmentRecordField.readPaired,
+    //      AlignmentRecordField.mateNegativeStrand,
+    //      AlignmentRecordField.mateMapped
+    //    )
 
-    val duplicateReads = rdd.adamSingleReadBuckets().keyBy(ReferencePositionPair(_)).groupBy(leftPositionAndLibrary)
-      .flatMap(kv => {
+    val projectedReads = rdd.map(DuplicateReadInfo(_))
+    val duplicateReads = DuplicateReadSingleReadBucket(projectedReads)
+      .keyBy(ReferencePositionPair(_)).groupBy(leftPositionAndLibrary).flatMap(kv => {
 
         val leftPos: Option[ReferencePositionWithOrientation] = kv._1._1
-        val readsAtLeftPos: Iterable[(ReferencePositionPair, SingleReadBucket)] = kv._2
+        val readsAtLeftPos: Iterable[(ReferencePositionPair, DuplicateReadSingleReadBucket)] = kv._2
 
         leftPos match {
 
@@ -134,26 +191,27 @@ private[rdd] object MarkDuplicatesWithBroadcast extends Serializable {
 
         }
       })
-    val keyedDuplicateReads = duplicateReads.keyBy(r => (r.getRecordGroupName, r.getReadName))
-    val readsJoinedDuplicates = rdd
-      .keyBy(r => (r.getRecordGroupName, r.getReadName))
-      .leftOuterJoin(keyedDuplicateReads)
+    val keyedDuplicateReads = duplicateReads.keyBy(read => (read.getRecordGroupName, read.getReadName)).collectAsMap()
+    val broadcastDuplicateReads = rdd.sparkContext.broadcast(keyedDuplicateReads)
+    //    val readsJoinedDuplicates = rdd
+    //      .keyBy(r => (r.getRecordGroupName, r.getReadName))
+    //      .leftOuterJoin(keyedDuplicateReads)
 
-    readsJoinedDuplicates.map(kv => {
-      val read = kv._2._1
-      val duplicateInfoOpt = kv._2._2
-      duplicateInfoOpt match {
+    rdd.map(read => {
+      val duplicateOpt = broadcastDuplicateReads.value.get((read.getRecordGroupName, read.getReadName))
+      duplicateOpt match {
         case None => read
-        case Some(duplicateInfo) => {
+        case Some(duplicate) => {
           read.setDuplicateRead(true)
           read
         }
       }
-    })
+    }
+    )
   }
 
-  private object ScoreOrdering extends Ordering[(ReferencePositionPair, SingleReadBucket)] {
-    override def compare(x: (ReferencePositionPair, SingleReadBucket), y: (ReferencePositionPair, SingleReadBucket)): Int = {
+  private object ScoreOrdering extends Ordering[(ReferencePositionPair, DuplicateReadSingleReadBucket)] {
+    override def compare(x: (ReferencePositionPair, DuplicateReadSingleReadBucket), y: (ReferencePositionPair, DuplicateReadSingleReadBucket)): Int = {
       // This is safe because scores are Ints
       scoreBucket(x._2) - scoreBucket(y._2)
     }

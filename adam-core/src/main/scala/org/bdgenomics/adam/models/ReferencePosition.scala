@@ -17,6 +17,7 @@
  */
 package org.bdgenomics.adam.models
 
+import org.bdgenomics.adam.rdd.read.DuplicateReadInfo
 import org.bdgenomics.formats.avro._
 import org.bdgenomics.adam.rdd.ADAMContext._
 import com.esotericsoftware.kryo.{ Kryo, Serializer }
@@ -28,6 +29,14 @@ object ReferencePositionWithOrientation {
   def apply(record: AlignmentRecord): Option[ReferencePositionWithOrientation] = {
     if (record.getReadMapped) {
       Some(new ReferencePositionWithOrientation(ReferencePosition(record).get, record.getReadNegativeStrand))
+    } else {
+      None
+    }
+  }
+
+  def fivePrime(record: DuplicateReadInfo): Option[ReferencePositionWithOrientation] = {
+    if (record.getReadMapped) {
+      Some(new ReferencePositionWithOrientation(ReferencePosition.fivePrime(record).get, record.getReadNegativeStrand))
     } else {
       None
     }
@@ -181,6 +190,12 @@ object ReferencePosition {
     record.getReadMapped && (contig.isDefined && Option(contig.get.getContigName).isDefined) && start.isDefined
   }
 
+  def mappedPositionCheck(record: DuplicateReadInfo): Boolean = {
+    val contig = Option(record.contigName)
+    val start = Option(record.getStart)
+    record.getReadMapped && contig.isDefined && start.isDefined
+  }
+
   /**
    * Generates a reference position from a read. This function generates the
    * position from the start mapping position of the read.
@@ -241,6 +256,14 @@ object ReferencePosition {
   def fivePrime(record: AlignmentRecord): Option[ReferencePosition] = {
     if (mappedPositionCheck(record)) {
       Some(new ReferencePosition(record.getContig.getContigName, record.fivePrimePosition.get))
+    } else {
+      None
+    }
+  }
+
+  def fivePrime(record: DuplicateReadInfo): Option[ReferencePosition] = {
+    if (mappedPositionCheck(record)) {
+      Some(new ReferencePosition(record.contigName, record.fivePrimePosition.get))
     } else {
       None
     }
