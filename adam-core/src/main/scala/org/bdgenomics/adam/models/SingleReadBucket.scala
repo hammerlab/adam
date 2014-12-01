@@ -27,8 +27,7 @@ import org.apache.spark.rdd.RDD
 
 object SingleReadBucket extends Logging {
   def apply(rdd: RDD[AlignmentRecord]): RDD[SingleReadBucket] = {
-    rdd.keyBy(p => (p.getRecordGroupName, p.getReadName))
-      .mapValues(DuplicateReadInfo(_))
+    rdd.groupBy(p => (p.getRecordGroupName, p.getReadName))
       .map(kv => {
         val (_, reads) = kv
 
@@ -42,27 +41,9 @@ object SingleReadBucket extends Logging {
   }
 }
 
-object DuplicateReadInfo {
-  def apply(record: AlignmentRecord): DuplicateReadInfo = {
-    DuplicateReadInfo(
-      record.getStart,
-      record.getReadPaired,
-      record.getMateMapped,
-      record.getReadName,
-      record.getQual.toCharArray.map(q => q - 33)
-    )
-  }
-}
-
-case class DuplicateReadInfo(getStart: Long,
-                             getReadPaired: Boolean,
-                             getMateMapped: Boolean,
-                             getReadName: String,
-                             qualityScores: Array[Int])
-
-case class SingleReadBucket(primaryMapped: Iterable[DuplicateReadInfo] = Seq.empty,
-                            secondaryMapped: Iterable[DuplicateReadInfo] = Seq.empty,
-                            unmapped: Iterable[DuplicateReadInfo] = Seq.empty) {
+case class SingleReadBucket(primaryMapped: Iterable[AlignmentRecord] = Seq.empty,
+                            secondaryMapped: Iterable[AlignmentRecord] = Seq.empty,
+                            unmapped: Iterable[AlignmentRecord] = Seq.empty) {
   // Note: not a val in order to save serialization/memory cost
   def allReads = {
     primaryMapped ++ secondaryMapped ++ unmapped

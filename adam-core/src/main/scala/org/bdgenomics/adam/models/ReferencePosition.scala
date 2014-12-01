@@ -33,14 +33,6 @@ object ReferencePositionWithOrientation {
     }
   }
 
-  def fivePrime(record: Mark): Option[ReferencePositionWithOrientation] = {
-    if (record.getReadMapped) {
-      Some(new ReferencePositionWithOrientation(ReferencePosition.fivePrime(record).get, record.getReadNegativeStrand))
-    } else {
-      None
-    }
-  }
-
   def fivePrime(record: AlignmentRecord): Option[ReferencePositionWithOrientation] = {
     if (record.getReadMapped) {
       Some(new ReferencePositionWithOrientation(ReferencePosition.fivePrime(record).get, record.getReadNegativeStrand))

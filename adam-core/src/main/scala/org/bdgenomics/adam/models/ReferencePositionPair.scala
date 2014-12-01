@@ -17,11 +17,10 @@
  */
 package org.bdgenomics.adam.models
 
-import com.esotericsoftware.kryo.io.{Input, Output}
-import com.esotericsoftware.kryo.{Kryo, Serializer}
+import com.esotericsoftware.kryo.{ Kryo, Serializer }
+import com.esotericsoftware.kryo.io.{ Input, Output }
 import org.apache.spark.Logging
-
-
+import Ordering.Option
 
 object ReferencePositionPair extends Logging {
   def apply(singleReadBucket: SingleReadBucket): ReferencePositionPair = {

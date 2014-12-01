@@ -279,7 +279,7 @@ class AlignmentRecordRDDFunctions(rdd: RDD[AlignmentRecord])
   }
 
   def adamMarkDuplicates(): RDD[AlignmentRecord] = {
-    MarkDuplicates(rdd)
+    MarkDuplicatesWithBroadcast(rdd)
   }
 
   /**
