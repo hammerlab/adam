@@ -39,7 +39,7 @@ object ReferencePositionPair extends Logging {
             case Some(read2) =>
               // Both reads are mapped
               val read2pos = ReferencePositionWithOrientation.fivePrime(read2)
-              if (read1pos < read2pos) {
+              if (read1pos.exists( _ < read2pos.get)) {
                 new ReferencePositionPair(read1pos, read2pos)
               } else {
                 new ReferencePositionPair(read2pos, read1pos)
@@ -53,7 +53,7 @@ object ReferencePositionPair extends Logging {
             case Some(read2) =>
               val read2pos = ReferencePositionWithOrientation.fivePrime(read2)
               log.warn("%s claimed to not have mate but mate found".format(read1.getReadName))
-              if (read1pos < read2pos) {
+              if (read1pos.exists( _ < read2pos.get)) {
                 new ReferencePositionPair(read1pos, read2pos)
               } else {
                 new ReferencePositionPair(read2pos, read1pos)
