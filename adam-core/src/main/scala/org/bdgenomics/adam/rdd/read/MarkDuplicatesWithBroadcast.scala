@@ -28,7 +28,7 @@ object DuplicateReadInfo {
   def apply(record: AlignmentRecord): DuplicateReadInfo = {
     DuplicateReadInfo(
       if (record.getContig != null) record.getContig.getContigName else null,
-      record.getStart,
+      if (record.getStart != null) record.getStart else -1,
       record.getPrimaryAlignment,
       record.getRecordGroupName,
       record.getRecordGroupLibrary,
