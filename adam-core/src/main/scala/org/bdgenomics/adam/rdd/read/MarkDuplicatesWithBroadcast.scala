@@ -154,43 +154,43 @@ private[rdd] object MarkDuplicatesWithBroadcast extends Serializable {
     val duplicateReads = DuplicateReadSingleReadBucket(projectedReads)
       .keyBy(ReferencePositionPair(_)).groupBy(leftPositionAndLibrary).flatMap(kv => {
 
-        val leftPos: Option[ReferencePositionWithOrientation] = kv._1._1
-        val readsAtLeftPos: Iterable[(ReferencePositionPair, DuplicateReadSingleReadBucket)] = kv._2
+      val leftPos: Option[ReferencePositionWithOrientation] = kv._1._1
+      val readsAtLeftPos: Iterable[(ReferencePositionPair, DuplicateReadSingleReadBucket)] = kv._2
 
-        leftPos match {
+      leftPos match {
 
-          // These are all unmapped reads. There is no way to determine if they are duplicates
-          case None => Seq.empty
-          // These reads have their left position mapped
-          case Some(leftPosWithOrientation) =>
+        // These are all unmapped reads. There is no way to determine if they are duplicates
+        case None => Seq.empty
+        // These reads have their left position mapped
+        case Some(leftPosWithOrientation) => {
 
-            val readsByRightPos = readsAtLeftPos.groupBy(rightPosition)
-            val groupCount = readsByRightPos.size
-            readsByRightPos.flatMap(e => {
+          val readsByRightPos = readsAtLeftPos.groupBy(rightPosition)
+          val groupCount = readsByRightPos.size
+          readsByRightPos.flatMap(e => {
 
-              val rightPos = e._1
-              val reads = e._2
+            val rightPos = e._1
+            val reads = e._2
 
-              val groupIsFragments = rightPos.isEmpty
+            val groupIsFragments = rightPos.isEmpty
 
-              // We have no pairs (only fragments) if the current group is a group of fragments
-              // and there is only one group in total
-              val onlyFragments = groupIsFragments && groupCount == 1
+            // We have no pairs (only fragments) if the current group is a group of fragments
+            // and there is only one group in total
+            val onlyFragments = groupIsFragments && groupCount == 1
 
-              // If there are only fragments then score the fragments. Otherwise, if there are not only
-              // fragments (there are pairs as well) mark all fragments as duplicates.
-              // If the group does not contain fragments (it contains pairs) then always score it.
-              if (onlyFragments || !groupIsFragments) {
-                // Find the highest-scoring read and mark it as not a duplicate. Mark all the other reads in this group as duplicates.
-                val highestScoringRead = reads.max(ScoreOrdering)
-                reads.flatMap(_._2.allReads.filter(r => r != highestScoringRead._2.primaryMapped.head))
-              } else {
-                reads.flatMap(_._2.allReads)
-              }
-            })
-
-        }
-      })
+            // If there are only fragments then score the fragments. Otherwise, if there are not only
+            // fragments (there are pairs as well) mark all fragments as duplicates.
+            // If the group does not contain fragments (it contains pairs) then always score it.
+            if (onlyFragments || !groupIsFragments) {
+              // Find the highest-scoring read and mark it as not a duplicate. Mark all the other reads in this group as duplicates.
+              val highestScoringRead: DuplicateReadSingleReadBucket = reads.max(ScoreOrdering)._2
+              val topRead = highestScoringRead.primaryMapped.head
+              reads.flatMap(_._2.allReads.filter(r => r != topRead))
+            } else {
+              reads.flatMap(_._2.allReads)
+            }
+          })
+        }}
+    })
     val keyedDuplicateReads = duplicateReads.keyBy(read => (read.getRecordGroupName, read.getReadName))
     val broadcastDuplicateReads = rdd.sparkContext.broadcast(keyedDuplicateReads.mapValues(score).collectAsMap())
     //    val readsJoinedDuplicates = rdd
