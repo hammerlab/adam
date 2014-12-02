@@ -191,8 +191,8 @@ private[rdd] object MarkDuplicatesWithBroadcast extends Serializable {
 
         }
       })
-    val keyedDuplicateReads = duplicateReads.keyBy(read => (read.getRecordGroupName, read.getReadName)).collectAsMap()
-    val broadcastDuplicateReads = rdd.sparkContext.broadcast(keyedDuplicateReads)
+    val keyedDuplicateReads = duplicateReads.keyBy(read => (read.getRecordGroupName, read.getReadName))
+    val broadcastDuplicateReads = rdd.sparkContext.broadcast(keyedDuplicateReads.mapValues(score).collectAsMap())
     //    val readsJoinedDuplicates = rdd
     //      .keyBy(r => (r.getRecordGroupName, r.getReadName))
     //      .leftOuterJoin(keyedDuplicateReads)
