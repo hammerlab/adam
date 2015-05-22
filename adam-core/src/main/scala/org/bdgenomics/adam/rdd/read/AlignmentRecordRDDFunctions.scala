@@ -125,16 +125,22 @@ class AlignmentRecordRDDFunctions(rdd: RDD[AlignmentRecord])
   def adamSAMSave(filePath: String, asSam: Boolean = true) = SAMSave.time {
 
     // convert the records
-    val (convertRecords: RDD[SAMRecordWritable], header: SAMFileHeader) = rdd.adamConvertToSAM()
+    val (convertRecords: RDD[SAMRecordWritable], header) = rdd.adamConvertToSAM()
 
     // add keys to our records
     val withKey = convertRecords.keyBy(v => new LongWritable(v.get.getAlignmentStart))
 
     // attach header to output format
-    asSam match {
-      case true  => ADAMSAMOutputFormat.addHeader(header)
-      case false => ADAMBAMOutputFormat.addHeader(header)
-    }
+    val setHeaderCount = rdd.mapPartitions( records => {
+      asSam match {
+        case true => ADAMSAMOutputFormat.addHeader(header.value.header)
+        case false => ADAMBAMOutputFormat.addHeader(header.value.header)
+      }
+      Iterator(1)
+    }).count()
+    assert(setHeaderCount == rdd.partitions.length, "BAM/SAM Header not set on every partition")
+    
+
 
     // write file to disk
     val conf = rdd.context.hadoopConfiguration
@@ -181,7 +187,7 @@ class AlignmentRecordRDDFunctions(rdd: RDD[AlignmentRecord])
    *
    * @return Returns a SAM/BAM formatted RDD of reads, as well as the file header.
    */
-  def adamConvertToSAM(): (RDD[SAMRecordWritable], SAMFileHeader) = ConvertToSAM.time {
+  def adamConvertToSAM(): (RDD[SAMRecordWritable], Broadcast[SAMFileHeaderWritable]) = ConvertToSAM.time {
     // collect global summary data
     val sd = rdd.adamGetSequenceDictionary()
     val rgd = rdd.adamGetReadGroupDictionary()
@@ -203,7 +209,7 @@ class AlignmentRecordRDDFunctions(rdd: RDD[AlignmentRecord])
       srw
     })
 
-    (convertedRDD, header)
+    (convertedRDD, hdrBcast)
   }
 
   /**
