@@ -129,6 +129,7 @@ class AlignmentRecordRDDFunctions(rdd: RDD[AlignmentRecord])
 
     // add keys to our records
     val withKey = convertRecords.keyBy(v => new LongWritable(v.get.getAlignmentStart))
+    
 
     // attach header to output format
     val setHeaderCount = rdd.mapPartitions(records => {
@@ -140,7 +141,15 @@ class AlignmentRecordRDDFunctions(rdd: RDD[AlignmentRecord])
         Iterator(1)
       }
     }).count()
+    println(s"Header set on $setHeaderCount partitions")
     assert(setHeaderCount == rdd.partitions.length, "BAM/SAM Header not set on every partition")
+
+    synchronized {
+      asSam match {
+        case true => ADAMSAMOutputFormat.addHeader(header.value.header)
+        case false => ADAMBAMOutputFormat.addHeader(header.value.header)
+      }
+    }
 
     // write file to disk
     val conf = rdd.context.hadoopConfiguration
