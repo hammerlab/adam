@@ -133,6 +133,7 @@ class AlignmentRecordRDDFunctions(rdd: RDD[AlignmentRecord])
 
     // attach header to output format
     val setHeaderCount = rdd.mapPartitions(records => {
+      val head = if (records.hasNext) records.next() else None
       synchronized {
         asSam match {
           case true  => ADAMSAMOutputFormat.addHeader(header.value.header)
