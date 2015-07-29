@@ -57,8 +57,8 @@ object MdTag {
     var cigarIdx = 0
     var mdTagStringOffset = 0
     var referencePos = referenceStart
-    var cigarReferencePosition = referenceStart
-
+    var cigarOperatorIndex = 0
+    var usedMatchingBases = 0
     if (mdTagInput == null || mdTagInput == "0") {
       new MdTag(referenceStart, List(), Map(), Map())
     } else {
@@ -73,18 +73,30 @@ object MdTag {
             mdTagStringOffset += 1
           }
           case (CigarOperator.MATCH_OR_MISMATCH | CigarOperator.M | CigarOperator.EQ, Some(matchingBases)) => {
-            val numMatchingBases = math.min(cigarElement.getLength, matchingBases.toInt)
+            val numMatchingBases = math.min(cigarElement.getLength - cigarOperatorIndex, matchingBases.toInt - usedMatchingBases)
+            
             if (numMatchingBases > 0) {
               matches ::= NumericRange(referencePos, referencePos + numMatchingBases, 1L)
+
+              // Move the reference position the length of the matching sequence
+              referencePos += numMatchingBases
+              
+              // Move ahead in the current CIGAR operator
+              cigarOperatorIndex += numMatchingBases
+
+              // Move ahead in the current MdTag digit
+              usedMatchingBases += numMatchingBases
             }
-            // Move the reference position the length of the matching sequence
-            referencePos += numMatchingBases.toInt
-            if (matchingBases.toInt <= cigarElement.getLength) mdTagStringOffset += matchingBases.size
+            
+            if (matchingBases.toInt == usedMatchingBases) {
+              mdTagStringOffset += matchingBases.size
+              usedMatchingBases = 0
+            }
 
             // If the M operator has been fully read move on to the next operator
-            if (referencePos >= cigarReferencePosition + cigarElement.getLength) {
+            if (cigarOperatorIndex == cigarElement.getLength) {
               cigarIdx += 1
-              cigarReferencePosition += cigarElement.getLength
+              cigarOperatorIndex = 0
             }
           }
           case (CigarOperator.MATCH_OR_MISMATCH | CigarOperator.M | CigarOperator.X, None) => {
@@ -98,12 +110,13 @@ object MdTag {
                     referencePos += 1
                 }
                 mdTagStringOffset += mismatchedBases.size
+                cigarOperatorIndex += mismatchedBases.size
               }
             }
             // If the M operator has been fully read move on to the next operator
-            if (referencePos >= cigarReferencePosition + cigarElement.getLength) {
+            if (cigarOperatorIndex == cigarElement.getLength) {
               cigarIdx += 1
-              cigarReferencePosition += cigarElement.getLength
+              cigarOperatorIndex = 0
             }
           }
           case (CigarOperator.DELETION, None) => {
@@ -122,16 +135,16 @@ object MdTag {
                     mdTagStringOffset += deletedBases.size
                   }
                 }
-                cigarReferencePosition += cigarElement.getLength
                 cigarIdx += 1
+                cigarOperatorIndex = 0
               }
               case _ => throw new IllegalArgumentException(s"CIGAR ${cigar.toString} indicates deletion found but no deleted bases in MDTag $mdTagInput")
             }
           }
           case _ if cigarElement.getOperator.consumesReferenceBases() => {
             referencePos += cigarElement.getLength
-            cigarReferencePosition += cigarElement.getLength
             cigarIdx += 1
+            cigarOperatorIndex = 0
           }
           case _ => {
             cigarIdx += 1
