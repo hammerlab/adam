@@ -68,11 +68,14 @@ object MdTag {
         val cigarElement = cigar.getCigarElement(cigarIdx)
         val nextDigit = digitPattern.findPrefixOf(mdTag.substring(mdTagStringOffset))
         (cigarElement.getOperator, nextDigit) match {
-          case (_, None) if mdTagStringOffset == 0 => throw new IllegalArgumentException(s"MdTag $mdTagInput does not start with a digit")
-          case (_, Some(matchingBases)) if matchingBases.toInt == 0 => {
+
+          case (_, None) if mdTagStringOffset == 0 =>
+            throw new IllegalArgumentException(s"MdTag $mdTagInput does not start with a digit")
+
+          case (_, Some(matchingBases)) if matchingBases.toInt == 0 =>
             mdTagStringOffset += 1
-          }
-          case (CigarOperator.MATCH_OR_MISMATCH | CigarOperator.M | CigarOperator.EQ, Some(matchingBases)) => {
+
+          case (CigarOperator.M | CigarOperator.EQ, Some(matchingBases)) =>
             val numMatchingBases = math.min(cigarElement.getLength - cigarOperatorIndex, matchingBases.toInt - usedMatchingBases)
             
             if (numMatchingBases > 0) {
@@ -89,7 +92,7 @@ object MdTag {
             }
             
             if (matchingBases.toInt == usedMatchingBases) {
-              mdTagStringOffset += matchingBases.size
+              mdTagStringOffset += matchingBases.length
               usedMatchingBases = 0
             }
 
@@ -98,57 +101,66 @@ object MdTag {
               cigarIdx += 1
               cigarOperatorIndex = 0
             }
-          }
-          case (CigarOperator.MATCH_OR_MISMATCH | CigarOperator.M | CigarOperator.X, None) => {
+
+          case (CigarOperator.M | CigarOperator.X, None) =>
             basesPattern.findPrefixOf(mdTag.substring(mdTagStringOffset)) match {
               // Must have found a base or digit pattern in CigarOperator M
-              case None => throw new IllegalArgumentException(s"No match or mismatched bases found for ${cigar.toString} in MDTag $mdTag")
-              case Some(mismatchedBases) => {
+              case None =>
+                throw new IllegalArgumentException(
+                  s"No match or mismatched bases found for ${cigar.toString} in MDTag $mdTag"
+                )
+              case Some(mismatchedBases) =>
                 mismatchedBases.foreach {
                   base =>
                     mismatches += (referencePos -> base)
                     referencePos += 1
                 }
-                mdTagStringOffset += mismatchedBases.size
-                cigarOperatorIndex += mismatchedBases.size
-              }
+                mdTagStringOffset += mismatchedBases.length
+                cigarOperatorIndex += mismatchedBases.length
             }
             // If the M operator has been fully read move on to the next operator
             if (cigarOperatorIndex == cigarElement.getLength) {
               cigarIdx += 1
               cigarOperatorIndex = 0
             }
-          }
-          case (CigarOperator.DELETION, None) => {
+
+          case (CigarOperator.DELETION, None) =>
             mdTag.charAt(mdTagStringOffset) match {
-              case '^' => {
+              case '^' =>
                 // Skip ahead of the deletion '^' character
                 mdTagStringOffset += 1
                 basesPattern.findPrefixOf(mdTag.substring(mdTagStringOffset)) match {
-                  case None => throw new IllegalArgumentException(s"No deleted bases found ${cigar.toString} in MDTag $mdTag")
-                  case Some(deletedBases) => {
+                  case None =>
+                    throw new IllegalArgumentException(s"No deleted bases found ${cigar.toString} in MDTag $mdTag")
+                  case Some(deletedBases) if deletedBases.length == cigarElement.getLength =>
                     deletedBases.foreach {
                       base =>
                         deletions += (referencePos -> base)
                         referencePos += 1
                     }
-                    mdTagStringOffset += deletedBases.size
-                  }
+                    mdTagStringOffset += deletedBases.length
+                  case Some(deletedBases) =>
+                    throw new IllegalArgumentException(
+                      s"Element ${cigarElement.getLength}${cigarElement.getOperator.toString} in cigar ${cigar.toString} contradicts number of bases listed in MDTag: ^${deletedBases}"
+                    )
                 }
                 cigarIdx += 1
                 cigarOperatorIndex = 0
-              }
-              case _ => throw new IllegalArgumentException(s"CIGAR ${cigar.toString} indicates deletion found but no deleted bases in MDTag $mdTagInput")
+
+              case _ =>
+                throw new IllegalArgumentException(
+                  s"CIGAR ${cigar.toString} indicates deletion found but no deleted bases in MDTag $mdTagInput"
+                )
             }
-          }
-          case _ if cigarElement.getOperator.consumesReferenceBases() => {
+
+          case _ if cigarElement.getOperator.consumesReferenceBases() =>
             referencePos += cigarElement.getLength
             cigarIdx += 1
             cigarOperatorIndex = 0
-          }
-          case _ => {
+
+          case _ =>
             cigarIdx += 1
-          }
+
         }
       }
       new MdTag(referenceStart, matches, mismatches, deletions)
@@ -413,7 +425,7 @@ class MdTag(
    * @return True if this read has mismatches. We do not return true if the read has no mismatches but has deletions.
    */
   def hasMismatches: Boolean = {
-    !mismatches.isEmpty
+    mismatches.nonEmpty
   }
 
   /**
@@ -432,7 +444,7 @@ class MdTag(
    */
   def end(): Long = {
     val ends = matches.map(_.end - 1) ::: mismatches.keys.toList ::: deletions.keys.toList
-    ends.reduce(_ max _)
+    ends.max
   }
 
   /**
@@ -509,7 +521,7 @@ class MdTag(
    * @return MD string corresponding to [0-9]+(([A-Z]|\&#94;[A-Z]+)[0-9]+)
    * @see http://zenfractal.com/2013/06/19/playing-with-matches/
    */
-  override def toString(): String = {
+  override def toString: String = {
     if (matches.isEmpty && mismatches.isEmpty && deletions.isEmpty) {
       "0"
     } else {
