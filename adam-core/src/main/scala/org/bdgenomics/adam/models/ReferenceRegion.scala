@@ -17,11 +17,11 @@
  */
 package org.bdgenomics.adam.models
 
-import com.esotericsoftware.kryo.io.{ Input, Output }
-import com.esotericsoftware.kryo.{ Kryo, Serializer }
-import org.bdgenomics.adam.rdd.ADAMContext._
+import com.esotericsoftware.kryo.io.{Input, Output}
+import com.esotericsoftware.kryo.{Kryo, Serializer}
 import org.bdgenomics.formats.avro._
-import scala.math.{ max, min }
+
+import scala.math.{max, min}
 
 trait ReferenceOrdering[T <: ReferenceRegion] extends Ordering[T] {
   private def regionCompare(a: T,
@@ -110,6 +110,10 @@ object ReferenceRegion {
 
   def apply(feature: Feature): ReferenceRegion = {
     new ReferenceRegion(feature.getContig.getContigName, feature.getStart, feature.getEnd)
+  }
+
+  def apply(variant: Variant): ReferenceRegion = {
+    new ReferenceRegion(variant.getContig.getContigName, variant.getStart, variant.getEnd)
   }
 }
 
