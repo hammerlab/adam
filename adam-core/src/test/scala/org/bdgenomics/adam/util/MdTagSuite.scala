@@ -225,6 +225,30 @@ class MdTagSuite extends FunSuite {
     assert(tag.end === 220)
     assert(tag.toString === "20")
   }
+  
+  test("CIGAR with leading soft-clipping") {
+     val tag1 = MdTag("0G0A9^A5", 0L, TextCigarCodec.decode("2S9M1D5M"))
+
+    assert(tag1.end() === 14L)
+    (0L to 8L).foreach(locus => assert(tag1.isMatch(locus)))
+    assert(tag1.deletedBase(9) === Some('A'))
+    (10L to 14L).foreach(locus => assert(tag1.isMatch(locus)))
+    
+    val tag2 = MdTag("1G0G0G6^C6", 5L, TextCigarCodec.decode("4S6M1D6M"))
+    assert(tag2.end() === 17L)
+    (5L to 10L).foreach(locus => assert(tag2.isMatch(locus)))
+    assert(tag2.deletedBase(11) === Some('C'))
+    (12L to 17L).foreach(locus => assert(tag2.isMatch(locus)))
+    
+    val tag3 = MdTag("0C3^A8G3", 10L, TextCigarCodec.decode("5S11M"))
+    //(10L to 16L).foreach(locus => assert(tag3.isMatch(locus)))
+    //(18L to 20L).foreach(locus => assert(tag3.isMatch(locus)))
+    assert(tag3.hasMismatches)
+    assert(tag3.mismatchedBase(17L) == Some('G'))
+
+
+
+  }
 
   test("Get correct matches for mdtag with insertion") {
     val tag = MdTag("10", 0L, TextCigarCodec.decode("5M3I5M"))
