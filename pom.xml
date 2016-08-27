@@ -20,7 +20,7 @@
     <java.version>1.8</java.version>
     <avro.version>1.8.0</avro.version>
     <!-- informative only, used in about template substitution -->
-    <scala.version>2.10.4</scala.version>
+    <scala.version>2.10.6</scala.version>
     <spark.version>1.6.1</spark.version>
     <parquet.version>1.8.1</parquet.version>
     <!-- Edit the following line to configure the Hadoop (HDFS) version. -->
@@ -153,6 +153,7 @@
         </executions>
         <configuration>
           <scalaVersion>${scala.version}</scalaVersion>
+          <recompileMode>incremental</recompileMode>
           <useZincServer>true</useZincServer>
           <args>
             <arg>-unchecked</arg>
@@ -166,9 +167,9 @@
           </jvmArgs>
           <javacArgs>
             <javacArg>-source</javacArg>
-            <javacArg>${java.version}</javacArg>
+            <javacArg>1.7</javacArg>
             <javacArg>-target</javacArg>
-            <javacArg>${java.version}</javacArg>
+            <javacArg>1.7</javacArg>
           </javacArgs>
         </configuration>
       </plugin>
