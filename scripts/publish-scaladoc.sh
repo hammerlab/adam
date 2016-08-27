@@ -7,7 +7,7 @@ sha1=$(git log -1 --pretty=format:%H)
 mvn scala:doc
 
 # get current scaladoc dir
-scaladoc=${PWD}/adam-core/target/site/scaladocs/
+scaladoc=${PWD}/target/site/scaladocs/
 
 # clone repo
 git clone git@github.com:bigdatagenomics/bigdatagenomics.github.io.git
