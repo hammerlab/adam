@@ -545,6 +545,13 @@
   <profiles>
     <profile>
       <id>coverage</id>
+      <activation>
+        <!-- Activate when being built by travis CI. -->
+        <property>
+          <name>env.TRAVIS</name>
+          <value>true</value>
+        </property>
+      </activation>
       <build>
         <plugins>
           <plugin>
@@ -556,9 +563,24 @@
               <aggregate>true</aggregate>
             </configuration>
           </plugin>
+          <plugin>
+            <groupId>org.eluder.coveralls</groupId>
+            <artifactId>coveralls-maven-plugin</artifactId>
+            <version>4.2.0</version>
+            <configuration>
+              <sourceDirectories>
+                <sourceDirectory>src/main/scala</sourceDirectory>
+                <sourceDirectory>src/main/java</sourceDirectory>
+              </sourceDirectories>
+              <coberturaReports>
+                <coberturaReport>target/cobertura.xml</coberturaReport>
+              </coberturaReports>
+            </configuration>
+          </plugin>
         </plugins>
       </build>
     </profile>
+
     <!-- Only sign artifacts when we are performing a release, not snapshots -->
     <profile>
       <id>sonatype-oss-release</id>

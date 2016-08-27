@@ -2,6 +2,7 @@ ADAM-CORE
 ====
 
 [![Build Status](https://travis-ci.org/hammerlab/adam.svg?branch=adam-core)](https://travis-ci.org/hammerlab/adam)
+[![Coverage Status](https://coveralls.io/repos/github/hammerlab/adam/badge.svg?branch=master)](https://coveralls.io/github/hammerlab/adam?branch=master)
 
 This is a (hopefully short-lived) fork of [bigdatagenomics/adam](https://github.com/bigdatagenomics/adam)'s `adam-core` module, aka Maven coordinates `org.bdgenomics.adam:adam-core_2.10`.
 
