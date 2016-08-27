@@ -34,7 +34,6 @@
   </properties>
 
   <modules>
-    <module>adam-core</module>
     <module>adam-apis</module>
     <module>adam-cli</module>
     <module>adam-assembly</module>
@@ -570,7 +569,6 @@
     <profile>
       <id>distribution</id>
       <modules>
-        <module>adam-core</module>
         <module>adam-apis</module>
         <module>adam-cli</module>
         <module>adam-assembly</module>
