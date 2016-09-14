@@ -21,6 +21,7 @@
     <avro.version>1.8.0</avro.version>
     <!-- informative only, used in about template substitution -->
     <scala.version>2.10.6</scala.version>
+    <scala.version.prefix>2.10</scala.version.prefix>
     <spark.version>1.6.1</spark.version>
     <parquet.version>1.8.1</parquet.version>
     <!-- Edit the following line to configure the Hadoop (HDFS) version. -->
@@ -345,7 +346,7 @@
     </dependency>
     <dependency>
       <groupId>org.bdgenomics.utils</groupId>
-      <artifactId>utils-misc_2.10</artifactId>
+      <artifactId>utils-misc_${scala.version.prefix}</artifactId>
       <version>${bdg-utils.version}</version>
       <type>test-jar</type>
       <scope>test</scope>
@@ -358,7 +359,7 @@
     </dependency>
     <dependency>
       <groupId>org.bdgenomics.utils</groupId>
-      <artifactId>utils-misc_2.10</artifactId>
+      <artifactId>utils-misc_${scala.version.prefix}</artifactId>
       <version>${bdg-utils.version}</version>
        <exclusions>
         <exclusion>
@@ -369,17 +370,17 @@
     </dependency>
     <dependency>
       <groupId>org.bdgenomics.utils</groupId>
-      <artifactId>utils-cli_2.10</artifactId>
+      <artifactId>utils-cli_${scala.version.prefix}</artifactId>
       <version>${bdg-utils.version}</version>
     </dependency>
     <dependency>
       <groupId>org.bdgenomics.utils</groupId>
-      <artifactId>utils-intervalrdd_2.10</artifactId>
+      <artifactId>utils-intervalrdd_${scala.version.prefix}</artifactId>
       <version>${bdg-utils.version}</version>
     </dependency>
     <dependency>
       <groupId>org.bdgenomics.utils</groupId>
-      <artifactId>utils-io_2.10</artifactId>
+      <artifactId>utils-io_${scala.version.prefix}</artifactId>
       <version>${bdg-utils.version}</version>
       <exclusions>
         <exclusion>
@@ -390,7 +391,7 @@
     </dependency>
     <dependency>
       <groupId>org.bdgenomics.utils</groupId>
-      <artifactId>utils-metrics_2.10</artifactId>
+      <artifactId>utils-metrics_${scala.version.prefix}</artifactId>
       <version>${bdg-utils.version}</version>
     </dependency>
     <dependency>
@@ -427,7 +428,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
-      <artifactId>spark-core_2.10</artifactId>
+      <artifactId>spark-core_${scala.version.prefix}</artifactId>
       <version>${spark.version}</version>
       <scope>provided</scope>
       <exclusions>
@@ -485,7 +486,7 @@
     </dependency>
     <dependency>
       <groupId>org.scalatest</groupId>
-      <artifactId>scalatest_2.10</artifactId>
+      <artifactId>scalatest_${scala.version.prefix}</artifactId>
       <version>2.2.6</version>
       <scope>test</scope>
     </dependency>
@@ -538,7 +539,7 @@
     </dependency>
     <dependency>
       <groupId>net.codingwell</groupId>
-      <artifactId>scala-guice_2.10</artifactId>
+      <artifactId>scala-guice_${scala.version.prefix}</artifactId>
       <version>4.0.1</version>
     </dependency>
   </dependencies>
