@@ -9,7 +9,7 @@
 
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.hammerlab.adam</groupId>
-  <artifactId>adam-core_2.11</artifactId>
+  <artifactId>adam-core_2.10</artifactId>
   <version>0.20.1</version>
   <packaging>jar</packaging>
   <name>ADAM_${scala.version.prefix}</name>
@@ -20,8 +20,8 @@
     <java.version>1.8</java.version>
     <avro.version>1.8.0</avro.version>
     <!-- informative only, used in about template substitution -->
-    <scala.version>2.11.8</scala.version>
-    <scala.version.prefix>2.11</scala.version.prefix>
+    <scala.version>2.10.6</scala.version>
+    <scala.version.prefix>2.10</scala.version.prefix>
     <spark.version>1.6.1</spark.version>
     <parquet.version>1.8.1</parquet.version>
     <!-- Edit the following line to configure the Hadoop (HDFS) version. -->
