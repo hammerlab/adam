@@ -12,7 +12,7 @@
   <artifactId>adam-core_2.11</artifactId>
   <version>0.20.1-SNAPSHOT</version>
   <packaging>jar</packaging>
-  <name>ADAM_2.11: Core</name>
+  <name>ADAM_${scala.version.prefix}</name>
   <description>A fast, scalable genome analysis system</description>
   <url>http://bdgenomics.org/</url>
 
@@ -66,21 +66,6 @@
     <outputDirectory>${project.build.directory}/scala-${scala.version}/classes</outputDirectory>
     <testOutputDirectory>${project.build.directory}/scala-${scala.version}/test-classes</testOutputDirectory>
 
-    <pluginManagement>
-      <plugins>
-        <plugin>
-          <groupId>net.alchim31.maven</groupId>
-          <artifactId>scala-maven-plugin</artifactId>
-          <version>3.2.2</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.5.1</version>
-        </plugin>
-      </plugins>
-    </pluginManagement>
-
     <plugins>
       <!-- disable surefire -->
       <plugin>
@@ -124,6 +109,7 @@
       <plugin>
         <groupId>net.alchim31.maven</groupId>
         <artifactId>scala-maven-plugin</artifactId>
+        <version>3.2.2</version>
         <executions>
           <execution>
             <id>scala-compile-first</id>
@@ -220,6 +206,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.5.1</version>
         <executions>
           <execution>
             <phase>compile</phase>

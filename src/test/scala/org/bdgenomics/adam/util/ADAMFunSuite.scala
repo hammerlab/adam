@@ -19,8 +19,8 @@ package org.bdgenomics.adam.util
 
 import com.google.common.io.Resources
 import java.io.File
-import java.net.{URI, URL}
-import java.nio.file.{Files, Path}
+import java.net.{ URI, URL }
+import java.nio.file.{ Files, Path }
 
 import org.bdgenomics.utils.misc.SparkFunSuite
 
