@@ -10,7 +10,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.hammerlab.adam</groupId>
   <artifactId>adam-core_2.11</artifactId>
-  <version>0.20.1-SNAPSHOT</version>
+  <version>0.20.1</version>
   <packaging>jar</packaging>
   <name>ADAM_${scala.version.prefix}</name>
   <description>A fast, scalable genome analysis system</description>
