@@ -17,9 +17,15 @@
  */
 package org.bdgenomics.adam.util
 
+import java.net.URL
+
 import org.bdgenomics.utils.misc.SparkFunSuite
 
 trait ADAMFunSuite extends SparkFunSuite {
+
+  override def resourceUrl(path: String): URL = {
+    Thread.currentThread().getContextClassLoader.getResource(path)
+  }
 
   override val appName: String = "adam"
   override val properties: Map[String, String] = Map(
