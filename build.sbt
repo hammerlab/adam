@@ -2,7 +2,7 @@ organization := "org.hammerlab.adam"
 
 name := ParentPlugin.sparkName("adam-core")
 
-version := "0.21.0-SNAPSHOT"
+version := "0.20.2-SNAPSHOT"
 
 val utilsVersion = "0.2.9"
 

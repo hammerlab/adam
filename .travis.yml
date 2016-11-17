@@ -1,13 +1,15 @@
 language: scala
 sudo: false
 
+scala:
+  - 2.10.6
+  - 2.11.8
+
 env:
-  - vars="-D2.10"
-  - vars="-D2.10 -Dspark2"
   - vars=""
   - vars="-Dspark2"
 
-script: sbt clean coverage test
+script: sbt $vars ++$TRAVIS_SCALA_VERSION clean coverage test
 
 cache:
   directories:
@@ -15,7 +17,7 @@ cache:
   - \$HOME/.sbt/boot/
   - \$HOME/.zinc
 
-after_success: sbt coverageReport coveralls
+after_success: sbt $vars ++$TRAVIS_SCALA_VERSION coverageReport coveralls
 
 before_cache:
   # Tricks to avoid unnecessary cache updates
