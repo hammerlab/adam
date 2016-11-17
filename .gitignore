@@ -6,7 +6,6 @@ build
 *~
 #*
 *.bak
-*.bam*
 *.adam*
 *.log
 .*.swp
