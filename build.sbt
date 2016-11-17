@@ -30,6 +30,7 @@ libraryDependencies <++= libraries { v => Seq(
   "org.apache.httpcomponents" % "httpclient" % "4.5.2",
   "com.netflix.servo" % "servo-core" % "0.10.0" exclude("com.google.guava", "guava"),
   "com.google.guava" % "guava" % "16.0.1",
+  "org.hammerlab" %% "genomic-loci" % "1.3.0" exclude("com.github.samtools", "htsjdk"),
 
   // Test deps
   (("org.bdgenomics.utils" %% "utils-misc" % utilsVersion exclude("org.apache.spark", "*")) % Test).classifier("tests"),

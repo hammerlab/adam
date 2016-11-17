@@ -20,6 +20,7 @@ package org.bdgenomics.adam.models
 import htsjdk.samtools.{ SAMFileHeader, SAMSequenceDictionary, SAMSequenceRecord }
 import htsjdk.variant.vcf.VCFHeader
 import org.bdgenomics.formats.avro.{ Contig, NucleotideContigFragment }
+import org.hammerlab.genomics.reference.ContigLengths
 
 import scala.collection.JavaConversions._
 
@@ -117,6 +118,8 @@ class SequenceDictionary(val records: Vector[SequenceRecord]) extends Serializab
   assert(byName.size == records.length, "SequenceRecords with duplicate names aren't permitted")
 
   private val hasSequenceOrdering = records.forall(_.referenceIndex.isDefined)
+
+  def contigLengths: ContigLengths = byName.mapValues(_.length)
 
   /**
    * @param that Sequence dictionary to compare against.
