@@ -17,10 +17,6 @@
  */
 package org.bdgenomics.adam.rdd.variant
 
-import htsjdk.variant.variantcontext.writer.{
-  Options,
-  VariantContextWriterBuilder
-}
 import htsjdk.variant.vcf.{ VCFHeader, VCFHeaderLine }
 import java.io.OutputStream
 import org.apache.hadoop.io.LongWritable
@@ -36,7 +32,11 @@ import org.bdgenomics.adam.models.{
   SequenceDictionary,
   VariantContext
 }
-import org.bdgenomics.adam.rdd.{ FileMerger, MultisampleGenomicRDD }
+import org.bdgenomics.adam.rdd.{
+  FileMerger,
+  MultisampleGenomicRDD,
+  VCFHeaderUtils
+}
 import org.bdgenomics.adam.rich.RichVariant
 import org.bdgenomics.formats.avro.Sample
 import org.bdgenomics.utils.misc.Logging
@@ -50,10 +50,13 @@ import scala.collection.JavaConversions._
  * @param rdd The underlying RDD of VariantContexts.
  * @param sequences The genome sequence these variants were called against.
  * @param samples The genotyped samples in this RDD of VariantContexts.
+ * @param headerLines The VCF header lines that cover all INFO/FORMAT fields
+ *   needed to represent this RDD of VariantContexts.
  */
 case class VariantContextRDD(rdd: RDD[VariantContext],
                              sequences: SequenceDictionary,
-                             @transient samples: Seq[Sample]) extends MultisampleGenomicRDD[VariantContext, VariantContextRDD]
+                             @transient samples: Seq[Sample],
+                             @transient headerLines: Seq[VCFHeaderLine] = SupportedHeaderLines.allHeaderLines) extends MultisampleGenomicRDD[VariantContext, VariantContextRDD]
     with Logging {
 
   /**
@@ -74,7 +77,9 @@ case class VariantContextRDD(rdd: RDD[VariantContext],
    *   annotations attached to this VariantContextRDD.
    */
   def toVariantAnnotationRDD: VariantAnnotationRDD = {
-    VariantAnnotationRDD(rdd.flatMap(_.annotations), sequences)
+    VariantAnnotationRDD(rdd.flatMap(_.annotations),
+      sequences,
+      headerLines)
   }
 
   /**
@@ -83,7 +88,8 @@ case class VariantContextRDD(rdd: RDD[VariantContext],
   def toGenotypeRDD: GenotypeRDD = {
     GenotypeRDD(rdd.flatMap(_.genotypes),
       sequences,
-      samples)
+      samples,
+      headerLines)
   }
 
   /**
@@ -91,7 +97,8 @@ case class VariantContextRDD(rdd: RDD[VariantContext],
    */
   def toVariantRDD: VariantRDD = {
     VariantRDD(rdd.map(_.variant.variant),
-      sequences)
+      sequences,
+      headerLines)
   }
 
   /**
@@ -135,10 +142,8 @@ case class VariantContextRDD(rdd: RDD[VariantContext],
     })
 
     // make header
-    val headerLines: Set[VCFHeaderLine] = (SupportedHeaderLines.infoHeaderLines ++
-      SupportedHeaderLines.formatHeaderLines).toSet
     val header = new VCFHeader(
-      headerLines,
+      headerLines.toSet,
       samples.map(_.getSampleId))
     header.setSequenceDictionary(sequences.toSAMSequenceDictionary)
 
@@ -148,30 +153,15 @@ case class VariantContextRDD(rdd: RDD[VariantContext],
     // configure things for saving to disk
     val conf = rdd.context.hadoopConfiguration
     val fs = headPath.getFileSystem(conf)
-    conf.set(VCFOutputFormat.OUTPUT_VCF_FORMAT_PROPERTY, vcfFormat.toString)
 
-    // get an output stream
-    val os = fs.create(headPath)
-      .asInstanceOf[OutputStream]
+    // write vcf header
+    VCFHeaderUtils.write(header,
+      headPath,
+      fs)
 
-    // build a vcw
-    val vcw = new VariantContextWriterBuilder()
-      .setOutputVCFStream(os)
-      .clearIndexCreator()
-      .unsetOption(Options.INDEX_ON_THE_FLY)
-      .build()
-
-    // write the header
-
-    vcw.writeHeader(header)
-
-    // close the writer and the underlying stream
-    vcw.close()
-    os.flush()
-    os.close()
-
-    // set path to header file
+    // set path to header file and the vcf format
     conf.set("org.bdgenomics.adam.rdd.variant.vcf_header_path", headPath.toString)
+    conf.set(VCFOutputFormat.OUTPUT_VCF_FORMAT_PROPERTY, vcfFormat.toString)
 
     if (asSingleFile) {
 

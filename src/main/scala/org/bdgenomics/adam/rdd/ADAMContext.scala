@@ -21,7 +21,7 @@ import java.io.{ File, FileNotFoundException, InputStream }
 
 import htsjdk.samtools.util.Locatable
 import htsjdk.samtools.{ SAMFileHeader, ValidationStringency }
-import htsjdk.variant.vcf.VCFHeader
+import htsjdk.variant.vcf.{ VCFCompoundHeaderLine, VCFFormatHeaderLine, VCFHeader, VCFHeaderLine, VCFInfoHeaderLine }
 import org.apache.avro.Schema
 import org.apache.avro.file.DataFileStream
 import org.apache.avro.generic.IndexedRecord
@@ -167,13 +167,13 @@ class ADAMContext private (@transient val sc: SparkContext) extends Serializable
    * @return Returns a tuple of metadata from the VCF header, including the
    *   sequence dictionary and a list of the samples contained in the VCF.
    */
-  private[rdd] def loadVcfMetadata(filePath: String): (SequenceDictionary, Seq[Sample]) = {
+  private[rdd] def loadVcfMetadata(filePath: String): (SequenceDictionary, Seq[Sample], Seq[VCFHeaderLine]) = {
     // get the paths to all vcfs
     val files = getFsAndFiles(new Path(filePath))
 
     // load yonder the metadata
     files.map(p => loadSingleVcfMetadata(p.toString)).reduce((p1, p2) => {
-      (p1._1 ++ p2._1, p1._2 ++ p2._2)
+      (p1._1 ++ p2._1, p1._2 ++ p2._2, p1._3 ++ p2._3)
     })
   }
 
@@ -184,8 +184,8 @@ class ADAMContext private (@transient val sc: SparkContext) extends Serializable
    *
    * @see loadVcfMetadata
    */
-  private def loadSingleVcfMetadata(filePath: String): (SequenceDictionary, Seq[Sample]) = {
-    def headerToMetadata(vcfHeader: VCFHeader): (SequenceDictionary, Seq[Sample]) = {
+  private def loadSingleVcfMetadata(filePath: String): (SequenceDictionary, Seq[Sample], Seq[VCFHeaderLine]) = {
+    def headerToMetadata(vcfHeader: VCFHeader): (SequenceDictionary, Seq[Sample], Seq[VCFHeaderLine]) = {
       val sd = SequenceDictionary.fromVCFHeader(vcfHeader)
       val samples =
         asScalaBuffer(vcfHeader.getGenotypeSamples)
@@ -194,12 +194,87 @@ class ADAMContext private (@transient val sc: SparkContext) extends Serializable
               .setSampleId(s)
               .build()
           )
-      (sd, samples)
+      (sd, samples, headerLines(vcfHeader))
     }
 
-    val vcfHeader = VCFHeaderReader.readHeaderFrom(WrapSeekable.openPath(sc.hadoopConfiguration,
+    headerToMetadata(readVcfHeader(filePath))
+  }
+
+  private def readVcfHeader(filePath: String): VCFHeader = {
+    VCFHeaderReader.readHeaderFrom(WrapSeekable.openPath(sc.hadoopConfiguration,
       new Path(filePath)))
-    headerToMetadata(vcfHeader)
+  }
+
+  private def cleanAndMixInSupportedLines(
+    headerLines: Seq[VCFHeaderLine],
+    stringency: ValidationStringency): Seq[VCFHeaderLine] = {
+
+    // dedupe
+    val deduped = headerLines.distinct
+
+    def auditLine(line: VCFCompoundHeaderLine,
+                  defaultLine: VCFCompoundHeaderLine,
+                  replaceFn: (String, VCFCompoundHeaderLine) => VCFCompoundHeaderLine): Option[VCFCompoundHeaderLine] = {
+      if (line.getType != defaultLine.getType) {
+        val msg = "Field type for provided header line (%s) does not match supported line (%s)".format(
+          line, defaultLine)
+        if (stringency == ValidationStringency.STRICT) {
+          throw new IllegalArgumentException(msg)
+        } else {
+          if (stringency == ValidationStringency.LENIENT) {
+            log.warn(msg)
+          }
+          Some(replaceFn("BAD_%s".format(line.getID), line))
+        }
+      } else {
+        None
+      }
+    }
+
+    // remove our supported header lines
+    deduped.flatMap(line => line match {
+      case fl: VCFFormatHeaderLine => {
+        val key = fl.getID
+        SupportedHeaderLines.formatHeaderLines
+          .find(_.getID == key)
+          .fold(Some(fl).asInstanceOf[Option[VCFCompoundHeaderLine]])(defaultLine => {
+            auditLine(fl, defaultLine, (newId, oldLine) => {
+              new VCFFormatHeaderLine(newId,
+                oldLine.getCountType,
+                oldLine.getType,
+                oldLine.getDescription)
+            })
+          })
+      }
+      case il: VCFInfoHeaderLine => {
+        val key = il.getID
+        SupportedHeaderLines.infoHeaderLines
+          .find(_.getID == key)
+          .fold(Some(il).asInstanceOf[Option[VCFCompoundHeaderLine]])(defaultLine => {
+            auditLine(il, defaultLine, (newId, oldLine) => {
+              new VCFInfoHeaderLine(newId,
+                oldLine.getCountType,
+                oldLine.getType,
+                oldLine.getDescription)
+            })
+          })
+      }
+      case l => {
+        Some(l)
+      }
+    }) ++ SupportedHeaderLines.allHeaderLines
+  }
+
+  private def headerLines(header: VCFHeader): Seq[VCFHeaderLine] = {
+    (header.getFilterLines ++
+      header.getFormatHeaderLines ++
+      header.getInfoHeaderLines ++
+      header.getOtherHeaderLines).toSeq
+  }
+
+  private def loadHeaderLines(filePath: String): Seq[VCFHeaderLine] = {
+    val header = readVcfHeader(filePath + "/_header")
+    headerLines(header)
   }
 
   /**
@@ -852,11 +927,14 @@ class ADAMContext private (@transient val sc: SparkContext) extends Serializable
    * Loads a VCF file into an RDD.
    *
    * @param filePath The file to load.
+   * @param stringency The validation stringency to use when validating the VCF.
    * @return Returns a VariantContextRDD.
    *
    * @see loadVcfAnnotations
    */
-  def loadVcf(filePath: String): VariantContextRDD = {
+  def loadVcf(
+    filePath: String,
+    stringency: ValidationStringency = ValidationStringency.STRICT): VariantContextRDD = {
 
     // load records from VCF
     val records = readVcfRecords(filePath, None)
@@ -866,13 +944,14 @@ class ADAMContext private (@transient val sc: SparkContext) extends Serializable
       records.instrument()
 
     // load vcf metadata
-    val (sd, samples) = loadVcfMetadata(filePath)
+    val (sd, samples, headers) = loadVcfMetadata(filePath)
 
     val vcc = new VariantContextConverter(Some(sd))
 
     VariantContextRDD(records.flatMap(p => vcc.convert(p._2.get)),
       sd,
-      samples)
+      samples,
+      cleanAndMixInSupportedLines(headers, stringency))
   }
 
   /**
@@ -882,8 +961,9 @@ class ADAMContext private (@transient val sc: SparkContext) extends Serializable
    * @param viewRegion ReferenceRegions we are filtering on.
    * @return Returns a VariantContextRDD.
    */
-  def loadIndexedVcf(filePath: String,
-                     viewRegion: ReferenceRegion): VariantContextRDD =
+  def loadIndexedVcf(
+    filePath: String,
+    viewRegion: ReferenceRegion): VariantContextRDD =
     loadIndexedVcf(filePath, Iterable(viewRegion))
 
   /**
@@ -891,10 +971,13 @@ class ADAMContext private (@transient val sc: SparkContext) extends Serializable
    *
    * @param filePath The file to load.
    * @param viewRegions Iterator of ReferenceRegions we are filtering on.
+   * @param stringency The validation stringency to use when validating the VCF.
    * @return Returns a VariantContextRDD.
    */
-  def loadIndexedVcf(filePath: String,
-                     viewRegions: Iterable[ReferenceRegion])(implicit s: DummyImplicit): VariantContextRDD = {
+  def loadIndexedVcf(
+    filePath: String,
+    viewRegions: Iterable[ReferenceRegion],
+    stringency: ValidationStringency = ValidationStringency.STRICT)(implicit s: DummyImplicit): VariantContextRDD = {
 
     // load records from VCF
     val records = readVcfRecords(filePath, Some(viewRegions))
@@ -904,13 +987,14 @@ class ADAMContext private (@transient val sc: SparkContext) extends Serializable
       records.instrument()
 
     // load vcf metadata
-    val (sd, samples) = loadVcfMetadata(filePath)
+    val (sd, samples, headers) = loadVcfMetadata(filePath)
 
     val vcc = new VariantContextConverter(Some(sd))
 
     VariantContextRDD(records.flatMap(p => vcc.convert(p._2.get)),
       sd,
-      samples)
+      samples,
+      cleanAndMixInSupportedLines(headers, stringency))
   }
 
   /**
@@ -927,13 +1011,16 @@ class ADAMContext private (@transient val sc: SparkContext) extends Serializable
     projection: Option[Schema] = None): GenotypeRDD = {
     val rdd = loadParquet[Genotype](filePath, predicate, projection)
 
+    // load header lines
+    val headers = loadHeaderLines(filePath)
+
     // load sequence info
     val sd = loadAvroSequences(filePath)
 
     // load avro record group dictionary and convert to samples
     val samples = loadAvroSampleMetadata(filePath)
 
-    GenotypeRDD(rdd, sd, samples)
+    GenotypeRDD(rdd, sd, samples, headers)
   }
 
   /**
@@ -951,7 +1038,10 @@ class ADAMContext private (@transient val sc: SparkContext) extends Serializable
     val rdd = loadParquet[Variant](filePath, predicate, projection)
     val sd = loadAvroSequences(filePath)
 
-    VariantRDD(rdd, sd)
+    // load header lines
+    val headers = loadHeaderLines(filePath)
+
+    VariantRDD(rdd, sd, headers)
   }
 
   /**
@@ -1241,9 +1331,14 @@ class ADAMContext private (@transient val sc: SparkContext) extends Serializable
     filePath: String,
     predicate: Option[FilterPredicate] = None,
     projection: Option[Schema] = None): VariantAnnotationRDD = {
+
+    // load header lines
+    val headers = loadHeaderLines(filePath)
+
     val sd = loadAvroSequences(filePath)
     val rdd = loadParquet[VariantAnnotation](filePath, predicate, projection)
-    VariantAnnotationRDD(rdd, sd)
+
+    VariantAnnotationRDD(rdd, sd, headers)
   }
 
   /**
