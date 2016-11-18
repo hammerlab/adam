@@ -1,3 +1,27 @@
-language: java
+language: scala
+sudo: false
 jdk:
   - oraclejdk8
+
+scala:
+  - 2.10.6
+  - 2.11.8
+
+env:
+  - vars=""
+  - vars="-Dspark2"
+
+script: sbt $vars ++$TRAVIS_SCALA_VERSION clean coverage test
+
+cache:
+  directories:
+  - \$HOME/.ivy2/cache
+  - \$HOME/.sbt/boot/
+  - \$HOME/.zinc
+
+after_success: sbt $vars ++$TRAVIS_SCALA_VERSION coverageReport coveralls
+
+before_cache:
+  # Tricks to avoid unnecessary cache updates
+  - find \$HOME/.ivy2 -name "ivydata-*.properties" -delete
+  - find \$HOME/.sbt -name "*.lock" -delete
