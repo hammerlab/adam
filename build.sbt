@@ -2,11 +2,13 @@ organization := "org.hammerlab.adam"
 
 name := ParentPlugin.sparkName("adam-core")
 
-version := "0.20.2"
+version := "0.20.3"
 
 sonatypeProfileName := "org.hammerlab"
 
 val utilsVersion = "0.2.9"
+
+hadoopVersion := "2.7.3"
 
 scalatestVersion := "2.2.1"
 
@@ -16,7 +18,7 @@ testDeps ++= Seq(
 )
 
 providedDeps ++= Seq(
-  "org.apache.hadoop" % "hadoop-client" % "2.7.3",
+  libraries.value('hadoop),
   libraries.value('spark)
 )
 
