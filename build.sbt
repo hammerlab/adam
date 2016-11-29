@@ -4,6 +4,8 @@ name := ParentPlugin.sparkName("adam-core")
 
 version := "0.20.2"
 
+sonatypeProfileName := "org.hammerlab"
+
 val utilsVersion = "0.2.9"
 
 scalatestVersion := "2.2.1"
