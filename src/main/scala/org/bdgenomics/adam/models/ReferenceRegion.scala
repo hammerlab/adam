@@ -21,6 +21,8 @@ import com.esotericsoftware.kryo.io.{ Input, Output }
 import com.esotericsoftware.kryo.{ Kryo, Serializer }
 import org.bdgenomics.formats.avro._
 import org.bdgenomics.utils.intervaltree.Interval
+import org.hammerlab.genomics.reference.Region
+
 import scala.math.{ max, min }
 
 trait ReferenceOrdering[T <: ReferenceRegion] extends Ordering[T] {
@@ -55,8 +57,8 @@ trait OptionalReferenceOrdering[T <: ReferenceRegion] extends Ordering[Option[T]
               b: Option[T]): Int = (a, b) match {
     case (None, None)         => 0
     case (Some(pa), Some(pb)) => baseOrdering.compare(pa, pb)
-    case (Some(pa), None)     => -1
-    case (None, Some(pb))     => -1
+    case (Some(_), None)     => -1
+    case (None, Some(_))     => -1
   }
 }
 
@@ -87,6 +89,9 @@ object ReferenceRegion {
 
   implicit def orderingForPositions = RegionOrdering
   implicit def orderingForOptionalPositions = OptionalRegionOrdering
+
+  implicit def toHammerlabRegion(region: ReferenceRegion): Region =
+    Region(region.referenceName, region.start, region.end)
 
   /**
    * Creates a reference region that starts at the beginning of a contig.
@@ -190,6 +195,26 @@ object ReferenceRegion {
     ReferenceRegion(record.getContigName, record.getStart, record.getEnd)
   }
 
+  def mateOpt(record: AlignmentRecord): Option[ReferenceRegion] =
+    if (record.getMateMapped)
+      try {
+        Some(
+          ReferenceRegion(
+            record.getMateContigName,
+            record.getMateAlignmentStart,
+            Option(record.getMateAlignmentEnd).map(_.toLong).getOrElse(record.getMateAlignmentStart + 1)
+          )
+        )
+      } catch {
+        case e: NullPointerException =>
+          throw new Exception(
+            s"Mate fields missing: ${record.getMateContigName} ${record.getMateAlignmentStart} ${record.getMateAlignmentEnd}",
+            e
+          )
+      }
+    else
+      None
+
   /**
    * Generates a region from a given position -- the region will have a length of 1.
    * @param pos The position to convert
@@ -209,7 +234,7 @@ object ReferenceRegion {
     for {
       contig <- Option(fragment.getContig)
       contigName <- Option(contig.getContigName)
-      startPosition <- Option(fragment.getFragmentStartPosition)
+      _ <- Option(fragment.getFragmentStartPosition)
       fragmentSequence = fragment.getFragmentSequence
     } yield {
       ReferenceRegion(

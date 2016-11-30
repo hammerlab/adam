@@ -233,7 +233,7 @@ class ADAMContext private (@transient val sc: SparkContext) extends Serializable
 
     // remove our supported header lines
     deduped.flatMap(line => line match {
-      case fl: VCFFormatHeaderLine => {
+      case fl: VCFFormatHeaderLine =>
         val key = fl.getID
         SupportedHeaderLines.formatHeaderLines
           .find(_.getID == key)
@@ -245,8 +245,7 @@ class ADAMContext private (@transient val sc: SparkContext) extends Serializable
                 oldLine.getDescription)
             })
           })
-      }
-      case il: VCFInfoHeaderLine => {
+      case il: VCFInfoHeaderLine =>
         val key = il.getID
         SupportedHeaderLines.infoHeaderLines
           .find(_.getID == key)
@@ -258,10 +257,8 @@ class ADAMContext private (@transient val sc: SparkContext) extends Serializable
                 oldLine.getDescription)
             })
           })
-      }
-      case l => {
+      case l =>
         Some(l)
-      }
     }) ++ SupportedHeaderLines.allHeaderLines
   }
 
@@ -568,7 +565,10 @@ class ADAMContext private (@transient val sc: SparkContext) extends Serializable
    *        a single Bam file. The bam index file associated needs to have the same name.
    * @param parsedLoci Iterable of ReferenceRegions we are filtering on
    */
-  def loadIndexedBam(filePath: String, parsedLoci: ParsedLoci)(implicit s: DummyImplicit): AlignmentRecordRDD = {
+  def loadIndexedBam(filePath: String,
+                     parsedLoci: ParsedLoci,
+                     includeUnmappedMates: Boolean = false)(implicit s: DummyImplicit): AlignmentRecordRDD = {
+
     val path = new Path(filePath)
     val bamFiles = getFsAndFiles(path).filter(p => p.toString.endsWith(".bam"))
 
@@ -605,10 +605,25 @@ class ADAMContext private (@transient val sc: SparkContext) extends Serializable
     if (Metrics.isRecording)
       records.instrument()
 
+    val lociBroadcast = sc.broadcast(loci)
     val samRecordConverter = new SAMRecordConverter
-    AlignedReadRDD(records.map(p => samRecordConverter.convert(p._2.get)),
+    AlignedReadRDD(
+      records
+        .map(p => samRecordConverter.convert(p._2.get))
+        .filter(r =>
+          ReferenceRegion
+            .opt(r)
+            .orElse(
+              if (includeUnmappedMates)
+                ReferenceRegion.mateOpt(r)
+              else
+                None
+            )
+            .exists(lociBroadcast.value.intersects(_))
+        ),
       seqDict,
-      readGroups)
+      readGroups
+    )
   }
 
   def loadIndexedBam(filePath: String, viewRegions: Iterable[ReferenceRegion])(implicit s: DummyImplicit): AlignmentRecordRDD =
