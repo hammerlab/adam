@@ -2,7 +2,7 @@ organization := "org.hammerlab.adam"
 
 name := ParentPlugin.sparkName("adam-core")
 
-version := "0.20.3"
+version := "0.20.4-SNAPSHOT"
 
 sonatypeProfileName := "org.hammerlab"
 
@@ -36,11 +36,11 @@ libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-log4j12" % "1.7.21",
   "org.apache.parquet" % "parquet-avro" % "1.8.1",
   "org.apache.parquet" % "parquet-scala_2.10" % "1.8.1" exclude("org.scala-lang", "scala-library"),
-  "org.seqdoop" % "hadoop-bam" % "7.7.1" exclude("org.apache.hadoop", "hadoop-client"),
+  libraries.value('hadoop_bam),
   "com.github.samtools" % "htsjdk" % "2.5.0",
   "org.apache.httpcomponents" % "httpclient" % "4.5.2",
   "com.netflix.servo" % "servo-core" % "0.10.0",
-  "org.hammerlab" %% "genomic-loci" % "1.4.0" exclude("com.github.samtools", "htsjdk")
+  "org.hammerlab" %% "genomic-loci" % "1.4.2" exclude("com.github.samtools", "htsjdk")
 )
 
 import scalariform.formatter.preferences._
