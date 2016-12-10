@@ -23,20 +23,20 @@ providedDeps ++= Seq(
 )
 
 libraryDependencies ++= Seq(
+  libraries.value('bdg_formats),
+  libraries.value('kryo),
+  libraries.value('hadoop_bam),
   "org.bdgenomics.utils" %% "utils-metrics" % utilsVersion,
   "org.bdgenomics.utils" %% "utils-misc" % utilsVersion,
   "org.bdgenomics.utils" %% "utils-io" % utilsVersion exclude("com.fasterxml.jackson.core", "*"),
   "org.bdgenomics.utils" %% "utils-cli" % utilsVersion,
   "org.bdgenomics.utils" %% "utils-intervalrdd" % utilsVersion,
-  "com.esotericsoftware.kryo" % "kryo" % "2.24.0",
-  "org.bdgenomics.bdg-formats" % "bdg-formats" % "0.10.0",
   "commons-io" % "commons-io" % "2.4",
   "it.unimi.dsi" % "fastutil" % "6.6.5",
   "org.apache.avro" % "avro" % "1.8.0",
   "org.slf4j" % "slf4j-log4j12" % "1.7.21",
   "org.apache.parquet" % "parquet-avro" % "1.8.1",
   "org.apache.parquet" % "parquet-scala_2.10" % "1.8.1" exclude("org.scala-lang", "scala-library"),
-  libraries.value('hadoop_bam),
   "com.github.samtools" % "htsjdk" % "2.5.0",
   "org.apache.httpcomponents" % "httpclient" % "4.5.2",
   "com.netflix.servo" % "servo-core" % "0.10.0",
