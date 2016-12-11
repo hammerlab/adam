@@ -18,8 +18,6 @@
 package org.bdgenomics.adam.rdd
 
 import java.io.{ File, FileNotFoundException }
-import java.util.UUID
-import htsjdk.samtools.DiskBasedBAMFileIndex
 import com.google.common.io.Files
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.filter2.dsl.Dsl._
@@ -28,12 +26,10 @@ import org.apache.parquet.hadoop.metadata.CompressionCodecName
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models._
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.rdd.read.AlignedReadRDD
 import org.bdgenomics.adam.util.PhredUtils._
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro._
-import org.seqdoop.hadoop_bam.{ BAMInputFormat, CRAMInputFormat }
-import scala.collection.JavaConversions._
+import org.seqdoop.hadoop_bam.CRAMInputFormat
 
 case class TestSaveArgs(var outputPath: String) extends ADAMSaveAnyArgs {
   var sortFastqOutput = false
@@ -47,6 +43,10 @@ case class TestSaveArgs(var outputPath: String) extends ADAMSaveAnyArgs {
 }
 
 class ADAMContextSuite extends ADAMFunSuite {
+
+  sparkTest("ctr is accessible") {
+    new ADAMContext(sc)
+  }
 
   sparkTest("sc.loadParquet should not fail on unmapped reads") {
     val readsFilepath = testFile("unmapped.sam")

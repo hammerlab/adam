@@ -22,7 +22,7 @@ import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
 
-class InnerBroadcastRegionJoinSuite extends ADAMFunSuite {
+class InnerTreeRegionJoinSuite extends ADAMFunSuite {
 
   sparkTest("Ensure same reference regions get passed together") {
     val contig = Contig.newBuilder
@@ -41,24 +41,24 @@ class InnerBroadcastRegionJoinSuite extends ADAMFunSuite {
     val record1 = builder.build()
     val record2 = builder.build()
 
-    val rdd1 = sc.parallelize(Seq(record1)).keyBy(ReferenceRegion(_))
-    val rdd2 = sc.parallelize(Seq(record2)).keyBy(ReferenceRegion(_))
+    val rdd1 = sc.parallelize(Seq(record1)).keyBy(ReferenceRegion.unstranded(_))
+    val rdd2 = sc.parallelize(Seq(record2)).keyBy(ReferenceRegion.unstranded(_))
 
-    assert(InnerBroadcastRegionJoinSuite.getReferenceRegion(record1) ===
-      InnerBroadcastRegionJoinSuite.getReferenceRegion(record2))
+    assert(InnerTreeRegionJoinSuite.getReferenceRegion(record1) ===
+      InnerTreeRegionJoinSuite.getReferenceRegion(record2))
 
-    assert(InnerBroadcastRegionJoin[AlignmentRecord, AlignmentRecord]().partitionAndJoin(
+    assert(InnerTreeRegionJoin[AlignmentRecord, AlignmentRecord]().partitionAndJoin(
       rdd1,
       rdd2).aggregate(true)(
-        InnerBroadcastRegionJoinSuite.merge,
-        InnerBroadcastRegionJoinSuite.and))
+        InnerTreeRegionJoinSuite.merge,
+        InnerTreeRegionJoinSuite.and))
 
-    assert(InnerBroadcastRegionJoin[AlignmentRecord, AlignmentRecord]().partitionAndJoin(
+    assert(InnerTreeRegionJoin[AlignmentRecord, AlignmentRecord]().partitionAndJoin(
       rdd1,
       rdd2)
       .aggregate(0)(
-        InnerBroadcastRegionJoinSuite.count,
-        InnerBroadcastRegionJoinSuite.sum) === 1)
+        InnerTreeRegionJoinSuite.count,
+        InnerTreeRegionJoinSuite.sum) === 1)
   }
 
   sparkTest("Overlapping reference regions") {
@@ -80,17 +80,17 @@ class InnerBroadcastRegionJoinSuite extends ADAMFunSuite {
     val record2 = AlignmentRecord.newBuilder(built).setStart(3L).setEnd(4L).build()
     val baseRecord = AlignmentRecord.newBuilder(built).setCigar("4M").setEnd(5L).build()
 
-    val baseRdd = sc.parallelize(Seq(baseRecord)).keyBy(ReferenceRegion(_))
-    val recordsRdd = sc.parallelize(Seq(record1, record2)).keyBy(ReferenceRegion(_))
+    val baseRdd = sc.parallelize(Seq(baseRecord)).keyBy(ReferenceRegion.unstranded(_))
+    val recordsRdd = sc.parallelize(Seq(record1, record2)).keyBy(ReferenceRegion.unstranded(_))
 
-    assert(InnerBroadcastRegionJoin[AlignmentRecord, AlignmentRecord]().partitionAndJoin(
+    assert(InnerTreeRegionJoin[AlignmentRecord, AlignmentRecord]().partitionAndJoin(
       baseRdd,
       recordsRdd)
       .aggregate(true)(
-        InnerBroadcastRegionJoinSuite.merge,
-        InnerBroadcastRegionJoinSuite.and))
+        InnerTreeRegionJoinSuite.merge,
+        InnerTreeRegionJoinSuite.and))
 
-    assert(InnerBroadcastRegionJoin[AlignmentRecord, AlignmentRecord]().partitionAndJoin(
+    assert(InnerTreeRegionJoin[AlignmentRecord, AlignmentRecord]().partitionAndJoin(
       baseRdd,
       recordsRdd).count() === 2)
   }
@@ -129,25 +129,25 @@ class InnerBroadcastRegionJoinSuite extends ADAMFunSuite {
     val baseRecord1 = AlignmentRecord.newBuilder(builtRef1).setCigar("4M").setEnd(5L).build()
     val baseRecord2 = AlignmentRecord.newBuilder(builtRef2).setCigar("4M").setEnd(5L).build()
 
-    val baseRdd = sc.parallelize(Seq(baseRecord1, baseRecord2)).keyBy(ReferenceRegion(_))
-    val recordsRdd = sc.parallelize(Seq(record1, record2, record3)).keyBy(ReferenceRegion(_))
+    val baseRdd = sc.parallelize(Seq(baseRecord1, baseRecord2)).keyBy(ReferenceRegion.unstranded(_))
+    val recordsRdd = sc.parallelize(Seq(record1, record2, record3)).keyBy(ReferenceRegion.unstranded(_))
 
-    assert(InnerBroadcastRegionJoin[AlignmentRecord, AlignmentRecord]().partitionAndJoin(
+    assert(InnerTreeRegionJoin[AlignmentRecord, AlignmentRecord]().partitionAndJoin(
       baseRdd,
       recordsRdd)
       .aggregate(true)(
-        InnerBroadcastRegionJoinSuite.merge,
-        InnerBroadcastRegionJoinSuite.and))
+        InnerTreeRegionJoinSuite.merge,
+        InnerTreeRegionJoinSuite.and))
 
-    assert(InnerBroadcastRegionJoin[AlignmentRecord, AlignmentRecord]().partitionAndJoin(
+    assert(InnerTreeRegionJoin[AlignmentRecord, AlignmentRecord]().partitionAndJoin(
       baseRdd,
       recordsRdd).count() === 3)
   }
 }
 
-object InnerBroadcastRegionJoinSuite {
+object InnerTreeRegionJoinSuite {
   def getReferenceRegion(record: AlignmentRecord): ReferenceRegion =
-    ReferenceRegion(record)
+    ReferenceRegion.unstranded(record)
 
   def merge(prev: Boolean, next: (AlignmentRecord, AlignmentRecord)): Boolean =
     prev && getReferenceRegion(next._1).overlaps(getReferenceRegion(next._2))
