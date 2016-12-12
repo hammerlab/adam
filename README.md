@@ -1,6 +1,15 @@
 ADAM
 ====
 
+[![Build Status](https://travis-ci.org/hammerlab/adam.svg?branch=sbt)](https://travis-ci.org/hammerlab/adam) [![Coverage Status](https://coveralls.io/repos/github/hammerlab/adam/badge.svg?branch=sbt)](https://coveralls.io/github/hammerlab/adam?branch=sbt) [![Maven Central](https://img.shields.io/maven-central/v/org.hammerlab.adam/adam-core_2.11.svg?maxAge=600)](http://search.maven.org/#search%7Cga%7C1%7Chammerlab%20adam-core)
+
+This fork of [bigdatagenomics/adam](https://github.com/bigdatagenomics/adam):
+- reduces the repo to the `adam-core` module,
+- [ports it to SBT](build.sbt) (using [hammerlab/sbt-parent](https://github.com/hammerlab/sbt-parent) to simplify build/packaging configuration), and
+- is occasionally published to Maven Central as [`org.hammerlab.adam:adam-core`](http://search.maven.org/#search%7Cga%7C1%7Chammerlab%20adam-core).
+
+The code (and README, from this point on) is essentially unchanged from upstream, which is periodically merged in.
+
 # Introduction
 
 ADAM is a genomics analysis platform with specialized file formats built using [Apache Avro][Avro], [Apache Spark][Spark] and [Apache Parquet][Parquet]. Apache 2 licensed. Some quick links: 
