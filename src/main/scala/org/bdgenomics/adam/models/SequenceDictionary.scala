@@ -23,6 +23,7 @@ import org.bdgenomics.formats.avro.{ Contig, NucleotideContigFragment }
 import org.hammerlab.genomics.reference.ContigLengths
 
 import scala.collection.JavaConversions._
+import scala.collection._
 
 /**
  * Singleton object for creating SequenceDictionaries.
@@ -119,7 +120,7 @@ class SequenceDictionary(val records: Vector[SequenceRecord]) extends Serializab
 
   private val hasSequenceOrdering = records.forall(_.referenceIndex.isDefined)
 
-  def contigLengths: ContigLengths = byName.mapValues(_.length)
+  def contigLengths: ContigLengths = byName.mapValues(_.length).toMap
 
   /**
    * @param that Sequence dictionary to compare against.

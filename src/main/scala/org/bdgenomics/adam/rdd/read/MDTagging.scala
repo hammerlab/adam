@@ -17,10 +17,7 @@
  */
 package org.bdgenomics.adam.rdd.read
 
-import org.bdgenomics.adam.rdd.ADAMContext._
 import htsjdk.samtools.{ TextCigarCodec, ValidationStringency }
-// NOTE(ryan): this is necessary for Spark <= 1.2.1.
-import org.apache.spark.SparkContext._
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.{ MdTag, ReferenceRegion }
 import org.bdgenomics.adam.util.ReferenceFile
@@ -74,7 +71,8 @@ private[read] case class MDTagging(
         contig <- Option(read.getContigName)
         if read.getReadMapped
       } yield {
-        maybeMDTagRead(read, referenceFileB.value.extract(ReferenceRegion(read)))
+        maybeMDTagRead(read, referenceFileB.value
+          .extract(ReferenceRegion.unstranded(read)))
       }).getOrElse({
         numUnmappedReads += 1
         read

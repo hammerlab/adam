@@ -17,11 +17,8 @@
  */
 package org.bdgenomics.adam.rdd
 
-import org.bdgenomics.adam.models.{ SequenceDictionary, ReferenceRegion }
+import org.bdgenomics.adam.models.ReferenceRegion
 import org.apache.spark.rdd.RDD
-import org.apache.spark.SparkContext._
-import scala.Predef._
-import org.apache.spark.SparkContext
 import scala.reflect.ClassTag
 
 /**
@@ -35,7 +32,7 @@ import scala.reflect.ClassTag
  * @tparam RU The type of data yielded by the right RDD at the output of the
  *   join.
  */
-trait RegionJoin[T, U, RT, RU] {
+trait RegionJoin[T, U, RT, RU] extends Serializable {
 
   /**
    * Performs a region join between two RDDs.
