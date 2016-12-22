@@ -28,6 +28,9 @@ import scala.math.{ exp, pow, log, log10 }
  */
 object PhredUtils extends Serializable {
 
+  // Helps avoid singularities in phred/log computations.
+  val one = 1 - 1e-16
+
   private lazy val phredToErrorProbabilityCache: Array[Double] = {
     (0 until 256).map { p => pow(10.0, -p / 10.0) }.toArray
   }
@@ -71,7 +74,13 @@ object PhredUtils extends Serializable {
    * @return One minus the input probability as a phred score, rounded to the
    *   nearest int.
    */
-  def successProbabilityToPhred(p: Double): Int = probabilityToPhred(1.0 - p)
+  def successProbabilityToPhred(p: Double): Int =
+    probabilityToPhred(
+      math.min(
+        one,
+        1.0 - p
+      )
+    )
 
   /**
    * @param p An error probability to convert to phred.
