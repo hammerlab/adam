@@ -23,7 +23,7 @@ import it.unimi.dsi.fastutil.io.{ FastByteArrayInputStream, FastByteArrayOutputS
 import org.apache.avro.io.{ BinaryDecoder, BinaryEncoder, DecoderFactory, EncoderFactory }
 import org.apache.avro.specific.{ SpecificDatumReader, SpecificDatumWriter, SpecificRecord }
 import org.apache.spark.serializer.KryoRegistrator
-import org.hammerlab.genomics.loci.kryo.Registrar
+import org.hammerlab.genomics.loci.set.Registrar
 
 import scala.reflect.ClassTag
 
@@ -344,6 +344,6 @@ class ADAMKryoRegistrator extends KryoRegistrator {
     kryo.register(Nil.getClass)
     kryo.register(None.getClass)
 
-    (new Registrar).registerClasses(kryo)
+    new Registrar().registerClasses(kryo)
   }
 }

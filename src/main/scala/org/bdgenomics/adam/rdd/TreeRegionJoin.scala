@@ -21,7 +21,6 @@ import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.instrumentation.Timers._
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.utils.intervalarray.IntervalArray
-
 import scala.reflect.ClassTag
 
 /**
@@ -99,7 +98,7 @@ case class InnerTreeRegionJoin[T: ClassTag, U: ClassTag]() extends RegionJoin[T,
  * broadcast.
  */
 case class RightOuterTreeRegionJoin[T: ClassTag, U: ClassTag]()
-  extends RegionJoin[T, U, Option[T], U]
+    extends RegionJoin[T, U, Option[T], U]
     with TreeRegionJoin[T, U] {
 
   /**
@@ -134,7 +133,7 @@ case class RightOuterTreeRegionJoin[T: ClassTag, U: ClassTag]()
  * values on the left grouped by the right value.
  */
 case class InnerTreeRegionJoinAndGroupByRight[T: ClassTag, U: ClassTag]()
-  extends RegionJoin[T, U, Iterable[T], U]
+    extends RegionJoin[T, U, Iterable[T], U]
     with TreeRegionJoin[T, U] {
 
   /**
@@ -163,7 +162,7 @@ case class InnerTreeRegionJoinAndGroupByRight[T: ClassTag, U: ClassTag]()
  * collections on the left side of the join are kept.
  */
 case class RightOuterTreeRegionJoinAndGroupByRight[T: ClassTag, U: ClassTag]()
-  extends RegionJoin[T, U, Iterable[T], U]
+    extends RegionJoin[T, U, Iterable[T], U]
     with TreeRegionJoin[T, U] {
 
   /**
