@@ -4,13 +4,12 @@ name := sparkName("adam-core")
 
 version := "0.20.4-SNAPSHOT"
 
-hadoopVersion := "2.7.3"
-
-scalatestVersion := "2.2.1"
-
 addSparkDeps
 publishTestJar
 enableScalariform
+
+hadoopVersion := "2.7.3"
+scalatestVersion := "2.2.1"
 
 // Using ":=" here to clobber the usual default hammerlab-test-libs that are added by parent-plugin, which use
 // Scalatest 3.0.0.
