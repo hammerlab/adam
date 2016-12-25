@@ -22,7 +22,7 @@ import htsjdk.variant.vcf.VCFHeader
 import org.bdgenomics.formats.avro.{ Contig, NucleotideContigFragment }
 import org.hammerlab.genomics.reference.{ ContigLengths, ContigName, NumLoci }
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConversions.{ asScalaIterator, seqAsJavaList }
 import scala.collection._
 
 /**
@@ -50,7 +50,7 @@ object SequenceDictionary {
    * @return A SequenceDictionary with populated sequence records.
    */
   def apply(dict: SAMSequenceDictionary): SequenceDictionary = {
-    new SequenceDictionary(dict.getSequences.map(SequenceRecord.fromSAMSequenceRecord).toVector)
+    new SequenceDictionary(dict.getSequences.iterator().map(SequenceRecord.fromSAMSequenceRecord).toVector)
   }
 
   /**
@@ -100,7 +100,7 @@ object SequenceDictionary {
    */
   def fromSAMSequenceDictionary(samDict: SAMSequenceDictionary): SequenceDictionary = {
     val samDictRecords = samDict.getSequences
-    new SequenceDictionary(samDictRecords.map(SequenceRecord.fromSAMSequenceRecord).toVector)
+    new SequenceDictionary(samDictRecords.iterator().map(SequenceRecord.fromSAMSequenceRecord).toVector)
   }
 }
 
@@ -187,7 +187,7 @@ class SequenceDictionary(val records: Vector[SequenceRecord]) extends Serializab
    * @return Returns a SAM formatted sequence dictionary.
    */
   def toSAMSequenceDictionary: SAMSequenceDictionary = {
-    new SAMSequenceDictionary(records.map(_ toSAMSequenceRecord).toList)
+    new SAMSequenceDictionary(records.iterator.map(_ toSAMSequenceRecord).toList)
   }
 
   /**
