@@ -1,6 +1,6 @@
 organization := "org.hammerlab.adam"
 
-name := sparkName("adam-core")
+name := sparkName("core")
 
 version := "0.20.4-SNAPSHOT"
 
@@ -20,7 +20,7 @@ testDeps := Seq(
 
 testJarTestDeps += (libs.value('bdg_utils_misc) exclude("org.apache.spark", "*"))
 
-libraryDependencies ++= Seq(
+deps ++= Seq(
   libs.value('bdg_formats),
   libs.value('bdg_utils_cli),
   libs.value('bdg_utils_intervalrdd),

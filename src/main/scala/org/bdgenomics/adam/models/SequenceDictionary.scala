@@ -125,7 +125,7 @@ class SequenceDictionary(val records: Vector[SequenceRecord]) extends Serializab
 
   private val hasSequenceOrdering = records.forall(_.referenceIndex.isDefined)
 
-  def contigLengths: ContigLengths = byName.mapValues(_.length: NumLoci).toMap
+  def contigLengths: ContigLengths = byName.mapValues(r ⇒ NumLoci(r.length)).toMap
 
   /**
    * @param that Sequence dictionary to compare against.
