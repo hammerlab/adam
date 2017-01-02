@@ -2,7 +2,7 @@ organization := "org.hammerlab.adam"
 
 name := sparkName("core")
 
-version := "0.20.4-SNAPSHOT"
+version := "0.20.4"
 
 addSparkDeps
 publishTestJar
