@@ -187,7 +187,7 @@ class SequenceDictionary(val records: Vector[SequenceRecord]) extends Serializab
    * @return Returns a SAM formatted sequence dictionary.
    */
   def toSAMSequenceDictionary: SAMSequenceDictionary = {
-    new SAMSequenceDictionary(records.iterator.map(_ toSAMSequenceRecord).toList)
+    new SAMSequenceDictionary(records.iterator.map(_.toSAMSequenceRecord).toList)
   }
 
   /**
@@ -229,7 +229,9 @@ class SequenceDictionary(val records: Vector[SequenceRecord]) extends Serializab
     records.map(_.toString).fold("SequenceDictionary{")(_ + "\n" + _) + "}"
   }
 
-  private[adam] def toAvro: Seq[Contig] = records.map(_.toADAMContig)
+  private[adam] def toAvro: Seq[Contig] = {
+    records.map(_.toADAMContig)
+  }
 
   /**
    * @return True if this dictionary contains no sequence records.
