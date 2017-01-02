@@ -54,6 +54,7 @@ import org.bdgenomics.utils.io.LocalFileByteAccess
 import org.bdgenomics.utils.misc.{ HadoopUtil, Logging }
 import org.hammerlab.genomics.loci.parsing.{ LociRange, LociRanges, ParsedLoci }
 import org.hammerlab.genomics.loci.set.LociSet
+import org.hammerlab.genomics.reference.Locus
 import org.seqdoop.hadoop_bam._
 import org.seqdoop.hadoop_bam.util._
 
@@ -632,7 +633,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
       LociRanges(
         viewRegions.map(
           region =>
-            LociRange(region.referenceName, region.start, region.end)
+            LociRange(region.referenceName, Locus(region.start), Locus(region.end))
         )
       )
     )

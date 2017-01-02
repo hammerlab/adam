@@ -20,9 +20,9 @@ package org.bdgenomics.adam.models
 import htsjdk.samtools.{ SAMFileHeader, SAMSequenceDictionary, SAMSequenceRecord }
 import htsjdk.variant.vcf.VCFHeader
 import org.bdgenomics.formats.avro.{ Contig, NucleotideContigFragment }
-import org.hammerlab.genomics.reference.ContigLengths
+import org.hammerlab.genomics.reference.{ ContigLengths, ContigName, NumLoci }
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConversions.{ asScalaIterator, seqAsJavaList }
 import scala.collection._
 
 /**
@@ -50,7 +50,7 @@ object SequenceDictionary {
    * @return A SequenceDictionary with populated sequence records.
    */
   def apply(dict: SAMSequenceDictionary): SequenceDictionary = {
-    new SequenceDictionary(dict.getSequences.map(SequenceRecord.fromSAMSequenceRecord).toVector)
+    new SequenceDictionary(dict.getSequences.iterator().map(SequenceRecord.fromSAMSequenceRecord).toVector)
   }
 
   /**
@@ -100,7 +100,7 @@ object SequenceDictionary {
    */
   def fromSAMSequenceDictionary(samDict: SAMSequenceDictionary): SequenceDictionary = {
     val samDictRecords = samDict.getSequences
-    new SequenceDictionary(samDictRecords.map(SequenceRecord.fromSAMSequenceRecord).toVector)
+    new SequenceDictionary(samDictRecords.iterator().map(SequenceRecord.fromSAMSequenceRecord).toVector)
   }
 }
 
@@ -115,12 +115,17 @@ object SequenceDictionary {
 class SequenceDictionary(val records: Vector[SequenceRecord]) extends Serializable {
   def this() = this(Vector.empty[SequenceRecord])
 
-  private val byName: Map[String, SequenceRecord] = records.view.map(r => r.name -> r).toMap
+  @transient private lazy val byName: Map[ContigName, SequenceRecord] =
+    records.
+      view
+      .map(r => (r.name: ContigName) -> r)
+      .toMap
+
   assert(byName.size == records.length, "SequenceRecords with duplicate names aren't permitted")
 
   private val hasSequenceOrdering = records.forall(_.referenceIndex.isDefined)
 
-  def contigLengths: ContigLengths = byName.mapValues(_.length).toMap
+  def contigLengths: ContigLengths = byName.mapValues(r ⇒ NumLoci(r.length)).toMap
 
   /**
    * @param that Sequence dictionary to compare against.
@@ -147,7 +152,7 @@ class SequenceDictionary(val records: Vector[SequenceRecord]) extends Serializab
    * @param name The name of the contig to extract.
    * @return True if we have a sequence record for this contig.
    */
-  def containsRefName(name: String): Boolean = byName.containsKey(name)
+  def containsRefName(name: String): Boolean = byName.contains(name)
 
   /**
    * Adds a sequence record to this dictionary.
@@ -182,7 +187,7 @@ class SequenceDictionary(val records: Vector[SequenceRecord]) extends Serializab
    * @return Returns a SAM formatted sequence dictionary.
    */
   def toSAMSequenceDictionary: SAMSequenceDictionary = {
-    new SAMSequenceDictionary(records.map(_ toSAMSequenceRecord).toList)
+    new SAMSequenceDictionary(records.iterator.map(_.toSAMSequenceRecord).toList)
   }
 
   /**
@@ -226,7 +231,6 @@ class SequenceDictionary(val records: Vector[SequenceRecord]) extends Serializab
 
   private[adam] def toAvro: Seq[Contig] = {
     records.map(_.toADAMContig)
-      .toSeq
   }
 
   /**

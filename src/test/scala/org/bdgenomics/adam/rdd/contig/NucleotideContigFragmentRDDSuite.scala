@@ -23,10 +23,11 @@ import com.google.common.io.Files
 import org.bdgenomics.adam.models._
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro._
+import org.scalatest.Matchers
 
 import scala.collection.mutable.ListBuffer
 
-class NucleotideContigFragmentRDDSuite extends ADAMFunSuite {
+class NucleotideContigFragmentRDDSuite extends ADAMFunSuite with Matchers {
 
   sparkTest("generate sequence dict from fasta") {
     val contig0 = Contig.newBuilder
@@ -49,13 +50,24 @@ class NucleotideContigFragmentRDDSuite extends ADAMFunSuite {
 
     val rdd = NucleotideContigFragmentRDD(sc.parallelize(List(ctg0, ctg1)))
 
-    assert(rdd.sequences.containsRefName("chr0"))
-    val chr0 = rdd.sequences("chr0").get
-    assert(chr0.length === 1000L)
-    assert(chr0.url == Some("http://bigdatagenomics.github.io/chr0.fa"))
-    assert(rdd.sequences.containsRefName("chr1"))
-    val chr1 = rdd.sequences("chr1").get
-    assert(chr1.length === 900L)
+    rdd.sequences("chr0") should be(
+      Some(
+        SequenceRecord(
+          "chr0",
+          1000L,
+          url = "http://bigdatagenomics.github.io/chr0.fa"
+        )
+      )
+    )
+
+    rdd.sequences("chr1") should be(
+      Some(
+        SequenceRecord(
+          "chr1",
+          900L
+        )
+      )
+    )
   }
 
   sparkTest("recover reference string from a single contig fragment") {
