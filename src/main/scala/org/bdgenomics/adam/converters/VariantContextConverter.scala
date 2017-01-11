@@ -19,22 +19,17 @@ package org.bdgenomics.adam.converters
 
 import com.google.common.base.Splitter
 import com.google.common.collect.ImmutableList
-import htsjdk.variant.variantcontext.{
-  Allele,
-  GenotypesContext,
-  GenotypeLikelihoods,
-  VariantContext => HtsjdkVariantContext,
-  VariantContextBuilder
-}
+import htsjdk.variant.variantcontext.{ Allele, GenotypeLikelihoods, GenotypesContext, VariantContextBuilder, VariantContext ⇒ HtsjdkVariantContext }
 import htsjdk.variant.vcf.VCFConstants
 import java.util.Collections
+
 import org.bdgenomics.utils.misc.Logging
-import org.bdgenomics.adam.models.{
-  SequenceDictionary,
-  VariantContext => ADAMVariantContext
-}
+import org.bdgenomics.adam.models.{ SequenceDictionary, VariantContext ⇒ ADAMVariantContext }
 import org.bdgenomics.adam.util.PhredUtils
 import org.bdgenomics.formats.avro._
+import org.hammerlab.genomics.reference.ContigName
+import org.hammerlab.genomics.reference.ContigName.Normalizer
+
 import scala.collection.JavaConversions._
 import scala.collection.mutable.{ Buffer, HashMap }
 
@@ -162,7 +157,7 @@ private[adam] class VariantContextConverter(dict: Option[SequenceDictionary] = N
    *
    * @see refSeqToContig
    */
-  private lazy val contigToRefSeq: Map[String, String] = dict match {
+  private lazy val contigToRefSeq: Map[ContigName, String] = dict match {
     case Some(d) => d.records.filter(_.refseq.isDefined).map(r => r.name -> r.refseq.get).toMap
     case _       => Map.empty
   }
@@ -173,7 +168,7 @@ private[adam] class VariantContextConverter(dict: Option[SequenceDictionary] = N
    *
    * @see contigToRefSeq
    */
-  private lazy val refSeqToContig: Map[String, String] = dict match {
+  private lazy val refSeqToContig: Map[String, ContigName] = dict match {
     case Some(d) => d.records.filter(_.refseq.isDefined).map(r => r.refseq.get -> r.name).toMap
     case _       => Map.empty
   }
@@ -383,11 +378,13 @@ private[adam] class VariantContextConverter(dict: Option[SequenceDictionary] = N
    */
   private def createADAMVariant(vc: HtsjdkVariantContext, alt: Option[String]): Variant = {
     // VCF CHROM, POS, ID, REF, FORMAT, and ALT
-    val builder = Variant.newBuilder
-      .setContigName(createContig(vc))
-      .setStart(vc.getStart - 1 /* ADAM is 0-indexed */ )
-      .setEnd(vc.getEnd /* ADAM is 0-indexed, so the 1-indexed inclusive end becomes exclusive */ )
-      .setReferenceAllele(vc.getReference.getBaseString)
+    val builder =
+      Variant.newBuilder
+        .setContigName(createContig(vc))
+        .setStart(vc.getStart - 1 /* ADAM is 0-indexed */ )
+        .setEnd(vc.getEnd /* ADAM is 0-indexed, so the 1-indexed inclusive end becomes exclusive */ )
+        .setReferenceAllele(vc.getReference.getBaseString)
+
     alt.foreach(builder.setAlternateAllele(_))
     splitIds(vc).foreach(builder.setNames(_))
     builder.setFiltersApplied(vc.filtersWereApplied)
@@ -594,13 +591,17 @@ private[adam] class VariantContextConverter(dict: Option[SequenceDictionary] = N
    * @param vc
    * @return GATK VariantContext
    */
-  def convert(vc: ADAMVariantContext): HtsjdkVariantContext = {
+  def convert(vc: ADAMVariantContext)(implicit normalizer: Normalizer): HtsjdkVariantContext = {
     val variant: Variant = vc.variant.variant
-    val vcb = new VariantContextBuilder()
-      .chr(refSeqToContig.getOrElse(
-        variant.getContigName,
-        variant.getContigName
-      ))
+    val vcb =
+      new VariantContextBuilder()
+      .chr(
+        refSeqToContig.getOrElse(
+          variant.getContigName,
+          ContigName(variant.getContigName)
+        )
+        .name
+      )
       .start(variant.getStart + 1 /* Recall ADAM is 0-indexed */ )
       .stop(variant.getStart + variant.getReferenceAllele.length)
       .alleles(VariantContextConverter.convertAlleles(variant))

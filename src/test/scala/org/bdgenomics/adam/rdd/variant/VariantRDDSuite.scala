@@ -19,8 +19,11 @@ package org.bdgenomics.adam.rdd.variant
 
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.util.ADAMFunSuite
+import org.hammerlab.genomics.reference.test.ContigNameUtil
 
-class VariantRDDSuite extends ADAMFunSuite {
+class VariantRDDSuite
+  extends ADAMFunSuite
+    with ContigNameUtil {
 
   sparkTest("use broadcast join to pull down variants mapped to targets") {
     val variantsPath = testFile("small.vcf")

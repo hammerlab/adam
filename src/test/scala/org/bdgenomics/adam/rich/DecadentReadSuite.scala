@@ -24,8 +24,11 @@ import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.ReferencePosition
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
+import org.hammerlab.genomics.reference.test.ContigNameUtil
 
-class DecadentReadSuite extends ADAMFunSuite {
+class DecadentReadSuite
+  extends ADAMFunSuite
+    with ContigNameUtil {
 
   test("reference position of decadent read") {
     val contig = Contig.newBuilder
@@ -91,7 +94,7 @@ class DecadentReadSuite extends ADAMFunSuite {
 
   test("converting bad read should fail") {
     val readBad = AlignmentRecord.newBuilder()
-      .setContigName("1")
+      .setContigName("chr1")
       .setStart(248262648L)
       .setEnd(248262721L)
       .setMapq(23)
@@ -109,7 +112,7 @@ class DecadentReadSuite extends ADAMFunSuite {
 
   def badGoodReadRDD: RDD[AlignmentRecord] = {
     val readBad = AlignmentRecord.newBuilder()
-      .setContigName("1")
+      .setContigName("chr1")
       .setStart(248262648L)
       .setEnd(248262721L)
       .setMapq(23)
@@ -120,7 +123,7 @@ class DecadentReadSuite extends ADAMFunSuite {
       .setMismatchingPositions("3^C71")
       .build()
     val readGood = AlignmentRecord.newBuilder()
-      .setContigName("1")
+      .setContigName("chr1")
       .setStart(248262648L)
       .setEnd(248262721L)
       .setMapq(23)
@@ -138,7 +141,7 @@ class DecadentReadSuite extends ADAMFunSuite {
     val decadent = DecadentRead.cloy(rdd, ValidationStringency.LENIENT)
       .repartition(2)
       .collect()
-    assert(decadent.size === 2)
+    assert(decadent.length === 2)
     assert(decadent.count(_._1.isDefined) === 1)
     assert(decadent.count(_._1.isEmpty) === 1)
     assert(decadent.count(_._2.isDefined) === 1)

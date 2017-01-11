@@ -19,17 +19,15 @@ package org.bdgenomics.adam.rdd.feature
 
 import com.google.common.collect.ComparisonChain
 import java.util.Comparator
+
 import org.apache.hadoop.fs.{ FileSystem, Path }
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models._
-import org.bdgenomics.adam.rdd.{
-  AvroGenomicRDD,
-  FileMerger,
-  JavaSaveArgs,
-  SAMHeaderWriter
-}
+import org.bdgenomics.adam.rdd.{ AvroGenomicRDD, FileMerger, JavaSaveArgs, SAMHeaderWriter }
 import org.bdgenomics.formats.avro.{ Feature, Strand }
 import org.bdgenomics.utils.misc.Logging
+import org.hammerlab.genomics.reference.NumLoci
+
 import scala.collection.JavaConversions._
 
 private trait FeatureOrdering[T <: Feature] extends Ordering[T] {
@@ -78,9 +76,8 @@ object FeatureRDD {
    * @param elem The feature to extract a sequence record from.
    * @return Gets the SequenceRecord for this feature.
    */
-  private def getSequenceRecord(elem: Feature): SequenceRecord = {
-    SequenceRecord(elem.getContigName, 1L)
-  }
+  private def getSequenceRecord(elem: Feature): SequenceRecord =
+    SequenceRecord(elem.getContigName, NumLoci(1L))
 
   /**
    * Builds a FeatureRDD without SequenceDictionary information by running an
@@ -95,10 +92,14 @@ object FeatureRDD {
     rdd.cache()
 
     // aggregate to create the sequence dictionary
-    val sd = new SequenceDictionary(rdd.map(getSequenceRecord)
-      .distinct
-      .collect
-      .toVector)
+    val sd =
+      new SequenceDictionary(
+        rdd
+          .map(getSequenceRecord)
+          .distinct
+          .collect
+          .toVector
+      )
 
     FeatureRDD(rdd, sd)
   }

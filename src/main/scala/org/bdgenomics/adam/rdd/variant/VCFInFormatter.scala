@@ -17,18 +17,15 @@
  */
 package org.bdgenomics.adam.rdd.variant
 
-import htsjdk.variant.variantcontext.writer.{
-  Options,
-  VariantContextWriterBuilder
-}
+import htsjdk.variant.variantcontext.writer.{ Options, VariantContextWriterBuilder }
 import htsjdk.variant.vcf.{ VCFHeader, VCFHeaderLine }
 import java.io.OutputStream
+
 import org.bdgenomics.adam.converters.VariantContextConverter
-import org.bdgenomics.adam.models.{
-  SequenceDictionary,
-  VariantContext
-}
+import org.bdgenomics.adam.models.{ SequenceDictionary, VariantContext }
 import org.bdgenomics.adam.rdd.{ InFormatter, InFormatterCompanion }
+import org.hammerlab.genomics.reference.ContigName.Normalizer
+
 import scala.collection.JavaConversions._
 
 /**
@@ -51,7 +48,8 @@ object VCFInFormatter extends InFormatterCompanion[VariantContext, VariantContex
 private[variant] case class VCFInFormatter private (
     sequences: SequenceDictionary,
     samples: Seq[String],
-    headerLines: Seq[VCFHeaderLine]) extends InFormatter[VariantContext, VariantContextRDD, VCFInFormatter] {
+    headerLines: Seq[VCFHeaderLine])(implicit normalizer: Normalizer)
+  extends InFormatter[VariantContext, VariantContextRDD, VCFInFormatter] {
 
   protected val companion = VCFInFormatter
 
@@ -78,10 +76,10 @@ private[variant] case class VCFInFormatter private (
     writer.writeHeader(header)
 
     // write the records
-    iter.foreach(r => {
+    iter.foreach { r =>
       val vc = converter.convert(r)
       writer.add(vc)
-    })
+    }
 
     // close the writer, else stream may be defective
     writer.close()

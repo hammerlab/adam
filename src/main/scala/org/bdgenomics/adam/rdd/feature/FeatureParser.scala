@@ -21,6 +21,9 @@ import htsjdk.samtools.ValidationStringency
 import org.bdgenomics.adam.models.SequenceRecord
 import org.bdgenomics.formats.avro.Feature
 import org.bdgenomics.utils.misc.Logging
+import org.hammerlab.genomics.reference.{ ContigName, NumLoci }
+import org.hammerlab.genomics.reference.ContigName.Normalizer
+
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 
@@ -67,10 +70,11 @@ private[rdd] object GTFParser {
    * @return the GTF/GFF2 attributes column split by <code>;</code> and whitespace
    */
   def parseAttributes(attributes: String): Seq[(String, String)] =
-    attributes.split(";").flatMap {
-      case token: String =>
+    attributes
+      .split(";")
+      .flatMap(token =>
         PATTERN.findFirstMatchIn(token).map(m => (m.group(1), m.group(2)))
-    }
+      )
 }
 
 /**
@@ -121,7 +125,7 @@ private[rdd] class GTFParser extends FeatureParser {
     if (frame != ".") f.setFrame(frame.toInt)
 
     // set strand if specified
-    Features.toStrand(strand).foreach(f.setStrand(_))
+    Features.toStrand(strand).foreach(f.setStrand)
 
     // assign values for various feature fields from attributes
     Features.assignAttributes(GTFParser.parseAttributes(attributes), f)
@@ -194,7 +198,7 @@ private[rdd] class GFF3Parser extends FeatureParser {
     if (phase != ".") f.setPhase(phase.toInt)
 
     // set strand if specified
-    Features.toStrand(strand).foreach(f.setStrand(_))
+    Features.toStrand(strand).foreach(f.setStrand)
 
     // assign values for various feature fields from attributes
     Features.assignAttributes(GFF3Parser.parseAttributes(attributes), f)
@@ -226,7 +230,7 @@ private[rdd] class IntervalListParser extends FeatureParser {
   }
 
   def parseHeader(line: String,
-                  stringency: ValidationStringency): Option[SequenceRecord] = {
+                  stringency: ValidationStringency)(implicit normalizer: Normalizer): Option[SequenceRecord] = {
 
     val fields = line.split("[ \t]+")
 
@@ -234,7 +238,7 @@ private[rdd] class IntervalListParser extends FeatureParser {
       val (name, length, url, md5) = {
         val attrs = fields.drop(1).flatMap(field => field.split(":", 2) match {
           case Array(key, value) => Some((key -> value))
-          case x => {
+          case x =>
             if (stringency == ValidationStringency.STRICT) {
               throw new Exception(s"Expected fields of the form 'key:value' in field $field but got: $x. Line:\n$line")
             } else {
@@ -243,11 +247,10 @@ private[rdd] class IntervalListParser extends FeatureParser {
               }
               None
             }
-          }
         }).toMap
 
         // Require that all @SQ lines have name, length, url, md5.
-        (attrs("SN"), attrs("LN").toLong, attrs("UR"), attrs("M5"))
+        (ContigName(attrs("SN")), NumLoci(attrs("LN").toLong), attrs("UR"), attrs("M5"))
       }
       Some(SequenceRecord(name, length, md5, url))
     }
@@ -278,7 +281,7 @@ private[rdd] class IntervalListParser extends FeatureParser {
       .setName(featureName)
 
     // set strand if specified
-    Features.toStrand(strand).foreach(f.setStrand(_))
+    Features.toStrand(strand).foreach(f.setStrand)
 
     Some(f.build())
   }
@@ -322,7 +325,7 @@ private[rdd] class BEDParser extends FeatureParser {
 
     if (hasColumn(3)) f.setName(fields(3))
     if (hasColumn(4)) f.setScore(fields(4).toDouble)
-    if (hasColumn(5)) Features.toStrand(fields(5)).foreach(f.setStrand(_))
+    if (hasColumn(5)) Features.toStrand(fields(5)).foreach(f.setStrand)
 
     val attributes = new ArrayBuffer[(String, String)]()
     if (hasColumn(6)) attributes += ("thickStart" -> fields(6))
@@ -377,7 +380,7 @@ private[rdd] class NarrowPeakParser extends FeatureParser {
 
     if (hasColumn(3)) f.setName(fields(3))
     if (hasColumn(4)) f.setScore(fields(4).toDouble)
-    if (fields.length > 5) Features.toStrand(fields(5)).foreach(f.setStrand(_))
+    if (fields.length > 5) Features.toStrand(fields(5)).foreach(f.setStrand)
 
     val attributes = new ArrayBuffer[(String, String)]()
     if (hasColumn(6)) attributes += ("signalValue" -> fields(6))

@@ -19,6 +19,7 @@ package org.bdgenomics.adam.models
 
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.formats.avro.Feature
+import org.hammerlab.genomics.reference.ContigName
 
 /**
  * Singleton object for converting from Avro Feature to Coverage.
@@ -73,7 +74,7 @@ private[adam] object Coverage {
  *   observed.
  * @param count The average coverage across this region.
  */
-case class Coverage(contigName: String, start: Long, end: Long, count: Double) {
+case class Coverage(contigName: ContigName, start: Long, end: Long, count: Double) {
 
   /**
    * Converts Coverage to Feature, setting Coverage count in the score attribute.
@@ -82,7 +83,7 @@ case class Coverage(contigName: String, start: Long, end: Long, count: Double) {
    */
   def toFeature: Feature = {
     Feature.newBuilder()
-      .setContigName(contigName)
+      .setContigName(contigName.name)
       .setStart(start)
       .setEnd(end)
       .setScore(count)

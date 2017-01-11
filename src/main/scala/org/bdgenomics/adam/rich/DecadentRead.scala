@@ -56,7 +56,7 @@ private[adam] object DecadentRead extends Logging with Serializable {
     strictness: ValidationStringency = ValidationStringency.STRICT): RDD[(Option[DecadentRead], Option[AlignmentRecord])] = {
     rdd.map(r => {
       try {
-        val dr = DecadentRead.apply(r)
+        val dr = DecadentRead(r)
         (Some(dr), None)
       } catch {
         case e: Throwable => {

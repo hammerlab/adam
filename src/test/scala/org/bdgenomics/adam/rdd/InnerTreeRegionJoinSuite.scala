@@ -21,8 +21,11 @@ import org.apache.spark.SparkContext._
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
+import org.hammerlab.genomics.reference.test.ContigNameUtil
 
-class InnerTreeRegionJoinSuite extends ADAMFunSuite {
+class InnerTreeRegionJoinSuite
+  extends ADAMFunSuite
+    with ContigNameUtil {
 
   sparkTest("Ensure same reference regions get passed together") {
     val contig = Contig.newBuilder

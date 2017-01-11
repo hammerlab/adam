@@ -495,13 +495,15 @@ sealed trait AlignmentRecordRDD extends AvroReadGroupGenomicRDD[AlignmentRecord,
     // we sort the unmapped reads by read name. We prefix with tildes ("~";
     // ASCII 126) to ensure that the read name is lexicographically "after" the
     // contig names.
-    replaceRddAndSequences(rdd.sortBy(r => {
-      if (r.getReadMapped) {
-        ReferencePosition(r)
-      } else {
-        ReferencePosition(s"~~~${r.getReadName}", 0)
-      }
-    }), sequences.stripIndices.sorted)
+    replaceRddAndSequences(
+      rdd.sortBy(r =>
+        if (r.getReadMapped)
+          ReferencePosition(r)
+        else
+          ReferencePosition(s"~~~${r.getReadName}", 0)
+      ),
+      sequences.stripIndices.sorted
+    )
   }
 
   /**

@@ -17,16 +17,12 @@
  */
 package org.bdgenomics.adam.models
 
-import com.esotericsoftware.kryo.{ Kryo, Serializer }
 import com.esotericsoftware.kryo.io.{ Input, Output }
+import com.esotericsoftware.kryo.{ Kryo, Serializer }
+import org.bdgenomics.adam.models.ReferencePosition.positionOrdering
 import org.bdgenomics.formats.avro._
-
-/**
- * A sort order that orders all positions lexicographically by contig and
- * numerically within a single contig.
- */
-object PositionOrdering extends ReferenceOrdering[ReferencePosition] {
-}
+import org.hammerlab.genomics.reference.ContigName
+import org.hammerlab.genomics.reference.ContigName.Normalizer
 
 /**
  * A sort order that orders all given positions lexicographically by contig and
@@ -36,7 +32,7 @@ object PositionOrdering extends ReferenceOrdering[ReferencePosition] {
  * @see PositionOrdering
  */
 object OptionalPositionOrdering extends OptionalReferenceOrdering[ReferencePosition] {
-  val baseOrdering = PositionOrdering
+  val baseOrdering = positionOrdering
 }
 
 /**
@@ -44,7 +40,11 @@ object OptionalPositionOrdering extends OptionalReferenceOrdering[ReferencePosit
  */
 object ReferencePosition extends Serializable {
 
-  implicit def orderingForPositions = PositionOrdering
+  /**
+   * A sort order that orders all positions lexicographically by contig and
+   * numerically within a single contig.
+   */
+  implicit val positionOrdering = ReferenceOrdering.lexicographic[ReferencePosition]
   implicit def orderingForOptionalPositions = OptionalPositionOrdering
 
   /**
@@ -107,7 +107,7 @@ object ReferencePosition extends Serializable {
    * @param referenceName The name of the reference contig this locus exists on.
    * @param pos The position of this locus.
    */
-  def apply(referenceName: String, pos: Long): ReferencePosition = {
+  def apply(referenceName: ContigName, pos: Long): ReferencePosition = {
     new ReferencePosition(referenceName, pos)
   }
 
@@ -118,7 +118,7 @@ object ReferencePosition extends Serializable {
    * @param pos The position of this locus.
    * @param strand The strand that this locus is on.
    */
-  def apply(referenceName: String, pos: Long, strand: Strand): ReferencePosition = {
+  def apply(referenceName: ContigName, pos: Long, strand: Strand): ReferencePosition = {
     new ReferencePosition(referenceName, pos, strand)
   }
 }
@@ -131,16 +131,16 @@ object ReferencePosition extends Serializable {
  * @param strand The strand that this locus is on.
  */
 class ReferencePosition(
-  override val referenceName: String,
+  override val referenceName: ContigName,
   val pos: Long,
   override val strand: Strand = Strand.INDEPENDENT)
     extends ReferenceRegion(referenceName, pos, pos + 1, strand)
 
-class ReferencePositionSerializer extends Serializer[ReferencePosition] {
+class ReferencePositionSerializer()(implicit normalizer: Normalizer) extends Serializer[ReferencePosition] {
   private val enumValues = Strand.values()
 
   def write(kryo: Kryo, output: Output, obj: ReferencePosition) = {
-    output.writeString(obj.referenceName)
+    output.writeString(obj.referenceName.name)
     output.writeLong(obj.pos)
     output.writeInt(obj.strand.ordinal)
   }

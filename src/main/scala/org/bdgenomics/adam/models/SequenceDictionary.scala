@@ -20,6 +20,7 @@ package org.bdgenomics.adam.models
 import htsjdk.samtools.{ SAMFileHeader, SAMSequenceDictionary, SAMSequenceRecord }
 import htsjdk.variant.vcf.VCFHeader
 import org.bdgenomics.formats.avro.{ Contig, NucleotideContigFragment }
+import org.hammerlab.genomics.reference.ContigName.Normalizer
 import org.hammerlab.genomics.reference.{ ContigLengths, ContigName, NumLoci }
 
 import scala.collection.JavaConversions.{ asScalaIterator, seqAsJavaList }
@@ -29,6 +30,17 @@ import scala.collection._
  * Singleton object for creating SequenceDictionaries.
  */
 object SequenceDictionary {
+
+  val orderByName = Ordering.by[SequenceRecord, String](_.name.name)
+
+  val orderByRefIdx =
+    new Ordering[SequenceRecord] {
+      def compare(a: SequenceRecord, b: SequenceRecord): Int =
+        (a.referenceIndex, b.referenceIndex) match {
+          case (Some(aRefIdx), Some(bRefIdx)) ⇒ aRefIdx.compare(bRefIdx)
+          case _ ⇒ throw new Exception(s"Missing reference index when comparing SequenceRecords: $a, $b")
+        }
+    }
 
   /**
    * @return Creates a new, empty SequenceDictionary.
@@ -49,7 +61,7 @@ object SequenceDictionary {
    * @param dict Htsjdk sequence dictionary to build from.
    * @return A SequenceDictionary with populated sequence records.
    */
-  def apply(dict: SAMSequenceDictionary): SequenceDictionary = {
+  def apply(dict: SAMSequenceDictionary)(implicit normalizer: Normalizer): SequenceDictionary = {
     new SequenceDictionary(dict.getSequences.iterator().map(SequenceRecord.fromSAMSequenceRecord).toVector)
   }
 
@@ -86,7 +98,7 @@ object SequenceDictionary {
     val samDict = header.getSequenceDictionary
 
     // vcf files can have null sequence dictionaries
-    Option(samDict).fold(SequenceDictionary.empty)(ssd => fromSAMSequenceDictionary(ssd))
+    Option(samDict).fold(SequenceDictionary.empty)(apply)
   }
 
   /**
@@ -144,7 +156,7 @@ class SequenceDictionary(val records: Vector[SequenceRecord]) extends Serializab
    * @param name The name of the contig to extract.
    * @return If available, the sequence record for this contig.
    */
-  def apply(name: String): Option[SequenceRecord] = byName.get(name)
+  def apply(name: ContigName): Option[SequenceRecord] = byName.get(name)
 
   /**
    * Checks to see if we have a contig with a given name.
@@ -217,11 +229,12 @@ class SequenceDictionary(val records: Vector[SequenceRecord]) extends Serializab
    * @see stripIndices
    */
   def sorted: SequenceDictionary = {
-    implicit val ordering: Ordering[SequenceRecord] =
+    implicit val ordering =
       if (hasSequenceOrdering)
-        SequenceOrderingByRefIdx
+        SequenceDictionary.orderByRefIdx
       else
-        SequenceOrderingByName
+        SequenceDictionary.orderByName
+
     new SequenceDictionary(records.sorted)
   }
 
@@ -237,29 +250,6 @@ class SequenceDictionary(val records: Vector[SequenceRecord]) extends Serializab
    * @return True if this dictionary contains no sequence records.
    */
   def isEmpty: Boolean = records.isEmpty
-}
-
-private object SequenceOrderingByName extends Ordering[SequenceRecord] {
-  def compare(
-    a: SequenceRecord,
-    b: SequenceRecord): Int = {
-    a.name.compareTo(b.name)
-  }
-}
-
-private object SequenceOrderingByRefIdx extends Ordering[SequenceRecord] {
-  def compare(
-    a: SequenceRecord,
-    b: SequenceRecord): Int = {
-    (for {
-      aRefIdx <- a.referenceIndex
-      bRefIdx <- b.referenceIndex
-    } yield {
-      aRefIdx.compareTo(bRefIdx)
-    }).getOrElse(
-      throw new Exception(s"Missing reference index when comparing SequenceRecords: $a, $b")
-    )
-  }
 }
 
 /**
@@ -278,8 +268,8 @@ private object SequenceOrderingByRefIdx extends Ordering[SequenceRecord] {
  *   contigs.
  */
 case class SequenceRecord(
-    name: String,
-    length: Long,
+    name: ContigName,
+    length: NumLoci,
     url: Option[String],
     md5: Option[String],
     refseq: Option[String],
@@ -288,8 +278,8 @@ case class SequenceRecord(
     species: Option[String],
     referenceIndex: Option[Int]) extends Serializable {
 
-  assert(name != null && !name.isEmpty, "SequenceRecord.name is null or empty")
-  assert(length > 0, "SequenceRecord.length <= 0")
+  assert(name.name.nonEmpty, "SequenceRecord.name is empty")
+  assert(length.num > 0, "SequenceRecord.length <= 0")
 
   /**
    * @return Returns a new sequence record with the index unset.
@@ -316,7 +306,7 @@ case class SequenceRecord(
    * @return A SAM formatted sequence record.
    */
   def toSAMSequenceRecord: SAMSequenceRecord = {
-    val rec = new SAMSequenceRecord(name, length.toInt)
+    val rec = new SAMSequenceRecord(name.name, length.toInt)
 
     // set md5 if available
     md5.foreach(s => rec.setAttribute(SAMSequenceRecord.MD5_TAG, s.toUpperCase))
@@ -358,9 +348,11 @@ case class SequenceRecord(
    * @return Builds an Avro contig representation from this record.
    */
   def toADAMContig: Contig = {
-    val builder = Contig.newBuilder()
-      .setContigName(name)
-      .setContigLength(length)
+    val builder =
+      Contig.newBuilder()
+        .setContigName(name.name)
+        .setContigLength(length.num)
+
     md5.foreach(builder.setContigMD5)
     url.foreach(builder.setReferenceURL)
     assembly.foreach(builder.setAssembly)
@@ -395,8 +387,8 @@ object SequenceRecord {
    *   wrapped in Options to check for null values.
    */
   def apply(
-    name: String,
-    length: Long,
+    name: ContigName,
+    length: NumLoci,
     md5: String = null,
     url: String = null,
     refseq: String = null,
@@ -423,10 +415,10 @@ object SequenceRecord {
    * @param seqRecord SAM Sequence record input.
    * @return A new ADAM sequence record.
    */
-  def fromSAMSequenceRecord(record: SAMSequenceRecord): SequenceRecord = {
+  def fromSAMSequenceRecord(record: SAMSequenceRecord)(implicit normalizer: Normalizer): SequenceRecord = {
     SequenceRecord(
       record.getSequenceName,
-      record.getSequenceLength,
+      NumLoci(record.getSequenceLength),
       md5 = record.getAttribute(SAMSequenceRecord.MD5_TAG),
       url = record.getAttribute(SAMSequenceRecord.URI_TAG),
       refseq = record.getAttribute(REFSEQ_TAG),
@@ -443,10 +435,10 @@ object SequenceRecord {
    * @param contig Contig record to build from.
    * @return This Contig record as a SequenceRecord.
    */
-  def fromADAMContig(contig: Contig): SequenceRecord = {
+  def fromADAMContig(contig: Contig)(implicit normalizer: Normalizer): SequenceRecord = {
     SequenceRecord(
       contig.getContigName,
-      Option(contig.getContigLength).map(l => l: Long).getOrElse(Long.MaxValue),
+      NumLoci(contig.getContigLength),
       md5 = contig.getContigMD5,
       url = contig.getReferenceURL,
       assembly = contig.getAssembly,

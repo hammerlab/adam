@@ -20,27 +20,33 @@ package org.bdgenomics.adam.rdd.variant
 import com.google.common.collect.ImmutableList
 import com.google.common.io.Files
 import java.io.File
-import org.bdgenomics.adam.models.{
-  SequenceDictionary,
-  SequenceRecord,
-  VariantContext
-}
+
+import org.bdgenomics.adam.models.{ SequenceDictionary, SequenceRecord, VariantContext }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.TestSaveArgs
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro._
+import org.hammerlab.genomics.reference.test.{ ContigNameUtil, LocusUtil }
+import org.scalactic.ConversionCheckedTripleEquals
+import org.scalatest.Matchers
+
 import scala.collection.JavaConversions._
 
-class VariantContextRDDSuite extends ADAMFunSuite {
+class VariantContextRDDSuite
+  extends ADAMFunSuite
+    with Matchers
+    with ConversionCheckedTripleEquals
+    with ContigNameUtil
+    with LocusUtil {
 
   val tempDir = Files.createTempDir()
 
   def variants: VariantContextRDD = {
-    val contig = Contig.newBuilder.setContigName("chr11")
+    val contig = Contig.newBuilder.setContigName("11")
       .setContigLength(249250621L)
       .build
     val v0 = Variant.newBuilder
-      .setContigName("chr11")
+      .setContigName("11")
       .setStart(17409572)
       .setReferenceAllele("T")
       .setAlternateAllele("C")
@@ -63,27 +69,27 @@ class VariantContextRDDSuite extends ADAMFunSuite {
 
   sparkTest("can write, then read in .vcf file") {
     val path = new File(tempDir, "test.vcf")
-    variants.saveAsVcf(TestSaveArgs(path.getAbsolutePath), false)
+    variants.saveAsVcf(TestSaveArgs(path.getAbsolutePath), sortOnSave = false)
     assert(path.exists)
 
     val vcRdd = sc.loadVcf("%s/test.vcf/part-r-00000".format(tempDir))
-    assert(vcRdd.rdd.count === 1)
+    vcRdd.rdd.count should === (1)
 
     val variant = vcRdd.rdd.first.variant.variant
-    assert(variant.getContigName === "chr11")
-    assert(variant.getStart === 17409572)
-    assert(variant.getReferenceAllele === "T")
-    assert(variant.getAlternateAllele === "C")
-    assert(variant.getNames.length === 2)
-    assert(variant.getNames.get(0) === "rs3131972")
-    assert(variant.getNames.get(1) === "rs201888535")
-    assert(variant.getFiltersApplied === true)
-    assert(variant.getFiltersPassed === true)
+    variant.getContigName should === ("11")
+    variant.getStart should be(17409572)
+    variant.getReferenceAllele should === ("T")
+    variant.getAlternateAllele should === ("C")
+    variant.getNames.length should === (2)
+    variant.getNames.get(0) should === ("rs3131972")
+    variant.getNames.get(1) should === ("rs201888535")
+    variant.getFiltersApplied should === (true)
+    variant.getFiltersPassed should === (true)
     assert(variant.getFiltersFailed.isEmpty)
-    assert(variant.getSomatic === false)
+    variant.getSomatic should === (false)
 
-    assert(vcRdd.sequences.records.size === 1)
-    assert(vcRdd.sequences.records(0).name === "chr11")
+    vcRdd.sequences.records.size should === (1)
+    vcRdd.sequences.records(0).name should === ("11")
   }
 
   sparkTest("can write as a single file, then read in .vcf file") {
@@ -91,9 +97,9 @@ class VariantContextRDDSuite extends ADAMFunSuite {
     variants.saveAsVcf(path.getAbsolutePath, asSingleFile = true)
     assert(path.exists)
     val vcRdd = sc.loadVcf("%s/test_single.vcf".format(tempDir))
-    assert(vcRdd.rdd.count === 1)
-    assert(vcRdd.sequences.records.size === 1)
-    assert(vcRdd.sequences.records(0).name === "chr11")
+    vcRdd.rdd.count should === (1)
+    vcRdd.sequences.records.size should === (1)
+    vcRdd.sequences.records(0).name should === ("11")
   }
 
   sparkTest("joins SNV variant annotation") {
@@ -132,8 +138,8 @@ class VariantContextRDDSuite extends ADAMFunSuite {
     val pipedRdd: VariantContextRDD = rdd.pipe[VariantContext, VariantContextRDD, VCFInFormatter]("tee /dev/null")
       .transform(_.cache())
     val newRecords = pipedRdd.rdd.count
-    assert(records === newRecords)
-    assert(pipedRdd.rdd.flatMap(_.genotypes).count === 18)
+    records should === (newRecords)
+    pipedRdd.rdd.flatMap(_.genotypes).count should === (18)
   }
 
   sparkTest("save a file sorted by contig index") {

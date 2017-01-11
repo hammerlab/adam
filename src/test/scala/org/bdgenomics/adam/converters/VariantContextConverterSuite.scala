@@ -19,23 +19,21 @@ package org.bdgenomics.adam.converters
 
 import com.google.common.collect.ImmutableList
 import htsjdk.variant.utils.SAMSequenceDictionaryExtractor
-import htsjdk.variant.variantcontext.{
-  Allele,
-  GenotypeBuilder,
-  GenotypeType,
-  VariantContextBuilder
-}
+import htsjdk.variant.variantcontext.{ Allele, GenotypeBuilder, GenotypeType, VariantContextBuilder }
 import java.io.File
-import org.bdgenomics.adam.models.{
-  SequenceDictionary,
-  VariantContext => ADAMVariantContext
-}
+
+import org.bdgenomics.adam.models.{ SequenceDictionary, VariantContext ⇒ ADAMVariantContext }
 import org.bdgenomics.adam.util.{ ADAMFunSuite, PhredUtils }
 import org.bdgenomics.formats.avro._
+import org.hammerlab.genomics.reference.test.ContigNameUtil
+
 import scala.collection.JavaConversions._
 
-class VariantContextConverterSuite extends ADAMFunSuite {
-  val dictionary = {
+class VariantContextConverterSuite
+  extends ADAMFunSuite
+    with ContigNameUtil {
+
+  lazy val dictionary = {
     val path = testFile("dict_with_accession.dict")
     SequenceDictionary(SAMSequenceDictionaryExtractor.extractDictionary(new File(path)))
   }

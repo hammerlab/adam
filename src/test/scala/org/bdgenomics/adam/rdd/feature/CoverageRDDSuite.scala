@@ -18,19 +18,18 @@
 package org.bdgenomics.adam.rdd.feature
 
 import org.apache.parquet.filter2.dsl.Dsl._
-import org.bdgenomics.adam.models.{
-  ReferenceRegion,
-  Coverage,
-  SequenceDictionary,
-  SequenceRecord
-}
+import org.bdgenomics.adam.models.{ Coverage, ReferenceRegion, SequenceDictionary, SequenceRecord }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.Feature
+import org.hammerlab.genomics.reference.test.{ ContigNameUtil, LocusUtil }
 
-class CoverageRDDSuite extends ADAMFunSuite {
+class CoverageRDDSuite
+  extends ADAMFunSuite
+    with ContigNameUtil
+    with LocusUtil {
 
-  val sd = new SequenceDictionary(Vector(SequenceRecord("chr1", 2000L)))
+  val sd = new SequenceDictionary(Vector(SequenceRecord("chr1", 2000)))
 
   def generateCoverage(length: Int): Seq[Coverage] = {
     // generate adjacent regions with coverage
@@ -72,7 +71,7 @@ class CoverageRDDSuite extends ADAMFunSuite {
     coverageRDD.save(outputFile, false)
 
     val region = ReferenceRegion("chr1", 1, 9)
-    val predicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end) && (BinaryColumn("contigName") === region.referenceName))
+    val predicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end) && (BinaryColumn("contigName") === region.referenceName.name))
     val coverage = sc.loadParquetCoverage(outputFile, Some(predicate))
     assert(coverage.rdd.count == 1)
   }

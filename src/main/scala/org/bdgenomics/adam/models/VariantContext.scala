@@ -149,8 +149,6 @@ object VariantContext {
  * @param variant The variant allele that is contained in this VariantContext.
  * @param genotypes An iterable collection of Genotypes where this allele was
  *   called. Equivalent to the per-sample FORMAT fields in a VCF.
- * @param databases An optional record annotating this variant. Equivalent to
- *   the per-allele split of the INFO field in a VCF.
  */
 class VariantContext(
     val position: ReferencePosition,

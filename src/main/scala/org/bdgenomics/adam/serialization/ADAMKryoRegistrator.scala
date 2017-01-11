@@ -24,6 +24,7 @@ import org.apache.avro.io.{ BinaryDecoder, BinaryEncoder, DecoderFactory, Encode
 import org.apache.avro.specific.{ SpecificDatumReader, SpecificDatumWriter, SpecificRecord }
 import org.apache.spark.serializer.KryoRegistrator
 import org.hammerlab.genomics.loci.set.Registrar
+import org.hammerlab.genomics.reference
 
 import scala.reflect.ClassTag
 
@@ -345,5 +346,6 @@ class ADAMKryoRegistrator extends KryoRegistrator {
     kryo.register(None.getClass)
 
     new Registrar().registerClasses(kryo)
+    new reference.Registrar().registerClasses(kryo)
   }
 }

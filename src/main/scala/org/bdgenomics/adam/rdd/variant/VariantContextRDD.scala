@@ -19,29 +19,20 @@ package org.bdgenomics.adam.rdd.variant
 
 import htsjdk.variant.vcf.{ VCFHeader, VCFHeaderLine }
 import java.io.OutputStream
+
 import org.apache.hadoop.io.LongWritable
 import org.apache.hadoop.fs.Path
 import org.apache.spark.rdd.RDD
-import org.bdgenomics.adam.converters.{
-  SupportedHeaderLines,
-  VariantContextConverter
-}
-import org.bdgenomics.adam.models.{
-  ReferencePosition,
-  ReferenceRegion,
-  SequenceDictionary,
-  VariantContext
-}
-import org.bdgenomics.adam.rdd.{
-  FileMerger,
-  MultisampleGenomicRDD,
-  VCFHeaderUtils
-}
+import org.bdgenomics.adam.converters.{ SupportedHeaderLines, VariantContextConverter }
+import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion, SequenceDictionary, VariantContext }
+import org.bdgenomics.adam.rdd.{ FileMerger, MultisampleGenomicRDD, VCFHeaderUtils }
 import org.bdgenomics.adam.rich.RichVariant
 import org.bdgenomics.formats.avro.Sample
 import org.bdgenomics.utils.misc.Logging
 import org.bdgenomics.utils.cli.SaveArgs
+import org.hammerlab.genomics.reference.ContigName.Normalizer
 import org.seqdoop.hadoop_bam._
+
 import scala.collection.JavaConversions._
 
 /**
@@ -124,7 +115,7 @@ case class VariantContextRDD(rdd: RDD[VariantContext],
    *   valid VCF header. Default is false.
    */
   def saveAsVcf(filePath: String,
-                asSingleFile: Boolean = false) {
+                asSingleFile: Boolean = false)(implicit normalizer: Normalizer) {
     val vcfFormat = VCFFormat.inferFromFilePath(filePath)
     assert(vcfFormat == VCFFormat.VCF, "BCF not yet supported") // TODO: Add BCF support
 

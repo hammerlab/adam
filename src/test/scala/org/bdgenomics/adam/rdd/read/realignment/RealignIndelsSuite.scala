@@ -25,8 +25,15 @@ import org.bdgenomics.adam.rdd.read.AlignmentRecordRDD
 import org.bdgenomics.adam.rich.RichAlignmentRecord
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
+import org.hammerlab.genomics.reference.test.ContigNameUtil
+import org.scalactic.ConversionCheckedTripleEquals
+import org.scalatest.Matchers
 
-class RealignIndelsSuite extends ADAMFunSuite {
+class RealignIndelsSuite
+  extends ADAMFunSuite
+    with Matchers
+    with ConversionCheckedTripleEquals
+    with ContigNameUtil {
 
   def artificialReadsRdd: AlignmentRecordRDD = {
     val path = testFile("artificial.sam")
@@ -59,7 +66,7 @@ class RealignIndelsSuite extends ADAMFunSuite {
       (t, r.map(r => r.record))
     }).collect()
 
-    assert(readsMappedToTarget.size === 2)
+    assert(readsMappedToTarget.length === 2)
 
     readsMappedToTarget.forall {
       case (target: Option[IndelRealignmentTarget], reads: Seq[AlignmentRecord]) => reads.forall {
@@ -90,7 +97,7 @@ class RealignIndelsSuite extends ADAMFunSuite {
       }
     })
     consensus = consensus.distinct
-    assert(consensus.length > 0)
+    assert(consensus.nonEmpty)
     // Note: it seems that consensus ranges are non-inclusive
     assert(consensus(0).index.start === 34)
     assert(consensus(0).index.end === 45)
@@ -114,13 +121,14 @@ class RealignIndelsSuite extends ADAMFunSuite {
     val rr = artificialReads.map(RichAlignmentRecord(_))
     val readsMappedToTarget: Array[(IndelRealignmentTarget, Iterable[AlignmentRecord])] = RealignIndels.mapTargets(rr, targets)
       .filter(_._1.isDefined)
-      .map(kv => {
-        val (t, r) = kv
+      .map {
+        case (t, r) ⇒
 
-        (t.get, r.map(r => r.record))
-      }).collect()
+          (t.get, r.map(r => r.record))
+      }
+      .collect()
 
-    val readReference = readsMappedToTarget.map {
+    readsMappedToTarget.foreach {
       case (target, reads) =>
         if (!target.isEmpty) {
           val referenceFromReads: (String, Long, Long) = RealignIndels.getReferenceFromReads(reads.map(r => new RichAlignmentRecord(r)).toSeq)
@@ -129,14 +137,13 @@ class RealignIndelsSuite extends ADAMFunSuite {
         }
       case _ => throw new AssertionError("Mapping should contain target and reads")
     }
-    assert(readReference != null)
   }
 
   sparkTest("checking realigned reads for artificial input") {
     val artificialRealignedReads_collected = artificialRealignedReads.collect()
     val gatkArtificialRealignedReads_collected = gatkArtificialRealignedReads.collect()
 
-    assert(artificialRealignedReads_collected.size === gatkArtificialRealignedReads_collected.size)
+    assert(artificialRealignedReads_collected.length === gatkArtificialRealignedReads_collected.length)
 
     val artificialRead4 = artificialRealignedReads_collected.filter(_.getReadName == "read4")
     val gatkRead4 = gatkArtificialRealignedReads_collected.filter(_.getReadName == "read4")
@@ -199,12 +206,16 @@ class RealignIndelsSuite extends ADAMFunSuite {
       .setReadMapped(true)
       .setMismatchingPositions("3")
       .build()).map(RichAlignmentRecord(_))
-      .toIterable
+
     val ri = new RealignIndels()
 
     // this should be a NOP
-    assert(ri.realignTargetGroup(None.asInstanceOf[Option[IndelRealignmentTarget]],
-      reads).size === 2)
+    assert(
+      ri.realignTargetGroup(
+        None,
+        reads
+      ).size === 2
+    )
   }
 
   sparkTest("we shouldn't try to realign reads with no indel evidence") {
@@ -261,8 +272,8 @@ class RealignIndelsSuite extends ADAMFunSuite {
 
       Option(op).filter(_ >= 0).foreach(oPos => {
         val s = artificialReads.collect().filter(x => (x.getReadName() == readName))
-        assert(s.filter(x => (x.getStart() == oPos)).length > 0)
-        assert(s.filter(x => (x.getCigar() == oc)).length > 0)
+        assert(s.exists(x => (x.getStart() == oPos)))
+        assert(s.exists(x => (x.getCigar() == oc)))
       })
     })
   }

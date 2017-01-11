@@ -80,7 +80,7 @@ case class IndexedFastaFile(sc: SparkContext,
    * @return The reference sequence at the desired locus.
    */
   def extract(region: ReferenceRegion): String = {
-    ref.getSubsequenceAt(region.referenceName, region.start, region.end)
+    ref.getSubsequenceAt(region.referenceName.name, region.start, region.end)
       .getBaseString
   }
 }

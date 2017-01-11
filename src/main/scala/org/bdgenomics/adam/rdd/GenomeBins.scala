@@ -18,6 +18,8 @@
 package org.bdgenomics.adam.rdd
 
 import org.bdgenomics.adam.models.ReferenceRegion
+import org.hammerlab.genomics.reference.{ ContigName, NumLoci }
+
 import scala.math._
 
 /**
@@ -28,12 +30,12 @@ import scala.math._
  * @param binSize The size of each bin in nucleotides
  * @param seqLengths A map containing the length of each contig
  */
-case class GenomeBins(binSize: Long, seqLengths: Map[String, Long]) extends Serializable {
-  private val names: Seq[String] = seqLengths.keys.toSeq.sortWith(_ < _)
-  private val lengths: Seq[Long] = names.map(seqLengths(_))
+case class GenomeBins(binSize: Long, seqLengths: Map[ContigName, NumLoci]) extends Serializable {
+  private val names: Seq[ContigName] = seqLengths.keys.toVector.sorted
+  private val lengths: Seq[NumLoci] = names.map(seqLengths(_))
   private val parts: Seq[Int] = lengths.map(v => round(ceil(v.toDouble / binSize)).toInt)
   private val cumulParts: Seq[Int] = parts.scan(0)(_ + _)
-  private val contig2cumulParts: Map[String, Int] = Map(names.zip(cumulParts): _*)
+  private val contig2cumulParts: Map[ContigName, Int] = Map(names.zip(cumulParts): _*)
 
   /**
    * The total number of bins induced by this partition.
@@ -70,6 +72,6 @@ case class GenomeBins(binSize: Long, seqLengths: Map[String, Long]) extends Seri
     val relPartition = bin - contig2cumulParts(name)
     val start = relPartition * binSize
     val end = min((relPartition + 1) * binSize, seqLengths(name))
-    ReferenceRegion(name, start, end)
+    ReferenceRegion(name.name, start, end)
   }
 }

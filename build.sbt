@@ -39,3 +39,5 @@ deps ++= Seq(
   "org.apache.parquet" % "parquet-avro" % "1.8.1",
   "org.apache.parquet" % "parquet-scala_2.10" % "1.8.1" exclude("org.scala-lang", "scala-library")
 )
+
+compileAndTestDeps += (libs.value('reference) exclude("com.github.samtools", "htsjdk"))

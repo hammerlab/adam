@@ -21,6 +21,8 @@ import org.bdgenomics.adam.rich.RichVariant
 import org.bdgenomics.adam.rich.DecadentRead._
 import org.bdgenomics.utils.misc.Logging
 import org.apache.spark.rdd.RDD
+import org.hammerlab.genomics.reference.ContigName
+
 import scala.collection.immutable._
 import scala.collection.mutable
 
@@ -30,7 +32,7 @@ import scala.collection.mutable
  * @param table A map between a contig name and a set containing all coordinates
  *   where a point variant is known to exist.
  */
-class SnpTable(private val table: Map[String, Set[Long]]) extends Serializable with Logging {
+class SnpTable(private val table: Map[ContigName, Set[Long]]) extends Serializable with Logging {
   log.info("SNP table has %s contigs and %s entries".format(
     table.size,
     table.values.map(_.size).sum))
@@ -50,9 +52,9 @@ class SnpTable(private val table: Map[String, Set[Long]]) extends Serializable w
     bucket.exists(_.contains(location.pos))
   }
 
-  private val unknownContigs = new mutable.HashSet[String]
+  private val unknownContigs = new mutable.HashSet[ContigName]
 
-  private def unknownContigWarning(contig: String) = {
+  private def unknownContigWarning(contig: ContigName) = {
     // This is synchronized to avoid a data race. Multiple threads may
     // race to update `unknownContigs`, e.g. when running with a Spark
     // master of `local[N]`.
@@ -76,7 +78,7 @@ object SnpTable {
    * @return An empty SNP table.
    */
   def apply(): SnpTable = {
-    new SnpTable(Map[String, Set[Long]]())
+    new SnpTable(Map.empty)
   }
 
   /**
@@ -86,9 +88,15 @@ object SnpTable {
    * @return Returns a new SNPTable containing the input variants.
    */
   def apply(variants: RDD[RichVariant]): SnpTable = {
-    val positions = variants.map(variant => (variant.variant.getContigName,
-      variant.variant.getStart)).collect()
-    val table = new mutable.HashMap[String, mutable.HashSet[Long]]
+    val positions =
+      variants
+        .map(
+          variant =>
+            variant.variant.getContigName → variant.variant.getStart
+        )
+        .collect()
+
+    val table = new mutable.HashMap[ContigName, mutable.HashSet[Long]]
     positions.foreach(tup => table.getOrElseUpdate(tup._1, { new mutable.HashSet[Long] }) += tup._2)
     new SnpTable(table.mapValues(_.toSet).toMap)
   }

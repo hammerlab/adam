@@ -20,22 +20,32 @@ package org.bdgenomics.adam.models
 import org.bdgenomics.adam.algorithms.consensus.Consensus
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.Variant
+import org.hammerlab.genomics.reference.ContigName
+import org.hammerlab.genomics.reference.test.ContigNameUtil
+import org.scalactic.ConversionCheckedTripleEquals
+import org.scalatest.Matchers
 
-class IndelTableSuite extends ADAMFunSuite {
+class IndelTableSuite
+  extends ADAMFunSuite
+    with Matchers
+    with ConversionCheckedTripleEquals
+    with ContigNameUtil {
+
+  implicit def makeContigNameTuple[T](t: (String, T)): (ContigName, T) = (t._1, t._2)
 
   // indel table containing a 1 bp deletion at chr1, pos 1000
-  val indelTable = new IndelTable(Map("1" -> Iterable(Consensus("", ReferenceRegion("1", 1000L, 1002L)))))
+  lazy val indelTable = new IndelTable(Map("1" -> Iterable(Consensus("", ReferenceRegion("1", 1000L, 1002L)))))
 
   test("check for indels in a region with known indels") {
-    assert(indelTable.getIndelsInRegion(ReferenceRegion("1", 0L, 2000L)).length === 1)
+    indelTable.getIndelsInRegion(ReferenceRegion("1", 0L, 2000L)).length should === (1)
   }
 
   test("check for indels in a contig that doesn't exist") {
-    assert(indelTable.getIndelsInRegion(ReferenceRegion("0", 0L, 1L)).length === 0)
+    indelTable.getIndelsInRegion(ReferenceRegion("0", 0L, 1L)).length should === (0)
   }
 
   test("check for indels in a region without known indels") {
-    assert(indelTable.getIndelsInRegion(ReferenceRegion("1", 1002L, 1005L)).length === 0)
+    indelTable.getIndelsInRegion(ReferenceRegion("1", 1002L, 1005L)).length should === (0)
   }
 
   sparkTest("build indel table from rdd of variants") {
@@ -58,19 +68,19 @@ class IndelTableSuite extends ADAMFunSuite {
 
     // check insert
     val insT = table.getIndelsInRegion(ReferenceRegion("1", 1000L, 1010L))
-    assert(insT.length === 1)
-    assert(insT.head.consensus === "TT")
-    assert(insT.head.index.referenceName === "1")
-    assert(insT.head.index.start === 1001)
-    assert(insT.head.index.end === 1002)
+    insT.length should === (1)
+    insT.head.consensus should === ("TT")
+    insT.head.index.referenceName should === ("1")
+    insT.head.index.start should === (1001)
+    insT.head.index.end should === (1002)
 
     // check delete
     val delT = table.getIndelsInRegion(ReferenceRegion("2", 40L, 60L))
-    assert(delT.length === 1)
-    assert(delT.head.consensus === "")
-    assert(delT.head.index.referenceName === "2")
-    assert(delT.head.index.start === 51)
-    assert(delT.head.index.end === 54)
+    delT.length should === (1)
+    delT.head.consensus should === ("")
+    delT.head.index.referenceName should === ("2")
+    delT.head.index.start should === (51)
+    delT.head.index.end should === (54)
   }
 
 }

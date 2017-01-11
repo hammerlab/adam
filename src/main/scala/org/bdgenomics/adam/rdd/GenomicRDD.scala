@@ -219,35 +219,36 @@ trait GenomicRDD[T, U <: GenomicRDD[T, U]] {
     val tFormatter: V = tFormatterCompanion.apply(this.asInstanceOf[U])
 
     // make bins
-    val seqLengths = sequences.records.toSeq.map(rec => (rec.name, rec.length)).toMap
+    val seqLengths = sequences.records.map(rec => (rec.name, rec.length)).toMap
     val totalLength = seqLengths.values.sum
-    val bins = GenomeBins(totalLength / rdd.partitions.size, seqLengths)
+    val bins = GenomeBins(totalLength / rdd.partitions.length, seqLengths)
 
     // if the input rdd is mapped, then we need to repartition
-    val partitionedRdd = if (sequences.records.size > 0) {
-      // get region covered, expand region by flank size, and tag with bins
-      val binKeyedRdd = rdd.flatMap(r => {
+    val partitionedRdd =
+      if (sequences.records.nonEmpty) {
+        // get region covered, expand region by flank size, and tag with bins
+        val binKeyedRdd = rdd.flatMap(r => {
 
-        // get regions and expand
-        val regions = getReferenceRegions(r).map(_.pad(flankSize))
+          // get regions and expand
+          val regions = getReferenceRegions(r).map(_.pad(flankSize))
 
-        // get all the bins this record falls into
-        val recordBins = regions.flatMap(rr => {
-          (bins.getStartBin(rr) to bins.getEndBin(rr)).map(b => (rr, b))
+          // get all the bins this record falls into
+          val recordBins = regions.flatMap(rr => {
+            (bins.getStartBin(rr) to bins.getEndBin(rr)).map(b => (rr, b))
+          })
+
+          // key the record by those bins and return
+          // TODO: this should key with the reference region corresponding to a bin
+          recordBins.map(b => (b, r))
         })
 
-        // key the record by those bins and return
-        // TODO: this should key with the reference region corresponding to a bin
-        recordBins.map(b => (b, r))
-      })
-
-      // repartition yonder our data
-      // TODO: this should repartition and sort within the partition
-      binKeyedRdd.repartitionAndSortWithinPartitions(ManualRegionPartitioner(bins.numBins))
+        // repartition yonder our data
+        // TODO: this should repartition and sort within the partition
+        binKeyedRdd.repartitionAndSortWithinPartitions(ManualRegionPartitioner(bins.numBins))
         .values
-    } else {
-      rdd
-    }
+      } else {
+        rdd
+      }
 
     // are we in local mode?
     val isLocal = partitionedRdd.context.isLocal
@@ -856,8 +857,6 @@ abstract class AvroGenomicRDD[T <% IndexedRecord: Manifest, U <: AvroGenomicRDD[
    *
    * Writes any necessary metadata to disk. If not overridden, writes the
    * sequence dictionary to disk as Avro.
-   *
-   * @param args Arguments for saving file to disk.
    */
   protected def saveMetadata(filePath: String) {
 

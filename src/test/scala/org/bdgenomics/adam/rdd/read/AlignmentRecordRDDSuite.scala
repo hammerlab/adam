@@ -19,23 +19,18 @@ package org.bdgenomics.adam.rdd.read
 
 import java.io.File
 import java.nio.file.Files
+
 import htsjdk.samtools.ValidationStringency
-import org.bdgenomics.adam.models.{
-  RecordGroupDictionary,
-  ReferenceRegion,
-  SequenceDictionary,
-  SequenceRecord
-}
+import org.bdgenomics.adam.models.{ RecordGroupDictionary, ReferenceRegion, SequenceDictionary, SequenceRecord }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.TestSaveArgs
 import org.bdgenomics.adam.rdd.feature.CoverageRDD
-import org.bdgenomics.adam.rdd.variant.{
-  VariantContextRDD,
-  VCFOutFormatter
-}
+import org.bdgenomics.adam.rdd.variant.{ VCFOutFormatter, VariantContextRDD }
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro._
+import org.hammerlab.genomics.reference.test.{ ContigNameUtil, LocusUtil }
 import org.seqdoop.hadoop_bam.{ CRAMInputFormat, SAMFormat }
+
 import scala.util.Random
 
 private object SequenceIndexWithReadOrdering extends Ordering[((Int, Long), (AlignmentRecord, Int))] {
@@ -49,7 +44,10 @@ private object SequenceIndexWithReadOrdering extends Ordering[((Int, Long), (Ali
   }
 }
 
-class AlignmentRecordRDDSuite extends ADAMFunSuite {
+class AlignmentRecordRDDSuite
+  extends ADAMFunSuite
+    with ContigNameUtil
+    with LocusUtil {
 
   sparkTest("sorting reads") {
     val random = new Random("sorting".hashCode)
@@ -69,7 +67,7 @@ class AlignmentRecordRDDSuite extends ADAMFunSuite {
 
     // make seq dict 
     val contigNames = rdd.flatMap(r => Option(r.getContigName)).distinct.collect
-    val sd = new SequenceDictionary(contigNames.map(v => SequenceRecord(v, 1000000L)).toVector)
+    val sd = new SequenceDictionary(contigNames.map(v => SequenceRecord(v, 1000000)).toVector)
 
     val sortedReads = AlignedReadRDD(rdd, sd, RecordGroupDictionary.empty)
       .sortReadsByReferencePosition()

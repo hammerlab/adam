@@ -17,41 +17,20 @@
  */
 package org.bdgenomics.adam.models
 
-import com.esotericsoftware.kryo.io.{ Input, Output }
-import com.esotericsoftware.kryo.{ Kryo, Serializer }
+import org.bdgenomics.adam.models.ReferenceRegion.regionOrdering
 import org.bdgenomics.formats.avro._
 import org.bdgenomics.utils.intervalarray.Interval
-import org.hammerlab.genomics.reference.{ Locus, Region }
+import org.hammerlab.genomics.reference.{ ContigName, Locus, Region }
 
 import scala.math.{ max, min }
 
-trait ReferenceOrdering[T <: ReferenceRegion] extends Ordering[T] {
-  private def regionCompare(
-    a: T,
-    b: T): Int = {
-    if (a.referenceName != b.referenceName) {
-      a.referenceName.compareTo(b.referenceName)
-    } else if (a.start != b.start) {
-      a.start.compareTo(b.start)
-    } else {
-      a.end.compareTo(b.end)
-    }
-  }
-
-  def compare(
-    a: T,
-    b: T): Int = {
-    val rc = regionCompare(a, b)
-    if (rc == 0) {
-      a.strand.ordinal compare b.strand.ordinal
-    } else {
-      rc
-    }
-  }
+object ReferenceOrdering {
+  def lexicographic[T <: ReferenceRegion] =
+    Ordering.by[T, (String, Long, Long, Int)](r ⇒ (r.referenceName.name, r. start, r.end, r.strand.ordinal))
 }
 
 trait OptionalReferenceOrdering[T <: ReferenceRegion] extends Ordering[Option[T]] {
-  val baseOrdering: ReferenceOrdering[T]
+  val baseOrdering: Ordering[T]
 
   def compare(a: Option[T],
               b: Option[T]): Int = (a, b) match {
@@ -65,21 +44,12 @@ trait OptionalReferenceOrdering[T <: ReferenceRegion] extends Ordering[Option[T]
 /**
  * A sort order that orders all given regions lexicographically by contig and
  * numerically within a single contig, and puts all non-provided regions at
- * the end. Regions are compared by start position first. If start positions
- * are equal, then we compare by end position.
- */
-object RegionOrdering extends ReferenceOrdering[ReferenceRegion] {
-}
-
-/**
- * A sort order that orders all given regions lexicographically by contig and
- * numerically within a single contig, and puts all non-provided regions at
  * the end. An extension of PositionOrdering to Optional data.
  *
  * @see PositionOrdering
  */
 object OptionalRegionOrdering extends OptionalReferenceOrdering[ReferenceRegion] {
-  val baseOrdering = RegionOrdering
+  val baseOrdering = regionOrdering
 }
 
 /**
@@ -87,7 +57,13 @@ object OptionalRegionOrdering extends OptionalReferenceOrdering[ReferenceRegion]
  */
 object ReferenceRegion {
 
-  implicit def orderingForPositions = RegionOrdering
+  /**
+   * A sort order that orders all given regions lexicographically by contig and
+   * numerically within a single contig, and puts all non-provided regions at
+   * the end. Regions are compared by start position first. If start positions
+   * are equal, then we compare by end position.
+   */
+  implicit val regionOrdering = ReferenceOrdering.lexicographic[ReferenceRegion]
   implicit def orderingForOptionalPositions = OptionalRegionOrdering
 
   implicit def toHammerlabRegion(region: ReferenceRegion): Region =
@@ -275,20 +251,18 @@ object ReferenceRegion {
    * @param fragment Assembly fragment from which to generate data.
    * @return Region corresponding to inclusive region of contig fragment.
    */
-  def apply(fragment: NucleotideContigFragment): Option[ReferenceRegion] = {
+  def apply(fragment: NucleotideContigFragment): Option[ReferenceRegion] =
     for {
       contig <- Option(fragment.getContig)
-      contigName <- Option(contig.getContigName)
+      _ <- Option(contig.getContigName)
       _ <- Option(fragment.getFragmentStartPosition)
       fragmentSequence = fragment.getFragmentSequence
-    } yield {
+    } yield
       ReferenceRegion(
         contig.getContigName,
         fragment.getFragmentStartPosition,
         fragment.getFragmentStartPosition + fragmentSequence.length
       )
-    }
-  }
 
   private def checkFeature(record: Feature) {
     require(record.getContigName != null &&
@@ -352,12 +326,11 @@ object ReferenceRegion {
  *            half-open interval.
  * @param strand The strand of the genome that this region exists on.
  */
-case class ReferenceRegion(
-  referenceName: String,
-  start: Long,
-  end: Long,
-  strand: Strand = Strand.INDEPENDENT)
-    extends Comparable[ReferenceRegion]
+case class ReferenceRegion(referenceName: ContigName,
+                           start: Long,
+                           end: Long,
+                           strand: Strand = Strand.INDEPENDENT)
+  extends Comparable[ReferenceRegion]
     with Interval[ReferenceRegion] {
 
   assert(start >= 0 && end >= start,
@@ -459,9 +432,7 @@ case class ReferenceRegion(
    * @return Returns a new reference region where the start and end have been
    *   moved.
    */
-  def pad(by: Long): ReferenceRegion = {
-    pad(by, by)
-  }
+  def pad(by: Long): ReferenceRegion = pad(by, by)
 
   /**
    * Extends the current reference region at both the start and end, but by
@@ -534,7 +505,7 @@ case class ReferenceRegion(
    * @return An ordering depending on which region comes first.
    */
   def compareTo(that: ReferenceRegion): Int = {
-    RegionOrdering.compare(this, that)
+    regionOrdering.compare(this, that)
   }
 
   /**
@@ -542,33 +513,5 @@ case class ReferenceRegion(
    */
   def length(): Long = {
     end - start
-  }
-
-  override def hashCode: Int = {
-    var result = 37
-    result = 41 * result + (if (referenceName != null) referenceName.hashCode else 0)
-    result = 41 * result + start.hashCode
-    result = 41 * result + end.hashCode
-    result = 41 * result + (if (strand != null) strand.ordinal() else 0)
-    result
-  }
-}
-
-class ReferenceRegionSerializer extends Serializer[ReferenceRegion] {
-  private val enumValues = Strand.values()
-
-  def write(kryo: Kryo, output: Output, obj: ReferenceRegion) = {
-    output.writeString(obj.referenceName)
-    output.writeLong(obj.start)
-    output.writeLong(obj.end)
-    output.writeInt(obj.strand.ordinal())
-  }
-
-  def read(kryo: Kryo, input: Input, klazz: Class[ReferenceRegion]): ReferenceRegion = {
-    val referenceName = input.readString()
-    val start = input.readLong()
-    val end = input.readLong()
-    val strand = input.readInt()
-    new ReferenceRegion(referenceName, start, end, enumValues(strand))
   }
 }

@@ -54,6 +54,7 @@ import org.bdgenomics.utils.io.LocalFileByteAccess
 import org.bdgenomics.utils.misc.{ HadoopUtil, Logging }
 import org.hammerlab.genomics.loci.parsing.{ LociRange, LociRanges, ParsedLoci }
 import org.hammerlab.genomics.loci.set.LociSet
+import org.hammerlab.genomics.reference.ContigName.Normalizer
 import org.hammerlab.genomics.reference.Locus
 import org.seqdoop.hadoop_bam._
 import org.seqdoop.hadoop_bam.util._
@@ -81,7 +82,7 @@ private case class LocatableReferenceRegion(rr: ReferenceRegion) extends Locatab
   /**
    * @return the reference contig this interval is on.
    */
-  def getContig(): String = rr.referenceName
+  def getContig(): String = rr.referenceName.name
 }
 
 /**
@@ -267,7 +268,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
     (header.getFilterLines ++
       header.getFormatHeaderLines ++
       header.getInfoHeaderLines ++
-      header.getOtherHeaderLines).toSeq
+      header.getOtherHeaderLines)
   }
 
   private def loadHeaderLines(filePath: String): Seq[VCFHeaderLine] = {
@@ -1257,8 +1258,6 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
 
     val records = parsedLines.flatMap(_._2)
 
-    val seqDictMap = seqDict.records.map(sr => sr.name -> sr).toMap
-
     if (Metrics.isRecording)
       records.instrument()
 
@@ -1442,14 +1441,12 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
    *
    * @see loadSequences
    */
-  def loadReferenceFile(filePath: String, fragmentLength: Long): ReferenceFile = {
-    if (filePath.endsWith(".2bit")) {
+  def loadReferenceFile(filePath: String, fragmentLength: Long)(implicit normalizer: Normalizer): ReferenceFile =
+    if (filePath.endsWith(".2bit"))
       //TODO(ryan): S3ByteAccess
       new TwoBitFile(new LocalFileByteAccess(new File(filePath)))
-    } else {
+    else
       ReferenceContigMap(loadSequences(filePath, fragmentLength = fragmentLength).rdd)
-    }
-  }
 
   /**
    * Auto-detects the file type and loads contigs as a NucleotideContigFragmentRDD.

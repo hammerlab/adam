@@ -17,12 +17,15 @@
  */
 package org.bdgenomics.adam.rich
 
-import org.bdgenomics.adam.models.{ ReferencePosition, TagType, Attribute }
+import org.bdgenomics.adam.models.{ Attribute, ReferencePosition, TagType }
 import org.bdgenomics.adam.rich.RichAlignmentRecord._
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
+import org.hammerlab.genomics.reference.test.ContigNameUtil
 import org.scalatest.FunSuite
 
-class RichAlignmentRecordSuite extends FunSuite {
+class RichAlignmentRecordSuite
+  extends FunSuite
+    with ContigNameUtil {
 
   test("Unclipped Start") {
     val recordWithoutClipping = AlignmentRecord.newBuilder().setReadMapped(true).setCigar("10M").setStart(42L).setEnd(52L).build()

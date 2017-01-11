@@ -18,34 +18,44 @@
 package org.bdgenomics.adam.util
 
 import java.io.File
+
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.utils.io.LocalFileByteAccess
+import org.hammerlab.genomics.reference.test.{ ContigNameUtil, LocusUtil }
+import org.scalactic.ConversionCheckedTripleEquals
+import org.scalatest.Matchers
 
-class TwoBitFileSuite extends ADAMFunSuite {
+class TwoBitFileSuite
+  extends ADAMFunSuite
+    with Matchers
+    with ConversionCheckedTripleEquals
+    with LocusUtil
+    with ContigNameUtil {
+
   test("correctly read sequence from .2bit file") {
     val file = new File(testFile("hg19.chrM.2bit"))
     val byteAccess = new LocalFileByteAccess(file)
     val twoBitFile = new TwoBitFile(byteAccess)
-    assert(twoBitFile.numSeq == 1)
-    assert(twoBitFile.seqRecords.toSeq.length == 1)
-    assert(twoBitFile.extract(ReferenceRegion("hg19_chrM", 0, 10)) == "GATCACAGGT")
-    assert(twoBitFile.extract(ReferenceRegion("hg19_chrM", 503, 513)) == "CATCCTACCC")
-    assert(twoBitFile.extract(ReferenceRegion("hg19_chrM", 16561, 16571)) == "CATCACGATG")
+    twoBitFile.numSeq should === (1)
+    twoBitFile.seqRecords.toSeq.length should === (1)
+    twoBitFile.extract(ReferenceRegion("hg19_chrM", 0, 10)) should === ("GATCACAGGT")
+    twoBitFile.extract(ReferenceRegion("hg19_chrM", 503, 513)) should === ("CATCCTACCC")
+    twoBitFile.extract(ReferenceRegion("hg19_chrM", 16561, 16571)) should === ("CATCACGATG")
   }
 
   test("correctly return masked sequences from .2bit file") {
     val file = new File(testFile("hg19.chrM.2bit"))
     val byteAccess = new LocalFileByteAccess(file)
     val twoBitFile = new TwoBitFile(byteAccess)
-    assert(twoBitFile.extract(ReferenceRegion("hg19_chrM", 0, 10), true) == "GATCACAGGT")
-    assert(twoBitFile.extract(ReferenceRegion("hg19_chrM", 2600, 2610), true) == "taatcacttg")
+    twoBitFile.extract(ReferenceRegion("hg19_chrM", 0, 10), true) should === ("GATCACAGGT")
+    twoBitFile.extract(ReferenceRegion("hg19_chrM", 2600, 2610), true) should === ("taatcacttg")
   }
 
   test("correctly return Ns from .2bit file") {
     val file = new File(testFile("human_g1k_v37_chr1_59kb.2bit"))
     val byteAccess = new LocalFileByteAccess(file)
     val twoBitFile = new TwoBitFile(byteAccess)
-    assert(twoBitFile.extract(ReferenceRegion("1", 9990, 10010), true) == "NNNNNNNNNNTAACCCTAAC")
+    twoBitFile.extract(ReferenceRegion("1", 9990, 10010), true) should === ("NNNNNNNNNNTAACCCTAAC")
   }
 
   test("correctly calculates sequence dictionary") {
@@ -53,7 +63,7 @@ class TwoBitFileSuite extends ADAMFunSuite {
     val byteAccess = new LocalFileByteAccess(file)
     val twoBitFile = new TwoBitFile(byteAccess)
     val dict = twoBitFile.sequences
-    assert(dict.records.length == 1)
-    assert(dict.records.head.length == 16571)
+    dict.records.length should === (1)
+    dict.records.head.length should === (16571)
   }
 }

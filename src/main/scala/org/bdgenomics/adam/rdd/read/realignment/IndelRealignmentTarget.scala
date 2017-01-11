@@ -139,7 +139,7 @@ private[realignment] object IndelRealignmentTarget {
 private[adam] class IndelRealignmentTargetSerializer extends Serializer[IndelRealignmentTarget] {
 
   def write(kryo: Kryo, output: Output, obj: IndelRealignmentTarget) = {
-    output.writeString(obj.readRange.referenceName)
+    output.writeString(obj.readRange.referenceName.name)
     output.writeLong(obj.readRange.start)
     output.writeLong(obj.readRange.end)
     output.writeBoolean(obj.variation.isDefined)
@@ -237,7 +237,7 @@ private[adam] class ZippedTargetSetSerializer extends Serializer[ZippedTargetSet
       val idx = input.readInt()
       array(i) = (target, idx)
     })
-    new ZippedTargetSet(TreeSet(array: _*)(ZippedTargetOrdering))
+    ZippedTargetSet(TreeSet(array: _*)(ZippedTargetOrdering))
   }
 }
 

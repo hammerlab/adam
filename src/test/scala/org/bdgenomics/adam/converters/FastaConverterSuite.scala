@@ -21,7 +21,11 @@ import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.util.ADAMFunSuite
 import java.io.File
 
-class FastaConverterSuite extends ADAMFunSuite {
+import org.hammerlab.genomics.reference.test.ContigNameUtil
+
+class FastaConverterSuite
+  extends ADAMFunSuite
+    with ContigNameUtil {
 
   val converter = new FastaConverter(1000)
 
