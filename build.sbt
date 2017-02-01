@@ -9,14 +9,10 @@ publishTestJar
 enableScalariform
 
 hadoopVersion := "2.7.3"
-scalatestVersion := "2.2.1"
 
 // Using ":=" here to clobber the usual default hammerlab-test-libs that are added by parent-plugin, which use
 // Scalatest 3.0.0.
-testDeps := Seq(
-  "org.mockito" % "mockito-core" % "1.10.19",
-  libs.value('scalatest)
-)
+testDeps +="org.mockito" % "mockito-core" % "1.10.19"
 
 testJarTestDeps += (libs.value('bdg_utils_misc) exclude("org.apache.spark", "*"))
 

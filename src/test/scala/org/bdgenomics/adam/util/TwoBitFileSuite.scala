@@ -21,7 +21,8 @@ import java.io.File
 
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.utils.io.LocalFileByteAccess
-import org.hammerlab.genomics.reference.test.{ ContigNameUtil, LocusUtil }
+import org.hammerlab.genomics.reference.test.ClearContigNames
+import org.hammerlab.genomics.reference.test.LociConversions.intToLocus
 import org.scalactic.ConversionCheckedTripleEquals
 import org.scalatest.Matchers
 
@@ -29,8 +30,7 @@ class TwoBitFileSuite
   extends ADAMFunSuite
     with Matchers
     with ConversionCheckedTripleEquals
-    with LocusUtil
-    with ContigNameUtil {
+    with ClearContigNames {
 
   test("correctly read sequence from .2bit file") {
     val file = new File(testFile("hg19.chrM.2bit"))

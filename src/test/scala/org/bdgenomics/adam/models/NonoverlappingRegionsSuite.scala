@@ -18,12 +18,12 @@
 package org.bdgenomics.adam.models
 
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
-import org.hammerlab.genomics.reference.test.ContigNameUtil
+import org.hammerlab.genomics.reference.test.ClearContigNames
 import org.scalatest.FunSuite
 
 class NonoverlappingRegionsSuite
   extends FunSuite
-    with ContigNameUtil {
+    with ClearContigNames {
 
   test("alternating returns an alternating seq of items") {
     assert(NonoverlappingRegions.alternating(Seq(),

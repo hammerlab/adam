@@ -22,11 +22,11 @@ import org.bdgenomics.adam.projections.{ AlignmentRecordField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.AlignmentRecord
-import org.hammerlab.genomics.reference.test.ContigNameUtil
+import org.hammerlab.genomics.reference.test.ClearContigNames
 
 class FlagStatSuite
   extends ADAMFunSuite
-    with ContigNameUtil {
+    with ClearContigNames {
 
   sparkTest("Standard FlagStat test") {
 

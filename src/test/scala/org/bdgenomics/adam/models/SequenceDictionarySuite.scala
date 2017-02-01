@@ -23,19 +23,14 @@ import htsjdk.samtools.{ SAMSequenceDictionary, SAMSequenceRecord }
 import htsjdk.variant.utils.SAMSequenceDictionaryExtractor
 import htsjdk.variant.vcf.VCFFileReader
 import org.bdgenomics.adam.util.ADAMFunSuite
-import org.hammerlab.genomics.reference.test.{ ContigNameUtil, LocusUtil }
+import org.hammerlab.genomics.reference.test.ClearContigNames
 import org.hammerlab.genomics.reference.{ ContigName, NumLoci }
-import org.scalactic.ConversionCheckedTripleEquals
-import org.scalatest.Matchers
-
+import org.hammerlab.genomics.reference.test.LociConversions.intToLocus
 import scala.collection.JavaConversions._
 
 class SequenceDictionarySuite
   extends ADAMFunSuite
-    with Matchers
-    with ConversionCheckedTripleEquals
-    with LocusUtil
-    with ContigNameUtil {
+    with ClearContigNames {
 
   test("Convert from sam sequence record and back") {
     val sr = new SAMSequenceRecord("1", 1000)
@@ -44,7 +39,7 @@ class SequenceDictionarySuite
     val asASR: SequenceRecord = SequenceRecord.fromSAMSequenceRecord(sr)
 
     asASR.name should === ("1")
-    asASR.length should === (1000L)
+    asASR.length should === (1000)
     asASR.url should === (Some("http://bigdatagenomics.github.io/1"))
 
     val asPSR: SAMSequenceRecord = asASR.toSAMSequenceRecord
@@ -184,7 +179,7 @@ class SequenceDictionarySuite
     val conv = SequenceRecord.fromSAMSequenceRecord(sr)
 
     conv.name should === ("chr0")
-    conv.length should === (1000L)
+    conv.length should === (1000)
     conv.url.get should === ("http://bigdatagenomics.github.io/chr0")
 
     val convSr = conv.toSAMSequenceRecord

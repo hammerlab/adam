@@ -23,7 +23,8 @@ import com.google.common.io.Files
 import org.bdgenomics.adam.models._
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro._
-import org.hammerlab.genomics.reference.test.{ ContigNameUtil, LocusUtil }
+import org.hammerlab.genomics.reference.test.ClearContigNames
+import org.hammerlab.genomics.reference.test.LociConversions.intToLocus
 import org.scalatest.Matchers
 
 import scala.collection.mutable.ListBuffer
@@ -31,8 +32,7 @@ import scala.collection.mutable.ListBuffer
 class NucleotideContigFragmentRDDSuite
   extends ADAMFunSuite
     with Matchers
-    with ContigNameUtil
-    with LocusUtil {
+    with ClearContigNames {
 
   sparkTest("generate sequence dict from fasta") {
     val contig0 = Contig.newBuilder

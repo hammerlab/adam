@@ -19,14 +19,14 @@ package org.bdgenomics.adam.models
 
 import org.scalatest.{ FunSuite, Matchers }
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig, Genotype, Variant }
-import org.hammerlab.genomics.reference.test.ContigNameUtil
+import org.hammerlab.genomics.reference.test.ClearContigNames
 import org.scalactic.ConversionCheckedTripleEquals
 
 class ReferencePositionSuite
   extends FunSuite
     with Matchers
     with ConversionCheckedTripleEquals
-    with ContigNameUtil {
+    with ClearContigNames {
 
   test("create reference position from mapped read") {
     val contig = Contig.newBuilder

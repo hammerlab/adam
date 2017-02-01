@@ -24,11 +24,11 @@ import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.ReferencePosition
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
-import org.hammerlab.genomics.reference.test.ContigNameUtil
+import org.hammerlab.genomics.reference.test.ClearContigNames
 
 class DecadentReadSuite
   extends ADAMFunSuite
-    with ContigNameUtil {
+    with ClearContigNames {
 
   test("reference position of decadent read") {
     val contig = Contig.newBuilder

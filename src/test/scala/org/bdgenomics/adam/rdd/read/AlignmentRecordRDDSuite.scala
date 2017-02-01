@@ -28,7 +28,8 @@ import org.bdgenomics.adam.rdd.feature.CoverageRDD
 import org.bdgenomics.adam.rdd.variant.{ VCFOutFormatter, VariantContextRDD }
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro._
-import org.hammerlab.genomics.reference.test.{ ContigNameUtil, LocusUtil }
+import org.hammerlab.genomics.reference.test.ClearContigNames
+import org.hammerlab.genomics.reference.test.LociConversions.intToLocus
 import org.seqdoop.hadoop_bam.{ CRAMInputFormat, SAMFormat }
 
 import scala.util.Random
@@ -46,8 +47,7 @@ private object SequenceIndexWithReadOrdering extends Ordering[((Int, Long), (Ali
 
 class AlignmentRecordRDDSuite
   extends ADAMFunSuite
-    with ContigNameUtil
-    with LocusUtil {
+    with ClearContigNames {
 
   sparkTest("sorting reads") {
     val random = new Random("sorting".hashCode)
@@ -364,7 +364,7 @@ class AlignmentRecordRDDSuite
         isSorted = true,
         asSingleFile = true)
 
-    checkFiles(testFile("sorted.sam"), actualSortedPath)
+    checkFiles(actualSortedPath, "sorted.sam")
   }
 
   sparkTest("writing unordered sam from unordered sam") {
@@ -377,20 +377,20 @@ class AlignmentRecordRDDSuite
       isSorted = false,
       asSingleFile = true)
 
-    checkFiles(unsortedPath, actualUnorderedPath)
+    checkFiles(actualUnorderedPath, "unordered.sam")
   }
 
   sparkTest("writing ordered sam from unordered sam") {
     val unsortedPath = testFile("unordered.sam")
     val ardd = sc.loadBam(unsortedPath)
-    val reads = ardd.sortReadsByReferencePosition
+    val reads = ardd.sortReadsByReferencePosition()
 
     val actualSortedPath = tmpFile("ordered.sam")
     reads.saveAsSam(actualSortedPath,
       isSorted = true,
       asSingleFile = true)
 
-    checkFiles(testFile("ordered.sam"), actualSortedPath)
+    checkFiles(actualSortedPath, "ordered.sam")
   }
 
   def testBQSR(asSam: Boolean, filename: String) {

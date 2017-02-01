@@ -25,7 +25,7 @@ import org.bdgenomics.adam.rdd.read.AlignmentRecordRDD
 import org.bdgenomics.adam.rich.RichAlignmentRecord
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
-import org.hammerlab.genomics.reference.test.ContigNameUtil
+import org.hammerlab.genomics.reference.test.ClearContigNames
 import org.scalactic.ConversionCheckedTripleEquals
 import org.scalatest.Matchers
 
@@ -33,7 +33,7 @@ class RealignIndelsSuite
   extends ADAMFunSuite
     with Matchers
     with ConversionCheckedTripleEquals
-    with ContigNameUtil {
+    with ClearContigNames {
 
   def artificialReadsRdd: AlignmentRecordRDD = {
     val path = testFile("artificial.sam")

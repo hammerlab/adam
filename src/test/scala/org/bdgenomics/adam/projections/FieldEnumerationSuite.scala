@@ -22,11 +22,11 @@ import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.TestSaveArgs
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.AlignmentRecord
-import org.hammerlab.genomics.reference.test.ContigNameUtil
+import org.hammerlab.genomics.reference.test.ClearContigNames
 
 class FieldEnumerationSuite
   extends ADAMFunSuite
-    with ContigNameUtil {
+    with ClearContigNames {
 
   test("Empty projections are illegal") {
     intercept[IllegalArgumentException] {

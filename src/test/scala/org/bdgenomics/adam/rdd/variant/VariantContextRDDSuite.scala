@@ -17,16 +17,17 @@
  */
 package org.bdgenomics.adam.rdd.variant
 
-import com.google.common.collect.ImmutableList
-import com.google.common.io.Files
 import java.io.File
 
+import com.google.common.collect.ImmutableList
+import com.google.common.io.Files
 import org.bdgenomics.adam.models.{ SequenceDictionary, SequenceRecord, VariantContext }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.TestSaveArgs
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro._
-import org.hammerlab.genomics.reference.test.{ ContigNameUtil, LocusUtil }
+import org.hammerlab.genomics.reference.test.ClearContigNames
+import org.hammerlab.genomics.reference.test.LociConversions.intToLocus
 import org.scalactic.ConversionCheckedTripleEquals
 import org.scalatest.Matchers
 
@@ -36,8 +37,7 @@ class VariantContextRDDSuite
   extends ADAMFunSuite
     with Matchers
     with ConversionCheckedTripleEquals
-    with ContigNameUtil
-    with LocusUtil {
+    with ClearContigNames {
 
   val tempDir = Files.createTempDir()
 
@@ -151,7 +151,7 @@ class VariantContextRDDSuite
       .saveAsVcf(outputPath,
         asSingleFile = true)
 
-    checkFiles(outputPath, testFile("sorted.vcf"))
+    checkFiles(outputPath, "sorted.vcf")
   }
 
   sparkTest("save a lexicographically sorted file") {
@@ -163,6 +163,6 @@ class VariantContextRDDSuite
       .saveAsVcf(outputPath,
         asSingleFile = true)
 
-    checkFiles(outputPath, testFile("sorted.lex.vcf"))
+    checkFiles(outputPath, "sorted.lex.vcf")
   }
 }

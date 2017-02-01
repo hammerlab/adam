@@ -54,7 +54,7 @@ import org.bdgenomics.utils.io.LocalFileByteAccess
 import org.bdgenomics.utils.misc.{ HadoopUtil, Logging }
 import org.hammerlab.genomics.loci.parsing.{ LociRange, LociRanges, ParsedLoci }
 import org.hammerlab.genomics.loci.set.LociSet
-import org.hammerlab.genomics.reference.ContigName.Normalizer
+import org.hammerlab.genomics.reference.ContigName.Factory
 import org.hammerlab.genomics.reference.Locus
 import org.seqdoop.hadoop_bam._
 import org.seqdoop.hadoop_bam.util._
@@ -1441,7 +1441,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
    *
    * @see loadSequences
    */
-  def loadReferenceFile(filePath: String, fragmentLength: Long)(implicit normalizer: Normalizer): ReferenceFile =
+  def loadReferenceFile(filePath: String, fragmentLength: Long)(implicit factory: Factory): ReferenceFile =
     if (filePath.endsWith(".2bit"))
       //TODO(ryan): S3ByteAccess
       new TwoBitFile(new LocalFileByteAccess(new File(filePath)))

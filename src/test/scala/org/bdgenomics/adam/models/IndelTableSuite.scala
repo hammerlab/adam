@@ -21,15 +21,13 @@ import org.bdgenomics.adam.algorithms.consensus.Consensus
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.Variant
 import org.hammerlab.genomics.reference.ContigName
-import org.hammerlab.genomics.reference.test.ContigNameUtil
-import org.scalactic.ConversionCheckedTripleEquals
+import org.hammerlab.genomics.reference.test.ClearContigNames
 import org.scalatest.Matchers
 
 class IndelTableSuite
   extends ADAMFunSuite
     with Matchers
-    with ConversionCheckedTripleEquals
-    with ContigNameUtil {
+    with ClearContigNames {
 
   implicit def makeContigNameTuple[T](t: (String, T)): (ContigName, T) = (t._1, t._2)
 

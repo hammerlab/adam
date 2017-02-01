@@ -22,11 +22,11 @@ import java.util.UUID
 import org.bdgenomics.adam.models.{ RecordGroup, RecordGroupDictionary, SequenceDictionary }
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
-import org.hammerlab.genomics.reference.test.ContigNameUtil
+import org.hammerlab.genomics.reference.test.ClearContigNames
 
 class MarkDuplicatesSuite
   extends ADAMFunSuite
-    with ContigNameUtil {
+    with ClearContigNames {
 
   val rgd = new RecordGroupDictionary(Seq(
     new RecordGroup("sammy sample",

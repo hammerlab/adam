@@ -20,7 +20,7 @@ package org.bdgenomics.adam.util
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary, SequenceRecord }
 import org.bdgenomics.formats.avro.NucleotideContigFragment
-import org.hammerlab.genomics.reference.ContigName.Normalizer
+import org.hammerlab.genomics.reference.ContigName.Factory
 import org.hammerlab.genomics.reference.{ ContigName, NumLoci }
 
 /**
@@ -97,7 +97,7 @@ object ReferenceContigMap {
    * @return Returns a serializable wrapper around these fragments that enables
    *   random access into the reference genome.
    */
-  def apply(fragments: RDD[NucleotideContigFragment])(implicit normalizer: Normalizer): ReferenceContigMap =
+  def apply(fragments: RDD[NucleotideContigFragment])(implicit factory: Factory): ReferenceContigMap =
     ReferenceContigMap(
       fragments
         .groupBy(fragment ⇒ ContigName(fragment.getContig.getContigName))

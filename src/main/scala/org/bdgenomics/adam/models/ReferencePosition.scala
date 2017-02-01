@@ -22,7 +22,7 @@ import com.esotericsoftware.kryo.{ Kryo, Serializer }
 import org.bdgenomics.adam.models.ReferencePosition.positionOrdering
 import org.bdgenomics.formats.avro._
 import org.hammerlab.genomics.reference.ContigName
-import org.hammerlab.genomics.reference.ContigName.Normalizer
+import org.hammerlab.genomics.reference.ContigName.Factory
 
 /**
  * A sort order that orders all given positions lexicographically by contig and
@@ -136,7 +136,7 @@ class ReferencePosition(
   override val strand: Strand = Strand.INDEPENDENT)
     extends ReferenceRegion(referenceName, pos, pos + 1, strand)
 
-class ReferencePositionSerializer()(implicit normalizer: Normalizer) extends Serializer[ReferencePosition] {
+class ReferencePositionSerializer()(implicit factory: Factory) extends Serializer[ReferencePosition] {
   private val enumValues = Strand.values()
 
   def write(kryo: Kryo, output: Output, obj: ReferencePosition) = {

@@ -24,7 +24,7 @@ import java.io.OutputStream
 import org.bdgenomics.adam.converters.VariantContextConverter
 import org.bdgenomics.adam.models.{ SequenceDictionary, VariantContext }
 import org.bdgenomics.adam.rdd.{ InFormatter, InFormatterCompanion }
-import org.hammerlab.genomics.reference.ContigName.Normalizer
+import org.hammerlab.genomics.reference.ContigName.Factory
 
 import scala.collection.JavaConversions._
 
@@ -48,7 +48,7 @@ object VCFInFormatter extends InFormatterCompanion[VariantContext, VariantContex
 private[variant] case class VCFInFormatter private (
     sequences: SequenceDictionary,
     samples: Seq[String],
-    headerLines: Seq[VCFHeaderLine])(implicit normalizer: Normalizer)
+    headerLines: Seq[VCFHeaderLine])(implicit factory: Factory)
   extends InFormatter[VariantContext, VariantContextRDD, VCFInFormatter] {
 
   protected val companion = VCFInFormatter

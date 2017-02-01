@@ -28,7 +28,7 @@ import org.bdgenomics.adam.models.{ SequenceDictionary, VariantContext ⇒ ADAMV
 import org.bdgenomics.adam.util.PhredUtils
 import org.bdgenomics.formats.avro._
 import org.hammerlab.genomics.reference.ContigName
-import org.hammerlab.genomics.reference.ContigName.Normalizer
+import org.hammerlab.genomics.reference.ContigName.Factory
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.{ Buffer, HashMap }
@@ -591,7 +591,7 @@ private[adam] class VariantContextConverter(dict: Option[SequenceDictionary] = N
    * @param vc
    * @return GATK VariantContext
    */
-  def convert(vc: ADAMVariantContext)(implicit normalizer: Normalizer): HtsjdkVariantContext = {
+  def convert(vc: ADAMVariantContext)(implicit factory: Factory): HtsjdkVariantContext = {
     val variant: Variant = vc.variant.variant
     val vcb =
       new VariantContextBuilder()

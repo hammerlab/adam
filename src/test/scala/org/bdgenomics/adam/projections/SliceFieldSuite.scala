@@ -52,7 +52,7 @@ class SliceFieldSuite extends ADAMFunSuite {
       start,
       end,
       strand,
-      length
+      ReadField.length
     )
 
     val slices: RDD[Slice] = sc.loadParquet(path, projection = Some(projection));

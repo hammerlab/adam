@@ -22,7 +22,7 @@ import org.bdgenomics.adam.models.SequenceRecord
 import org.bdgenomics.formats.avro.Feature
 import org.bdgenomics.utils.misc.Logging
 import org.hammerlab.genomics.reference.{ ContigName, NumLoci }
-import org.hammerlab.genomics.reference.ContigName.Normalizer
+import org.hammerlab.genomics.reference.ContigName.Factory
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
@@ -230,7 +230,7 @@ private[rdd] class IntervalListParser extends FeatureParser {
   }
 
   def parseHeader(line: String,
-                  stringency: ValidationStringency)(implicit normalizer: Normalizer): Option[SequenceRecord] = {
+                  stringency: ValidationStringency)(implicit factory: Factory): Option[SequenceRecord] = {
 
     val fields = line.split("[ \t]+")
 

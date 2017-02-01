@@ -20,7 +20,7 @@ package org.bdgenomics.adam.models
 import htsjdk.samtools.{ SAMFileHeader, SAMSequenceDictionary, SAMSequenceRecord }
 import htsjdk.variant.vcf.VCFHeader
 import org.bdgenomics.formats.avro.{ Contig, NucleotideContigFragment }
-import org.hammerlab.genomics.reference.ContigName.Normalizer
+import org.hammerlab.genomics.reference.ContigName.Factory
 import org.hammerlab.genomics.reference.{ ContigLengths, ContigName, NumLoci }
 
 import scala.collection.JavaConversions.{ asScalaIterator, seqAsJavaList }
@@ -61,7 +61,7 @@ object SequenceDictionary {
    * @param dict Htsjdk sequence dictionary to build from.
    * @return A SequenceDictionary with populated sequence records.
    */
-  def apply(dict: SAMSequenceDictionary)(implicit normalizer: Normalizer): SequenceDictionary = {
+  def apply(dict: SAMSequenceDictionary)(implicit factory: Factory): SequenceDictionary = {
     new SequenceDictionary(dict.getSequences.iterator().map(SequenceRecord.fromSAMSequenceRecord).toVector)
   }
 
@@ -386,16 +386,15 @@ object SequenceRecord {
    * @return Returns a new SequenceRecord where all strings except for name are
    *   wrapped in Options to check for null values.
    */
-  def apply(
-    name: ContigName,
-    length: NumLoci,
-    md5: String = null,
-    url: String = null,
-    refseq: String = null,
-    genbank: String = null,
-    assembly: String = null,
-    species: String = null,
-    referenceIndex: Option[Int] = None): SequenceRecord = {
+  def apply(name: ContigName,
+            length: NumLoci,
+            md5: String = null,
+            url: String = null,
+            refseq: String = null,
+            genbank: String = null,
+            assembly: String = null,
+            species: String = null,
+            referenceIndex: Option[Int] = None): SequenceRecord =
     new SequenceRecord(
       name,
       length,
@@ -407,7 +406,6 @@ object SequenceRecord {
       Option(species),
       referenceIndex
     )
-  }
 
   /*
    * Generates a sequence record from a SAMSequence record.
@@ -415,7 +413,7 @@ object SequenceRecord {
    * @param seqRecord SAM Sequence record input.
    * @return A new ADAM sequence record.
    */
-  def fromSAMSequenceRecord(record: SAMSequenceRecord)(implicit normalizer: Normalizer): SequenceRecord = {
+  def fromSAMSequenceRecord(record: SAMSequenceRecord)(implicit factory: Factory): SequenceRecord =
     SequenceRecord(
       record.getSequenceName,
       NumLoci(record.getSequenceLength),
@@ -427,7 +425,6 @@ object SequenceRecord {
       species = record.getAttribute(SAMSequenceRecord.SPECIES_TAG),
       referenceIndex = if (record.getSequenceIndex == -1) None else Some(record.getSequenceIndex)
     )
-  }
 
   /**
    * Builds a sequence record from an Avro Contig.
@@ -435,7 +432,7 @@ object SequenceRecord {
    * @param contig Contig record to build from.
    * @return This Contig record as a SequenceRecord.
    */
-  def fromADAMContig(contig: Contig)(implicit normalizer: Normalizer): SequenceRecord = {
+  def fromADAMContig(contig: Contig)(implicit factory: Factory): SequenceRecord =
     SequenceRecord(
       contig.getContigName,
       NumLoci(contig.getContigLength),
@@ -445,7 +442,6 @@ object SequenceRecord {
       species = contig.getSpecies,
       referenceIndex = Option(contig.getReferenceIndex).map(Integer2int)
     )
-  }
 
   /**
    * Extracts the contig metadata from a nucleotide fragment.
@@ -453,8 +449,7 @@ object SequenceRecord {
    * @param fragment The assembly fragment to extract a SequenceRecord from.
    * @return The sequence record metadata from a single assembly fragment.
    */
-  def fromADAMContigFragment(fragment: NucleotideContigFragment): SequenceRecord = {
+  def fromADAMContigFragment(fragment: NucleotideContigFragment): SequenceRecord =
     fromADAMContig(fragment.getContig)
-  }
 }
 

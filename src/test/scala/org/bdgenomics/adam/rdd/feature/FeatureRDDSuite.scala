@@ -23,12 +23,12 @@ import java.io.File
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.{ Feature, Strand }
-import org.hammerlab.genomics.reference.test.ContigNameUtil
+import org.hammerlab.genomics.reference.test.ClearContigNames
 import org.scalactic.{ Equivalence, TypeCheckedTripleEquals }
 
 class FeatureRDDSuite
   extends ADAMFunSuite
-    with ContigNameUtil
+    with ClearContigNames
     with TypeCheckedTripleEquals {
 
   implicit val strongFeatureEq = new Equivalence[Feature] {

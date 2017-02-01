@@ -24,6 +24,7 @@ import org.bdgenomics.adam.models.{
   SequenceRecord
 }
 import org.bdgenomics.formats.avro.AlignmentRecord
+import org.hammerlab.genomics.reference.test.LociConversions._
 
 class LeftOuterShuffleRegionJoinSuite extends OuterRegionJoinSuite {
 

@@ -20,7 +20,7 @@ package org.bdgenomics.adam.models
 import htsjdk.variant.variantcontext.{ Allele, GenotypeBuilder, VariantContextBuilder }
 import org.bdgenomics.adam.converters.VariantContextConverter
 import org.bdgenomics.formats.avro._
-import org.hammerlab.genomics.reference.test.ContigNameUtil
+import org.hammerlab.genomics.reference.test.ClearContigNames
 import org.scalactic.ConversionCheckedTripleEquals
 import org.scalatest.{ FunSuite, Matchers }
 
@@ -30,7 +30,7 @@ class ReferenceRegionSuite
   extends FunSuite
     with Matchers
     with ConversionCheckedTripleEquals
-    with ContigNameUtil {
+    with ClearContigNames {
 
   test("contains(: ReferenceRegion)") {
     assert(region("chr0", 10, 100).contains(region("chr0", 50, 70)))

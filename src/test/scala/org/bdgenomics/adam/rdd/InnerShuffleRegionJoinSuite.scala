@@ -17,16 +17,15 @@
  */
 package org.bdgenomics.adam.rdd
 
-import org.apache.spark.SparkContext._
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary, SequenceRecord }
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
-import org.hammerlab.genomics.reference.test.{ ContigNameUtil, LocusUtil }
+import org.hammerlab.genomics.reference.test.ClearContigNames
+import org.hammerlab.genomics.reference.test.LociConversions.intToLocus
 
 class InnerShuffleRegionJoinSuite
   extends ADAMFunSuite
-    with ContigNameUtil
-    with LocusUtil {
+    with ClearContigNames {
 
   val partitionSize = 3
   var seqDict: SequenceDictionary = _

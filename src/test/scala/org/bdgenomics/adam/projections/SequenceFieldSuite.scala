@@ -33,7 +33,7 @@ class SequenceFieldSuite extends ADAMFunSuite {
       .setDescription("Chromosome 6")
       .setAlphabet(Alphabet.DNA)
       .setSequence("ACTG")
-      .setLength(4)
+      .setLength(4L)
       .build()))
     rdd.saveAsParquet(TestSaveArgs(path))
 
@@ -42,7 +42,7 @@ class SequenceFieldSuite extends ADAMFunSuite {
       description,
       alphabet,
       sequence,
-      length
+      ReadField.length
     )
 
     val sequences: RDD[Sequence] = sc.loadParquet(path, projection = Some(projection));

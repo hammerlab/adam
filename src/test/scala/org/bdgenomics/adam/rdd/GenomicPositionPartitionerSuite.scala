@@ -23,7 +23,8 @@ import org.bdgenomics.adam.projections.Projection
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
-import org.hammerlab.genomics.reference.test.{ ContigNameUtil, LocusUtil }
+import org.hammerlab.genomics.reference.test.ClearContigNames
+import org.hammerlab.genomics.reference.test.LociConversions.intToLocus
 import org.scalactic.ConversionCheckedTripleEquals
 import org.scalatest.Matchers
 
@@ -33,8 +34,7 @@ class GenomicPositionPartitionerSuite
   extends ADAMFunSuite
     with Matchers
     with ConversionCheckedTripleEquals
-    with ContigNameUtil
-    with LocusUtil {
+    with ClearContigNames {
 
   implicit def makeSequenceRecord(t: (String, Int)): SequenceRecord = SequenceRecord(t._1, t._2)
 

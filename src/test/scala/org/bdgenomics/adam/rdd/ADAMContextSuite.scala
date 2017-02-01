@@ -30,7 +30,7 @@ import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.util.PhredUtils._
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro._
-import org.hammerlab.genomics.reference.test.ContigNameUtil
+import org.hammerlab.genomics.reference.test.ClearContigNames
 import org.scalactic.ConversionCheckedTripleEquals
 import org.scalatest.Matchers
 import org.seqdoop.hadoop_bam.CRAMInputFormat
@@ -50,7 +50,7 @@ class ADAMContextSuite
   extends ADAMFunSuite
     with Matchers
     with ConversionCheckedTripleEquals
-    with ContigNameUtil {
+    with ClearContigNames {
 
   sparkTest("ctr is accessible") {
     new ADAMContext(sc)

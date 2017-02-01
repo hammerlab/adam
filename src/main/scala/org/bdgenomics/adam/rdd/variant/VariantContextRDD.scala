@@ -30,7 +30,7 @@ import org.bdgenomics.adam.rich.RichVariant
 import org.bdgenomics.formats.avro.Sample
 import org.bdgenomics.utils.misc.Logging
 import org.bdgenomics.utils.cli.SaveArgs
-import org.hammerlab.genomics.reference.ContigName.Normalizer
+import org.hammerlab.genomics.reference.ContigName.Factory
 import org.seqdoop.hadoop_bam._
 
 import scala.collection.JavaConversions._
@@ -115,7 +115,7 @@ case class VariantContextRDD(rdd: RDD[VariantContext],
    *   valid VCF header. Default is false.
    */
   def saveAsVcf(filePath: String,
-                asSingleFile: Boolean = false)(implicit normalizer: Normalizer) {
+                asSingleFile: Boolean = false)(implicit factory: Factory) {
     val vcfFormat = VCFFormat.inferFromFilePath(filePath)
     assert(vcfFormat == VCFFormat.VCF, "BCF not yet supported") // TODO: Add BCF support
 

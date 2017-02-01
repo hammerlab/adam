@@ -25,13 +25,13 @@ import java.io.File
 import org.bdgenomics.adam.models.{ SequenceDictionary, VariantContext ⇒ ADAMVariantContext }
 import org.bdgenomics.adam.util.{ ADAMFunSuite, PhredUtils }
 import org.bdgenomics.formats.avro._
-import org.hammerlab.genomics.reference.test.ContigNameUtil
+import org.hammerlab.genomics.reference.test.ClearContigNames
 
 import scala.collection.JavaConversions._
 
 class VariantContextConverterSuite
   extends ADAMFunSuite
-    with ContigNameUtil {
+    with ClearContigNames {
 
   lazy val dictionary = {
     val path = testFile("dict_with_accession.dict")
@@ -82,7 +82,7 @@ class VariantContextConverterSuite
 
     assert(variant.getReferenceAllele === "A")
     assert(variant.getStart === 0L)
-    assert(variant.getSomatic === false)
+    assert(variant.getSomatic.===[Boolean](false)(jboolBoolEqual))
   }
 
   test("Convert somatic htsjdk site-only SNV to ADAM") {

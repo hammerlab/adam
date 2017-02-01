@@ -22,12 +22,12 @@ import org.bdgenomics.adam.models.{ Coverage, ReferenceRegion, SequenceDictionar
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.Feature
-import org.hammerlab.genomics.reference.test.{ ContigNameUtil, LocusUtil }
+import org.hammerlab.genomics.reference.test.ClearContigNames
+import org.hammerlab.genomics.reference.test.LociConversions.intToLocus
 
 class CoverageRDDSuite
   extends ADAMFunSuite
-    with ContigNameUtil
-    with LocusUtil {
+    with ClearContigNames {
 
   val sd = new SequenceDictionary(Vector(SequenceRecord("chr1", 2000)))
 

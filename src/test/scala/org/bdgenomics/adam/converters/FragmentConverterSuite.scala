@@ -44,8 +44,8 @@ class FragmentConverterSuite extends ADAMFunSuite {
 
     assert(convertedRead.getSequence === "ACACACAC")
     assert(convertedRead.getContigName === "ctg")
-    assert(convertedRead.getStart === 0L)
-    assert(convertedRead.getEnd === 8L)
+    assert(convertedRead.getStart === 0)
+    assert(convertedRead.getEnd === 8)
   }
 
   test("if a fragment isn't associated with a contig, don't get a fragment collector") {

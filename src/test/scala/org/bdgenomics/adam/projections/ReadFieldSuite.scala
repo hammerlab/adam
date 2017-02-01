@@ -37,21 +37,22 @@ class ReadFieldSuite extends ADAMFunSuite {
       .setDescription("read 1")
       .setAlphabet(Alphabet.DNA)
       .setSequence("ACTG")
-      .setLength(4)
+      .setLength(4L)
       .setQualityScores("0123")
       .setQualityScoreVariant(QualityScoreVariant.FASTQ_SANGER)
       .build()))
     rdd.saveAsParquet(TestSaveArgs(path))
 
-    val projection = Projection(
-      name,
-      description,
-      alphabet,
-      sequence,
-      length,
-      qualityScores,
-      qualityScoreVariant
-    )
+    val projection =
+      Projection(
+        name,
+        description,
+        alphabet,
+        sequence,
+        ReadField.length,
+        qualityScores,
+        qualityScoreVariant
+      )
 
     val reads: RDD[Read] = sc.loadParquet(path, projection = Some(projection))
     assert(reads.count() === 1)

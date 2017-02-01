@@ -26,11 +26,11 @@ import org.bdgenomics.adam.rich.DecadentRead._
 import org.bdgenomics.adam.rich.RichVariant
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.AlignmentRecord
-import org.hammerlab.genomics.reference.test.ContigNameUtil
+import org.hammerlab.genomics.reference.test.ClearContigNames
 
 class BaseQualityRecalibrationSuite
   extends ADAMFunSuite
-    with ContigNameUtil {
+    with ClearContigNames {
 
   sparkTest("BQSR Test Input #1 w/ VCF Sites") {
     val readsFilepath = testFile("bqsr1.sam")

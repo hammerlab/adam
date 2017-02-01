@@ -25,7 +25,7 @@ import com.esotericsoftware.kryo.io.{ Input, Output }
 import org.bdgenomics.utils.io.{ ByteAccess, ByteArrayByteAccess }
 import org.bdgenomics.adam.models._
 import org.hammerlab.genomics.reference.{ ContigName, NumLoci }
-import org.hammerlab.genomics.reference.ContigName.Normalizer
+import org.hammerlab.genomics.reference.ContigName.Factory
 
 private object TwoBitFile {
   val MAGIC_NUMBER: Int = 0x1A412743
@@ -59,7 +59,7 @@ private object TwoBitFile {
  *
  * @param byteAccess ByteAccess pointing to a .2bit file.
  */
-class TwoBitFile(byteAccess: ByteAccess)(implicit normalizer: Normalizer) extends ReferenceFile {
+class TwoBitFile(byteAccess: ByteAccess)(implicit factory: Factory) extends ReferenceFile {
 
   // load file into memory
   private[util] val bytes = ByteBuffer.wrap(byteAccess.readFully(0, byteAccess.length().toInt))
