@@ -26,7 +26,6 @@ import org.scalatest.Matchers
 
 class IndelTableSuite
   extends ADAMFunSuite
-    with Matchers
     with ClearContigNames {
 
   implicit def makeContigNameTuple[T](t: (String, T)): (ContigName, T) = (t._1, t._2)

@@ -21,6 +21,7 @@ import java.net.URL
 
 import htsjdk.samtools.util.Log
 import org.bdgenomics.adam.serialization.ADAMKryoRegistrator
+import org.hammerlab.genomics.reference.test.{ ContigNameCanEqualString, LocusCanEqualInt }
 import org.hammerlab.spark.test.suite.KryoSparkSuite
 import org.hammerlab.test.matchers.files.FileMatcher.fileMatch
 import org.hammerlab.test.resources.File
@@ -28,6 +29,8 @@ import org.scalactic.TypeCheckedTripleEquals
 
 abstract class ADAMFunSuite
   extends KryoSparkSuite(classOf[ADAMKryoRegistrator], referenceTracking = true)
+    with ContigNameCanEqualString
+    with LocusCanEqualInt
     with TypeCheckedTripleEquals {
 
   // added to resolve #1280
