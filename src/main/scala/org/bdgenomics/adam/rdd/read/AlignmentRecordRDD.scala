@@ -49,14 +49,46 @@ import org.bdgenomics.adam.rdd.feature.CoverageRDD
 import org.bdgenomics.adam.rdd.read.realignment.RealignIndels
 import org.bdgenomics.adam.rdd.read.recalibration.BaseQualityRecalibration
 import org.bdgenomics.adam.rdd.fragment.FragmentRDD
+import org.bdgenomics.adam.serialization.AvroSerializer
 import org.bdgenomics.adam.util.ReferenceFile
 import org.bdgenomics.formats.avro._
+import org.bdgenomics.utils.interval.array.{
+  IntervalArray,
+  IntervalArraySerializer
+}
 import org.seqdoop.hadoop_bam._
 import scala.collection.JavaConversions._
 import scala.language.implicitConversions
 import scala.math.{ abs, min }
+import scala.reflect.ClassTag
+
+private[adam] case class AlignmentRecordArray(
+    array: Array[(ReferenceRegion, AlignmentRecord)],
+    maxIntervalWidth: Long) extends IntervalArray[ReferenceRegion, AlignmentRecord] {
+
+  protected def replace(arr: Array[(ReferenceRegion, AlignmentRecord)],
+                        maxWidth: Long): IntervalArray[ReferenceRegion, AlignmentRecord] = {
+    AlignmentRecordArray(arr, maxWidth)
+  }
+}
+
+private[adam] class AlignmentRecordArraySerializer extends IntervalArraySerializer[ReferenceRegion, AlignmentRecord, AlignmentRecordArray] {
+
+  protected val kSerializer = new ReferenceRegionSerializer
+  protected val tSerializer = new AvroSerializer[AlignmentRecord]
+
+  protected def builder(arr: Array[(ReferenceRegion, AlignmentRecord)],
+                        maxIntervalWidth: Long): AlignmentRecordArray = {
+    AlignmentRecordArray(arr, maxIntervalWidth)
+  }
+}
 
 sealed trait AlignmentRecordRDD extends AvroReadGroupGenomicRDD[AlignmentRecord, AlignmentRecordRDD] {
+
+  protected def buildTree(rdd: RDD[(ReferenceRegion, AlignmentRecord)])(
+    implicit tTag: ClassTag[AlignmentRecord]): IntervalArray[ReferenceRegion, AlignmentRecord] = {
+    IntervalArray(rdd, AlignmentRecordArray.apply(_, _))
+  }
 
   /**
    * Replaces the underlying RDD and SequenceDictionary and emits a new object.
@@ -76,6 +108,29 @@ sealed trait AlignmentRecordRDD extends AvroReadGroupGenomicRDD[AlignmentRecord,
    */
   def toFragments: FragmentRDD = {
     FragmentRDD(groupReadsByFragment().map(_.toFragment),
+      sequences,
+      recordGroups)
+  }
+
+  /**
+   * Groups all reads by record group and read name.
+   *
+   * @return SingleReadBuckets with primary, secondary and unmapped reads
+   */
+  private def locallyGroupReadsByFragment(): RDD[SingleReadBucket] = {
+    SingleReadBucket.fromQuerynameSorted(rdd)
+  }
+
+  /**
+   * Convert this set of reads into fragments.
+   *
+   * Assumes that reads are sorted by readname.
+   * *
+   * @return Returns a FragmentRDD where all reads have been grouped together by
+   *   the original sequence fragment they come from.
+   */
+  private[rdd] def querynameSortedToFragments: FragmentRDD = {
+    FragmentRDD(locallyGroupReadsByFragment().map(_.toFragment),
       sequences,
       recordGroups)
   }

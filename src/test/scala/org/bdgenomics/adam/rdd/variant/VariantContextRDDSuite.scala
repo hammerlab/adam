@@ -21,13 +21,12 @@ import java.io.File
 
 import com.google.common.collect.ImmutableList
 import com.google.common.io.Files
-import org.bdgenomics.adam.models.{ SequenceDictionary, SequenceRecord, VariantContext }
+import org.bdgenomics.adam.models.{ SequenceDictionary, VariantContext }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.TestSaveArgs
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro._
 import org.hammerlab.genomics.reference.test.ClearContigNames
-import org.hammerlab.genomics.reference.test.LociConversions.intToLocus
 import org.scalactic.ConversionCheckedTripleEquals
 import org.scalatest.Matchers
 
@@ -86,7 +85,6 @@ class VariantContextRDDSuite
     variant.getFiltersApplied should === (true)
     variant.getFiltersPassed should === (true)
     assert(variant.getFiltersFailed.isEmpty)
-    variant.getSomatic should === (false)
 
     vcRdd.sequences.records.size should === (1)
     vcRdd.sequences.records(0).name should === ("11")
@@ -102,38 +100,13 @@ class VariantContextRDDSuite
     vcRdd.sequences.records(0).name should === ("11")
   }
 
-  sparkTest("joins SNV variant annotation") {
-    val v0 = Variant.newBuilder
-      .setContigName("11")
-      .setStart(17409572)
-      .setReferenceAllele("T")
-      .setAlternateAllele("C")
-      .build
-
-    val sd = SequenceDictionary(SequenceRecord("11", 20000000))
-
-    val vc = VariantContextRDD(sc.parallelize(List(
-      VariantContext(v0))), sd, Seq.empty)
-
-    val a0 = VariantAnnotation.newBuilder
-      .setVariant(v0)
-      .setDbSnp(true)
-      .build
-
-    val vda = VariantAnnotationRDD(sc.parallelize(List(
-      a0)), sd)
-
-    val annotated = vc.joinVariantAnnotations(vda).rdd
-    assert(annotated.map(_.annotations.isDefined).reduce { (a, b) => a && b })
-  }
-
   sparkTest("don't lose any variants when piping as VCF") {
     val smallVcf = testFile("small.vcf")
     val rdd: VariantContextRDD = sc.loadVcf(smallVcf)
     val records = rdd.rdd.count
 
     implicit val tFormatter = VCFInFormatter
-    implicit val uFormatter = new VCFOutFormatter
+    implicit val uFormatter = new VCFOutFormatter(rdd.headerLines)
 
     val pipedRdd: VariantContextRDD = rdd.pipe[VariantContext, VariantContextRDD, VCFInFormatter]("tee /dev/null")
       .transform(_.cache())

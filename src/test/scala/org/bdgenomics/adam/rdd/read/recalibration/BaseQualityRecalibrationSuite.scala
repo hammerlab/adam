@@ -32,7 +32,7 @@ class BaseQualityRecalibrationSuite
   extends ADAMFunSuite
     with ClearContigNames {
 
-  sparkTest("BQSR Test Input #1 w/ VCF Sites") {
+  ignore("BQSR Test Input #1 w/ VCF Sites") {
     val readsFilepath = testFile("bqsr1.sam")
     val snpsFilepath = testFile("bqsr1.vcf")
     val obsFilepath = testFile("bqsr1-ref.observed")

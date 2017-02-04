@@ -17,8 +17,9 @@
  */
 package org.bdgenomics.adam.models
 
+import htsjdk.samtools.ValidationStringency
 import htsjdk.variant.variantcontext.{ Allele, GenotypeBuilder, VariantContextBuilder }
-import org.bdgenomics.adam.converters.VariantContextConverter
+import org.bdgenomics.adam.converters.{ DefaultHeaderLines, VariantContextConverter }
 import org.bdgenomics.formats.avro._
 import org.hammerlab.genomics.reference.test.ClearContigNames
 import org.scalactic.ConversionCheckedTripleEquals
@@ -443,7 +444,8 @@ class ReferenceRegionSuite
   }
 
   test("convert a genotype and then get the reference region") {
-    val converter = new VariantContextConverter
+    val converter = new VariantContextConverter(DefaultHeaderLines.allHeaderLines,
+      ValidationStringency.LENIENT)
     val vcb = new VariantContextBuilder()
       .alleles(List(Allele.create("A", true), Allele.create("T")))
       .start(1L)

@@ -17,19 +17,48 @@
  */
 package org.bdgenomics.adam.rdd.variant
 
+import htsjdk.samtools.ValidationStringency
 import htsjdk.variant.vcf.VCFHeaderLine
 import org.apache.spark.rdd.RDD
-import org.bdgenomics.adam.converters.SupportedHeaderLines
+import org.bdgenomics.adam.converters.DefaultHeaderLines
 import org.bdgenomics.adam.models.{
   ReferencePosition,
   ReferenceRegion,
+  ReferenceRegionSerializer,
   SequenceDictionary,
   VariantContext
 }
 import org.bdgenomics.adam.rdd.{ JavaSaveArgs, MultisampleAvroGenomicRDD }
 import org.bdgenomics.adam.rich.RichVariant
+import org.bdgenomics.adam.serialization.AvroSerializer
 import org.bdgenomics.utils.cli.SaveArgs
+import org.bdgenomics.utils.interval.array.{
+  IntervalArray,
+  IntervalArraySerializer
+}
 import org.bdgenomics.formats.avro.{ Contig, Genotype, Sample }
+import scala.reflect.ClassTag
+
+private[adam] case class GenotypeArray(
+    array: Array[(ReferenceRegion, Genotype)],
+    maxIntervalWidth: Long) extends IntervalArray[ReferenceRegion, Genotype] {
+
+  protected def replace(arr: Array[(ReferenceRegion, Genotype)],
+                        maxWidth: Long): IntervalArray[ReferenceRegion, Genotype] = {
+    GenotypeArray(arr, maxWidth)
+  }
+}
+
+private[adam] class GenotypeArraySerializer extends IntervalArraySerializer[ReferenceRegion, Genotype, GenotypeArray] {
+
+  protected val kSerializer = new ReferenceRegionSerializer
+  protected val tSerializer = new AvroSerializer[Genotype]
+
+  protected def builder(arr: Array[(ReferenceRegion, Genotype)],
+                        maxIntervalWidth: Long): GenotypeArray = {
+    GenotypeArray(arr, maxIntervalWidth)
+  }
+}
 
 /**
  * An RDD containing genotypes called in a set of samples against a given
@@ -44,7 +73,12 @@ import org.bdgenomics.formats.avro.{ Contig, Genotype, Sample }
 case class GenotypeRDD(rdd: RDD[Genotype],
                        sequences: SequenceDictionary,
                        @transient samples: Seq[Sample],
-                       @transient headerLines: Seq[VCFHeaderLine] = SupportedHeaderLines.allHeaderLines) extends MultisampleAvroGenomicRDD[Genotype, GenotypeRDD] {
+                       @transient headerLines: Seq[VCFHeaderLine] = DefaultHeaderLines.allHeaderLines) extends MultisampleAvroGenomicRDD[Genotype, GenotypeRDD] {
+
+  protected def buildTree(rdd: RDD[(ReferenceRegion, Genotype)])(
+    implicit tTag: ClassTag[Genotype]): IntervalArray[ReferenceRegion, Genotype] = {
+    IntervalArray(rdd, GenotypeArray.apply(_, _))
+  }
 
   /**
    * Java-friendly method for saving.
@@ -66,7 +100,7 @@ case class GenotypeRDD(rdd: RDD[Genotype],
     val vcRdd = vcIntRdd.groupByKey
       .map {
         case (v: RichVariant, g) => {
-          new VariantContext(ReferencePosition(v.variant), v, g, None)
+          new VariantContext(ReferencePosition(v.variant), v, g)
         }
       }
 
@@ -108,6 +142,22 @@ case class GenotypeRDD(rdd: RDD[Genotype],
     } else {
       false
     }
+  }
+
+  /**
+   * Explicitly saves to VCF.
+   *
+   * @param filePath The filepath to save to.
+   * @param asSingleFile If true, saves the output as a single file by merging
+   *   the sharded output after completing the write to HDFS. If false, the
+   *   output of this call will be written as shards, where each shard has a
+   *   valid VCF header.
+   * @param stringency The validation stringency to use when writing the VCF.
+   */
+  def saveAsVcf(filePath: String,
+                asSingleFile: Boolean,
+                stringency: ValidationStringency) {
+    toVariantContextRDD.saveAsVcf(filePath, asSingleFile, stringency)
   }
 
   /**

@@ -17,9 +17,11 @@
  */
 package org.bdgenomics.adam.models
 
+import com.esotericsoftware.kryo.{ Kryo, Serializer }
+import com.esotericsoftware.kryo.io.{ Input, Output }
 import org.bdgenomics.adam.models.ReferenceRegion.regionOrdering
 import org.bdgenomics.formats.avro._
-import org.bdgenomics.utils.intervalarray.Interval
+import org.bdgenomics.utils.interval.array.Interval
 import org.hammerlab.genomics.reference.{ ContigName, Locus, Region }
 
 import scala.math.{ max, min }
@@ -148,16 +150,6 @@ object ReferenceRegion {
    */
   def apply(variant: Variant): ReferenceRegion = {
     ReferenceRegion(variant.getContigName, variant.getStart, variant.getEnd)
-  }
-
-  /**
-   * Builds a reference region from a variant annotation.
-   *
-   * @param annotation VariantAnnotation to extract region from.
-   * @return The site where the variant for the specified variant annotation covers.
-   */
-  def apply(annotation: VariantAnnotation): ReferenceRegion = {
-    ReferenceRegion(annotation.getVariant)
   }
 
   private def checkRead(record: AlignmentRecord) {
@@ -513,5 +505,24 @@ case class ReferenceRegion(referenceName: ContigName,
    */
   def length(): Long = {
     end - start
+  }
+}
+
+class ReferenceRegionSerializer extends Serializer[ReferenceRegion] {
+  private val enumValues = Strand.values()
+
+  def write(kryo: Kryo, output: Output, obj: ReferenceRegion) = {
+    kryo.writeObject(output, obj.referenceName)
+    output.writeLong(obj.start)
+    output.writeLong(obj.end)
+    output.writeInt(obj.strand.ordinal())
+  }
+
+  def read(kryo: Kryo, input: Input, klazz: Class[ReferenceRegion]): ReferenceRegion = {
+    val referenceName = kryo.readObject(input, klazz).asInstanceOf[ContigName]
+    val start = input.readLong()
+    val end = input.readLong()
+    val strand = input.readInt()
+    new ReferenceRegion(referenceName, start, end, enumValues(strand))
   }
 }

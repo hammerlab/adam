@@ -22,7 +22,6 @@ import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.Variant
 import org.hammerlab.genomics.reference.ContigName
 import org.hammerlab.genomics.reference.test.ClearContigNames
-import org.scalatest.Matchers
 
 class IndelTableSuite
   extends ADAMFunSuite
@@ -73,11 +72,11 @@ class IndelTableSuite
 
     // check delete
     val delT = table.getIndelsInRegion(ReferenceRegion("2", 40L, 60L))
-    delT.length should === (1)
-    delT.head.consensus should === ("")
-    delT.head.index.referenceName should === ("2")
-    delT.head.index.start should === (51)
-    delT.head.index.end should === (54)
+    assert(delT.length === 1)
+    assert(delT.head.consensus === "")
+    assert(delT.head.index.referenceName === "2")
+    assert(delT.head.index.start === 51)
+    assert(delT.head.index.end === 55)
   }
 
 }

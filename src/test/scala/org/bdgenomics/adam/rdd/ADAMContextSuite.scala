@@ -27,8 +27,8 @@ import org.apache.parquet.hadoop.metadata.CompressionCodecName
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models._
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.util.PhredUtils._
 import org.bdgenomics.adam.util.ADAMFunSuite
+import org.bdgenomics.adam.util.PhredUtils._
 import org.bdgenomics.formats.avro._
 import org.hammerlab.genomics.reference.test.ClearContigNames
 import org.scalactic.ConversionCheckedTripleEquals
@@ -172,7 +172,6 @@ class ADAMContextSuite
     variant.getFiltersApplied should === (true)
     variant.getFiltersPassed should === (false)
     assert(variant.getFiltersFailed.contains("IndelQD"))
-    variant.getSomatic should === (false)
 
     vc.genotypes.size should === (3)
 
@@ -394,7 +393,7 @@ class ADAMContextSuite
     val path = testFile("bqsr1.vcf").replace("bqsr1", "*")
 
     val variants = sc.loadVcf(path).toVariantRDD
-    variants.rdd.count should === (710)
+    assert(variants.rdd.count === 715)
   }
 
   sparkTest("load vcf from a directory") {
@@ -413,6 +412,21 @@ class ADAMContextSuite
     variants.rdd.count should === (6)
   }
 
+  sparkTest("parse annotations for multi-allelic rows") {
+    val path = new File(testFile("gvcf_dir/gvcf_multiallelic.g.vcf")).getParent()
+
+    val variants = sc.loadVcf(path).toVariantRDD
+    val multiAllelicVariants = variants.rdd
+      .filter(_.getReferenceAllele == "TAAA")
+      .sortBy(_.getAlternateAllele.length)
+      .collect()
+
+    val mleCounts = multiAllelicVariants.map(_.getAnnotation.getAttributes.get("MLEAC"))
+    //ALT    T,TA,TAA,<NON_REF>
+    //MLEAC  0,1,1,0
+    assert(mleCounts === Array("0", "1", "1"))
+  }
+
   sparkTest("load parquet with globs") {
     val inputPath = testFile("small.sam")
     val reads = sc.loadAlignments(inputPath)
@@ -421,24 +435,66 @@ class ADAMContextSuite
     reads.saveAsParquet(outputPath.replace(".adam", ".2.adam"))
 
     val paths = new Path(outputPath.replace(".adam", "*.adam") + "/*")
-    assert(sc.getFsAndFiles(paths).length > 2)
 
     val reloadedReads = sc.loadParquetAlignments(outputPath.replace(".adam", "*.adam") + "/*")
     (2 * reads.rdd.count) should === (reloadedReads.rdd.count)
   }
 
   sparkTest("bad glob should fail") {
-    val inputPath = testFile("small.sam")
+    val inputPath = testFile("small.sam").replace(".sam", "*.sad")
     intercept[FileNotFoundException] {
-      sc.getFsAndFiles(new Path(inputPath.replace(".sam", "*.sad")))
+      sc.loadAlignments(inputPath)
     }
   }
 
   sparkTest("empty directory should fail") {
-    val outputPath = tmpLocation()
+    val inputPath = tmpLocation()
     intercept[FileNotFoundException] {
-      sc.getFsAndFiles(new Path(outputPath))
+      sc.loadAlignments(inputPath)
     }
   }
-}
 
+  sparkTest("can read a SnpEff-annotated .vcf file") {
+    val path = testFile("small_snpeff.vcf")
+    val variantRdd = sc.loadVariants(path)
+    val variants = variantRdd.rdd.sortBy(_.getStart).collect
+
+    variants.foreach(v => v.getStart.longValue match {
+      case 14396L => {
+        assert(v.getReferenceAllele === "CTGT")
+        assert(v.getAlternateAllele === "C")
+        assert(v.getAnnotation.getTranscriptEffects.size === 4)
+
+        val te = v.getAnnotation.getTranscriptEffects.get(0)
+        assert(te.getAlternateAllele === "C")
+        assert(te.getEffects.contains("downstream_gene_variant"))
+        assert(te.getGeneName === "WASH7P")
+        assert(te.getGeneId === "ENSG00000227232")
+        assert(te.getFeatureType === "transcript")
+        assert(te.getFeatureId === "ENST00000488147.1")
+        assert(te.getBiotype === "unprocessed_pseudogene")
+      }
+      case 14521L => {
+        assert(v.getReferenceAllele === "G")
+        assert(v.getAlternateAllele === "A")
+        assert(v.getAnnotation.getTranscriptEffects.size === 4)
+      }
+      case 19189L => {
+        assert(v.getReferenceAllele === "GC")
+        assert(v.getAlternateAllele === "G")
+        assert(v.getAnnotation.getTranscriptEffects.size === 3)
+      }
+      case 63734L => {
+        assert(v.getReferenceAllele === "CCTA")
+        assert(v.getAlternateAllele === "C")
+        assert(v.getAnnotation.getTranscriptEffects.size === 1)
+      }
+      case 752720L => {
+        assert(v.getReferenceAllele === "A")
+        assert(v.getAlternateAllele === "G")
+        assert(v.getAnnotation.getTranscriptEffects.size === 2)
+      }
+      case _ => fail("unexpected variant start " + v.getStart)
+    })
+  }
+}

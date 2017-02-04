@@ -18,13 +18,14 @@
 package org.bdgenomics.adam.rdd.read.realignment
 
 import org.apache.spark.rdd.RDD
-import org.bdgenomics.adam.algorithms.consensus.Consensus
+import org.bdgenomics.adam.algorithms.consensus.{ Consensus, ConsensusGenerator }
 import org.bdgenomics.adam.models.ReferencePosition
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.read.AlignmentRecordRDD
+import org.bdgenomics.adam.rdd.variant.VariantRDD
 import org.bdgenomics.adam.rich.RichAlignmentRecord
 import org.bdgenomics.adam.util.ADAMFunSuite
-import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
+import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig, Variant }
 import org.hammerlab.genomics.reference.test.ClearContigNames
 import org.scalactic.ConversionCheckedTripleEquals
 import org.scalatest.Matchers
@@ -44,9 +45,9 @@ class RealignIndelsSuite
     artificialReadsRdd.rdd
   }
 
-  def artificialRealignedReads: RDD[AlignmentRecord] = {
+  def artificialRealignedReads(cg: ConsensusGenerator = ConsensusGenerator.fromReads): RDD[AlignmentRecord] = {
     artificialReadsRdd
-      .realignIndels()
+      .realignIndels(consensusModel = cg)
       .sortReadsByReferencePosition()
       .rdd
   }
@@ -112,8 +113,9 @@ class RealignIndelsSuite
     def checkReference(readReference: (String, Long, Long)) {
       // the first three lines of artificial.fasta
       val refStr = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGGGGGGGGGGAAAAAAAAAAGGGGGGGGGGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-      val startIndex = Math.min(readReference._2.toInt, 120)
-      val stopIndex = Math.min(readReference._3.toInt, 180)
+      val startIndex = readReference._2.toInt
+      val stopIndex = readReference._3.toInt
+      assert(readReference._1.length === stopIndex - startIndex)
       assert(readReference._1 === refStr.substring(startIndex, stopIndex))
     }
 
@@ -140,13 +142,80 @@ class RealignIndelsSuite
   }
 
   sparkTest("checking realigned reads for artificial input") {
-    val artificialRealignedReads_collected = artificialRealignedReads.collect()
-    val gatkArtificialRealignedReads_collected = gatkArtificialRealignedReads.collect()
+    val artificialRealignedReadsCollected = artificialRealignedReads()
+      .collect()
+    val gatkArtificialRealignedReadsCollected = gatkArtificialRealignedReads
+      .collect()
 
-    assert(artificialRealignedReads_collected.length === gatkArtificialRealignedReads_collected.length)
+    assert(artificialRealignedReadsCollected.size === gatkArtificialRealignedReadsCollected.size)
 
-    val artificialRead4 = artificialRealignedReads_collected.filter(_.getReadName == "read4")
-    val gatkRead4 = gatkArtificialRealignedReads_collected.filter(_.getReadName == "read4")
+    val artificialRead4 = artificialRealignedReadsCollected.filter(_.getReadName == "read4")
+    val gatkRead4 = gatkArtificialRealignedReadsCollected.filter(_.getReadName == "read4")
+    val result = artificialRead4.zip(gatkRead4)
+
+    assert(result.forall(
+      pair => pair._1.getReadName == pair._2.getReadName))
+    assert(result.forall(
+      pair => pair._1.getStart == pair._2.getStart))
+    assert(result.forall(
+      pair => pair._1.getCigar == pair._2.getCigar))
+    assert(result.forall(
+      pair => pair._1.getMapq == pair._2.getMapq))
+  }
+
+  sparkTest("checking realigned reads for artificial input using knowns") {
+    val indel = Variant.newBuilder()
+      .setContigName("artificial")
+      .setStart(33)
+      .setEnd(44)
+      .setReferenceAllele("AGGGGGGGGGG")
+      .setAlternateAllele("A")
+      .build
+    val variantRdd = VariantRDD(sc.parallelize(Seq(indel)),
+      artificialReadsRdd.sequences)
+    val knowns = ConsensusGenerator.fromKnownIndels(variantRdd)
+    val artificialRealignedReadsCollected = artificialRealignedReads(cg = knowns)
+      .collect()
+    val gatkArtificialRealignedReadsCollected = gatkArtificialRealignedReads
+      .collect()
+
+    assert(artificialRealignedReadsCollected.length === gatkArtificialRealignedReadsCollected.length)
+
+    val artificialRead4 = artificialRealignedReadsCollected.filter(_.getReadName == "read4")
+    val gatkRead4 = gatkArtificialRealignedReadsCollected.filter(_.getReadName == "read4")
+    val result = artificialRead4.zip(gatkRead4)
+
+    assert(result.forall(
+      pair => pair._1.getReadName == pair._2.getReadName))
+    assert(result.forall(
+      pair => pair._1.getStart == pair._2.getStart))
+    assert(result.forall(
+      pair => pair._1.getCigar == pair._2.getCigar))
+    assert(result.forall(
+      pair => pair._1.getMapq == pair._2.getMapq))
+  }
+
+  sparkTest("checking realigned reads for artificial input using knowns and reads") {
+    val indel = Variant.newBuilder()
+      .setContigName("artificial")
+      .setStart(33)
+      .setEnd(44)
+      .setReferenceAllele("AGGGGGGGGGG")
+      .setAlternateAllele("A")
+      .build
+    val variantRdd = VariantRDD(sc.parallelize(Seq(indel)),
+      artificialReadsRdd.sequences)
+    val knowns = ConsensusGenerator.fromKnownIndels(variantRdd)
+    val union = ConsensusGenerator.union(knowns, ConsensusGenerator.fromReads)
+    val artificialRealignedReadsCollected = artificialRealignedReads(cg = union)
+      .collect()
+    val gatkArtificialRealignedReadsCollected = gatkArtificialRealignedReads
+      .collect()
+
+    assert(artificialRealignedReadsCollected.size === gatkArtificialRealignedReadsCollected.size)
+
+    val artificialRead4 = artificialRealignedReadsCollected.filter(_.getReadName == "read4")
+    val gatkRead4 = gatkArtificialRealignedReadsCollected.filter(_.getReadName == "read4")
     val result = artificialRead4.zip(gatkRead4)
 
     assert(result.forall(
@@ -265,16 +334,18 @@ class RealignIndelsSuite
   }
 
   sparkTest("test OP and OC tags") {
-    artificialRealignedReads.collect().foreach(realn => {
-      val readName = realn.getReadName()
-      val op = realn.getOldPosition()
-      val oc = realn.getOldCigar()
+    artificialRealignedReads()
+      .collect()
+      .foreach { realn =>
+        val readName = realn.getReadName()
+        val op = realn.getOldPosition()
+        val oc = realn.getOldCigar()
 
-      Option(op).filter(_ >= 0).foreach(oPos => {
-        val s = artificialReads.collect().filter(x => (x.getReadName() == readName))
-        assert(s.exists(x => (x.getStart() == oPos)))
-        assert(s.exists(x => (x.getCigar() == oc)))
-      })
-    })
+        Option(op).filter(_ >= 0).foreach { oPos =>
+          val s = artificialReads.collect().filter(x => (x.getReadName() == readName))
+          assert(s.filter(x => (x.getStart() == oPos)).length > 0)
+          assert(s.filter(x => (x.getCigar() == oc)).length > 0)
+        }
+      }
   }
 }
