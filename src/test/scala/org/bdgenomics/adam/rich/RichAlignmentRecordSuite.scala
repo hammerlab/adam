@@ -21,10 +21,10 @@ import org.bdgenomics.adam.models.{ Attribute, ReferencePosition, TagType }
 import org.bdgenomics.adam.rich.RichAlignmentRecord._
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
 import org.hammerlab.genomics.reference.test.ClearContigNames
-import org.scalatest.FunSuite
+import org.hammerlab.test.Suite
 
 class RichAlignmentRecordSuite
-  extends FunSuite
+  extends Suite
     with ClearContigNames {
 
   test("Unclipped Start") {

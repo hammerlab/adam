@@ -17,15 +17,12 @@
  */
 package org.bdgenomics.adam.models
 
-import org.scalatest.{ FunSuite, Matchers }
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig, Genotype, Variant }
 import org.hammerlab.genomics.reference.test.ClearContigNames
-import org.scalactic.ConversionCheckedTripleEquals
+import org.hammerlab.test.Suite
 
 class ReferencePositionSuite
-  extends FunSuite
-    with Matchers
-    with ConversionCheckedTripleEquals
+  extends Suite
     with ClearContigNames {
 
   test("create reference position from mapped read") {

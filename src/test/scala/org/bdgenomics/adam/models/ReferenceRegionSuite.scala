@@ -22,15 +22,14 @@ import htsjdk.variant.variantcontext.{ Allele, GenotypeBuilder, VariantContextBu
 import org.bdgenomics.adam.converters.{ DefaultHeaderLines, VariantContextConverter }
 import org.bdgenomics.formats.avro._
 import org.hammerlab.genomics.reference.test.ClearContigNames
+import org.hammerlab.test.Suite
 import org.scalactic.ConversionCheckedTripleEquals
 import org.scalatest.{ FunSuite, Matchers }
 
 import scala.collection.JavaConversions._
 
 class ReferenceRegionSuite
-  extends FunSuite
-    with Matchers
-    with ConversionCheckedTripleEquals
+  extends Suite
     with ClearContigNames {
 
   test("contains(: ReferenceRegion)") {

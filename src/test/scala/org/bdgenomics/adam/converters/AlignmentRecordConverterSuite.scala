@@ -24,12 +24,12 @@ import org.bdgenomics.adam.models.{ RecordGroup, RecordGroupDictionary, SAMFileH
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Fragment }
 import org.hammerlab.genomics.reference.test.ClearContigNames
 import org.hammerlab.genomics.reference.test.LociConversions.intToLocus
-import org.scalatest.FunSuite
+import org.hammerlab.test.Suite
 
 import scala.collection.JavaConversions._
 
 class AlignmentRecordConverterSuite
-  extends FunSuite
+  extends Suite
     with ClearContigNames {
 
   // allocate converters
