@@ -19,9 +19,12 @@ package org.bdgenomics.adam.rdd.contig
 
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.formats.avro.{ Contig, NucleotideContigFragment }
-import org.scalatest.FunSuite
+import org.hammerlab.genomics.reference.test.ClearContigNames
+import org.hammerlab.test.Suite
 
-class FlankReferenceFragmentsSuite extends FunSuite {
+class FlankReferenceFragmentsSuite
+  extends Suite
+    with ClearContigNames {
 
   test("don't put flanks on non-adjacent fragments") {
     val testIter = Iterator((ReferenceRegion("chr1", 0L, 10L),

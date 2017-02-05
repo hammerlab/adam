@@ -19,23 +19,20 @@ package org.bdgenomics.adam.rdd.read
 
 import java.io.File
 import java.nio.file.Files
+
 import htsjdk.samtools.ValidationStringency
-import org.bdgenomics.adam.models.{
-  RecordGroupDictionary,
-  ReferenceRegion,
-  SequenceDictionary,
-  SequenceRecord
-}
+import org.bdgenomics.adam.converters.DefaultHeaderLines
+import org.bdgenomics.adam.models.{ RecordGroupDictionary, ReferenceRegion, SequenceDictionary, SequenceRecord }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.TestSaveArgs
 import org.bdgenomics.adam.rdd.feature.CoverageRDD
-import org.bdgenomics.adam.rdd.variant.{
-  VariantContextRDD,
-  VCFOutFormatter
-}
+import org.bdgenomics.adam.rdd.variant.{ VCFOutFormatter, VariantContextRDD }
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro._
+import org.hammerlab.genomics.reference.test.ClearContigNames
+import org.hammerlab.genomics.reference.test.LociConversions.intToLocus
 import org.seqdoop.hadoop_bam.{ CRAMInputFormat, SAMFormat }
+
 import scala.util.Random
 
 private object SequenceIndexWithReadOrdering extends Ordering[((Int, Long), (AlignmentRecord, Int))] {
@@ -49,7 +46,9 @@ private object SequenceIndexWithReadOrdering extends Ordering[((Int, Long), (Ali
   }
 }
 
-class AlignmentRecordRDDSuite extends ADAMFunSuite {
+class AlignmentRecordRDDSuite
+  extends ADAMFunSuite
+    with ClearContigNames {
 
   sparkTest("sorting reads") {
     val random = new Random("sorting".hashCode)
@@ -69,7 +68,7 @@ class AlignmentRecordRDDSuite extends ADAMFunSuite {
 
     // make seq dict 
     val contigNames = rdd.flatMap(r => Option(r.getContigName)).distinct.collect
-    val sd = new SequenceDictionary(contigNames.map(v => SequenceRecord(v, 1000000L)).toVector)
+    val sd = new SequenceDictionary(contigNames.map(v => SequenceRecord(v, 1000000)).toVector)
 
     val sortedReads = AlignedReadRDD(rdd, sd, RecordGroupDictionary.empty)
       .sortReadsByReferencePosition()
@@ -366,7 +365,7 @@ class AlignmentRecordRDDSuite extends ADAMFunSuite {
         isSorted = true,
         asSingleFile = true)
 
-    checkFiles(testFile("sorted.sam"), actualSortedPath)
+    checkFiles(actualSortedPath, "sorted.sam")
   }
 
   sparkTest("writing unordered sam from unordered sam") {
@@ -379,20 +378,20 @@ class AlignmentRecordRDDSuite extends ADAMFunSuite {
       isSorted = false,
       asSingleFile = true)
 
-    checkFiles(unsortedPath, actualUnorderedPath)
+    checkFiles(actualUnorderedPath, "unordered.sam")
   }
 
   sparkTest("writing ordered sam from unordered sam") {
     val unsortedPath = testFile("unordered.sam")
     val ardd = sc.loadBam(unsortedPath)
-    val reads = ardd.sortReadsByReferencePosition
+    val reads = ardd.sortReadsByReferencePosition()
 
     val actualSortedPath = tmpFile("ordered.sam")
     reads.saveAsSam(actualSortedPath,
       isSorted = true,
       asSingleFile = true)
 
-    checkFiles(testFile("ordered.sam"), actualSortedPath)
+    checkFiles(actualSortedPath, "ordered.sam")
   }
 
   def testBQSR(asSam: Boolean, filename: String) {
@@ -690,7 +689,7 @@ class AlignmentRecordRDDSuite extends ADAMFunSuite {
     assert(smallRecords === newRecords)
   }
 
-  sparkTest("read vcf from alignment record pipe") {
+  ignore("read vcf from alignment record pipe") {
     val readsPath = testFile("small.1.sam")
     val vcfPath = testFile("small.vcf")
     val scriptPath = testFile("test_command.sh")
@@ -698,7 +697,7 @@ class AlignmentRecordRDDSuite extends ADAMFunSuite {
     val ardd = sc.loadBam(readsPath)
 
     implicit val tFormatter = SAMInFormatter
-    implicit val uFormatter = new VCFOutFormatter
+    implicit val uFormatter = new VCFOutFormatter(DefaultHeaderLines.allHeaderLines)
 
     val pipedRdd: VariantContextRDD = ardd.pipe("/bin/bash $0 %s $1".format(tempPath),
       files = Seq(scriptPath, vcfPath))

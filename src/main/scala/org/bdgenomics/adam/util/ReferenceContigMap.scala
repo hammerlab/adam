@@ -18,12 +18,10 @@
 package org.bdgenomics.adam.util
 
 import org.apache.spark.rdd.RDD
-import org.bdgenomics.adam.models.{
-  ReferenceRegion,
-  SequenceDictionary,
-  SequenceRecord
-}
+import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary, SequenceRecord }
 import org.bdgenomics.formats.avro.NucleotideContigFragment
+import org.hammerlab.genomics.reference.ContigName.Factory
+import org.hammerlab.genomics.reference.{ ContigName, NumLoci }
 
 /**
  * A broadcastable ReferenceFile backed by a map containing contig name ->
@@ -31,13 +29,20 @@ import org.bdgenomics.formats.avro.NucleotideContigFragment
  *
  * @param contigMap a map containing a Seq of contig fragments per contig.
  */
-case class ReferenceContigMap(contigMap: Map[String, Seq[NucleotideContigFragment]]) extends ReferenceFile {
+case class ReferenceContigMap(contigMap: Map[ContigName, Seq[NucleotideContigFragment]]) extends ReferenceFile {
 
   /**
    * The sequence dictionary corresponding to the contigs in this collection of fragments.
    */
-  val sequences: SequenceDictionary = new SequenceDictionary(contigMap.map(r =>
-    SequenceRecord(r._1, r._2.map(_.getFragmentEndPosition).max)).toVector)
+  val sequences: SequenceDictionary =
+    new SequenceDictionary(
+      contigMap
+        .map {
+          case (contigName, fragment) ⇒
+            SequenceRecord(contigName, NumLoci(fragment.map(_.getFragmentEndPosition).max))
+        }
+        .toVector
+    )
 
   /**
    * Extract reference sequence from the file.
@@ -92,13 +97,12 @@ object ReferenceContigMap {
    * @return Returns a serializable wrapper around these fragments that enables
    *   random access into the reference genome.
    */
-  def apply(fragments: RDD[NucleotideContigFragment]): ReferenceContigMap = {
+  def apply(fragments: RDD[NucleotideContigFragment])(implicit factory: Factory): ReferenceContigMap =
     ReferenceContigMap(
       fragments
-        .groupBy(_.getContig.getContigName)
+        .groupBy(fragment ⇒ ContigName(fragment.getContig.getContigName))
         .mapValues(_.toSeq.sortBy(_.getFragmentStartPosition))
         .collectAsMap
         .toMap
     )
-  }
 }

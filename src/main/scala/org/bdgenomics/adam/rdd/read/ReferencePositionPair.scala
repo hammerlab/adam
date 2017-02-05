@@ -46,26 +46,25 @@ private[read] object ReferencePositionPair extends Logging {
     val secondOfPair = (singleReadBucket.primaryMapped.filter(_.getReadInFragment == 1) ++
       singleReadBucket.unmapped.filter(_.getReadInFragment == 1)).toSeq
 
-    def getPos(r: AlignmentRecord): ReferencePosition = {
-      if (r.getReadMapped) {
-        new RichAlignmentRecord(r).fivePrimeReferencePosition
-      } else {
-        ReferencePosition(r.getSequence, 0L)
-      }
-    }
+    def getPos(r: AlignmentRecord): Option[ReferencePosition] =
+      if (r.getReadMapped)
+        Some(new RichAlignmentRecord(r).fivePrimeReferencePosition)
+      else
+        Option(r.getSequence).map(ReferencePosition(_, 0L))
 
-    if (firstOfPair.size + secondOfPair.size > 0) {
+
+    if (firstOfPair.size + secondOfPair.size > 0)
       new ReferencePositionPair(
-        firstOfPair.lift(0).map(getPos),
-        secondOfPair.lift(0).map(getPos)
+        firstOfPair.headOption.flatMap(getPos),
+        secondOfPair.headOption.flatMap(getPos)
       )
-    } else {
+    else
       new ReferencePositionPair(
-        (singleReadBucket.primaryMapped ++
-          singleReadBucket.unmapped).toSeq.headOption.map(getPos),
+        (singleReadBucket.primaryMapped ++ singleReadBucket.unmapped)
+          .headOption
+          .flatMap(getPos),
         None
       )
-    }
   }
 }
 
@@ -83,7 +82,7 @@ private[adam] case class ReferencePositionPair(
 class ReferencePositionPairSerializer extends Serializer[ReferencePositionPair] {
   val rps = new ReferencePositionSerializer()
 
-  private def writeOptionalReferencePos(kryo: Kryo, output: Output, optRefPos: Option[ReferencePosition]) = {
+  private def writeOptionalReferencePos(kryo: Kryo, output: Output, optRefPos: Option[ReferencePosition]) =
     optRefPos match {
       case None =>
         output.writeBoolean(false)
@@ -91,16 +90,13 @@ class ReferencePositionPairSerializer extends Serializer[ReferencePositionPair] 
         output.writeBoolean(true)
         rps.write(kryo, output, refPos)
     }
-  }
 
-  private def readOptionalReferencePos(kryo: Kryo, input: Input): Option[ReferencePosition] = {
-    val exists = input.readBoolean()
-    if (exists) {
+  private def readOptionalReferencePos(kryo: Kryo, input: Input): Option[ReferencePosition] =
+    if (input.readBoolean()) {
       Some(rps.read(kryo, input, classOf[ReferencePosition]))
     } else {
       None
     }
-  }
 
   def write(kryo: Kryo, output: Output, obj: ReferencePositionPair) = {
     writeOptionalReferencePos(kryo, output, obj.read1refPos)

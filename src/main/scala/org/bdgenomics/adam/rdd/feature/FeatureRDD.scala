@@ -17,20 +17,42 @@
  */
 package org.bdgenomics.adam.rdd.feature
 
-import com.google.common.collect.ComparisonChain
 import java.util.Comparator
+
+import com.google.common.collect.ComparisonChain
 import org.apache.hadoop.fs.{ FileSystem, Path }
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models._
-import org.bdgenomics.adam.rdd.{
-  AvroGenomicRDD,
-  FileMerger,
-  JavaSaveArgs,
-  SAMHeaderWriter
-}
+import org.bdgenomics.adam.rdd.{ AvroGenomicRDD, FileMerger, JavaSaveArgs, SAMHeaderWriter }
+import org.bdgenomics.adam.serialization.AvroSerializer
 import org.bdgenomics.formats.avro.{ Feature, Strand }
+import org.bdgenomics.utils.interval.array.{ IntervalArray, IntervalArraySerializer }
 import org.bdgenomics.utils.misc.Logging
+import org.hammerlab.genomics.reference.NumLoci
+
 import scala.collection.JavaConversions._
+import scala.reflect.ClassTag
+
+private[adam] case class FeatureArray(
+    array: Array[(ReferenceRegion, Feature)],
+    maxIntervalWidth: Long) extends IntervalArray[ReferenceRegion, Feature] {
+
+  protected def replace(arr: Array[(ReferenceRegion, Feature)],
+                        maxWidth: Long): IntervalArray[ReferenceRegion, Feature] = {
+    FeatureArray(arr, maxWidth)
+  }
+}
+
+private[adam] class FeatureArraySerializer extends IntervalArraySerializer[ReferenceRegion, Feature, FeatureArray] {
+
+  protected val kSerializer = new ReferenceRegionSerializer
+  protected val tSerializer = new AvroSerializer[Feature]
+
+  protected def builder(arr: Array[(ReferenceRegion, Feature)],
+                        maxIntervalWidth: Long): FeatureArray = {
+    FeatureArray(arr, maxIntervalWidth)
+  }
+}
 
 private trait FeatureOrdering[T <: Feature] extends Ordering[T] {
   def allowNull(s: java.lang.String): java.lang.Integer = {
@@ -78,9 +100,8 @@ object FeatureRDD {
    * @param elem The feature to extract a sequence record from.
    * @return Gets the SequenceRecord for this feature.
    */
-  private def getSequenceRecord(elem: Feature): SequenceRecord = {
-    SequenceRecord(elem.getContigName, 1L)
-  }
+  private def getSequenceRecord(elem: Feature): SequenceRecord =
+    SequenceRecord(elem.getContigName, NumLoci(1L))
 
   /**
    * Builds a FeatureRDD without SequenceDictionary information by running an
@@ -95,10 +116,14 @@ object FeatureRDD {
     rdd.cache()
 
     // aggregate to create the sequence dictionary
-    val sd = new SequenceDictionary(rdd.map(getSequenceRecord)
-      .distinct
-      .collect
-      .toVector)
+    val sd =
+      new SequenceDictionary(
+        rdd
+          .map(getSequenceRecord)
+          .distinct
+          .collect
+          .toVector
+      )
 
     FeatureRDD(rdd, sd)
   }
@@ -212,6 +237,11 @@ object FeatureRDD {
  */
 case class FeatureRDD(rdd: RDD[Feature],
                       sequences: SequenceDictionary) extends AvroGenomicRDD[Feature, FeatureRDD] with Logging {
+
+  protected def buildTree(rdd: RDD[(ReferenceRegion, Feature)])(
+    implicit tTag: ClassTag[Feature]): IntervalArray[ReferenceRegion, Feature] = {
+    IntervalArray(rdd, FeatureArray.apply(_, _))
+  }
 
   /**
    * Java friendly save function. Automatically detects the output format.

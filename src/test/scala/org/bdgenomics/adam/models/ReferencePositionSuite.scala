@@ -17,10 +17,13 @@
  */
 package org.bdgenomics.adam.models
 
-import org.scalatest.FunSuite
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig, Genotype, Variant }
+import org.hammerlab.genomics.reference.test.ClearContigNames
+import org.hammerlab.test.Suite
 
-class ReferencePositionSuite extends FunSuite {
+class ReferencePositionSuite
+  extends Suite
+    with ClearContigNames {
 
   test("create reference position from mapped read") {
     val contig = Contig.newBuilder
@@ -35,8 +38,8 @@ class ReferencePositionSuite extends FunSuite {
 
     val refPos = ReferencePosition(read)
 
-    assert(refPos.referenceName === "chr1")
-    assert(refPos.pos === 1L)
+    refPos.referenceName should === ("chr1")
+    refPos.pos should === (1L)
   }
 
   test("create reference position from variant") {
@@ -49,8 +52,8 @@ class ReferencePositionSuite extends FunSuite {
 
     val refPos = ReferencePosition(variant)
 
-    assert(refPos.referenceName === "chr10")
-    assert(refPos.pos === 10L)
+    refPos.referenceName should === ("chr10")
+    refPos.pos should === (10L)
   }
 
   test("create reference position from genotype") {
@@ -70,7 +73,7 @@ class ReferencePositionSuite extends FunSuite {
 
     val refPos = ReferencePosition(genotype)
 
-    assert(refPos.referenceName === "chr10")
-    assert(refPos.pos === 100L)
+    refPos.referenceName should === ("chr10")
+    refPos.pos should === (100L)
   }
 }

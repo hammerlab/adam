@@ -54,6 +54,7 @@ import org.bdgenomics.utils.io.LocalFileByteAccess
 import org.bdgenomics.utils.misc.{ HadoopUtil, Logging }
 import org.hammerlab.genomics.loci.parsing.{ LociRange, LociRanges, ParsedLoci }
 import org.hammerlab.genomics.loci.set.LociSet
+import org.hammerlab.genomics.reference.ContigName.Factory
 import org.hammerlab.genomics.reference.Locus
 import org.seqdoop.hadoop_bam._
 import org.seqdoop.hadoop_bam.util._
@@ -81,7 +82,7 @@ private case class LocatableReferenceRegion(rr: ReferenceRegion) extends Locatab
   /**
    * @return the reference contig this interval is on.
    */
-  def getContig(): String = rr.referenceName
+  def getContig(): String = rr.referenceName.name
 }
 
 /**
@@ -233,10 +234,10 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
     }
 
     // remove our supported header lines
-    deduped.flatMap(line => line match {
+    deduped.flatMap {
       case fl: VCFFormatHeaderLine =>
         val key = fl.getID
-        SupportedHeaderLines.formatHeaderLines
+        DefaultHeaderLines.formatHeaderLines
           .find(_.getID == key)
           .fold(Some(fl).asInstanceOf[Option[VCFCompoundHeaderLine]])(defaultLine => {
             auditLine(fl, defaultLine, (newId, oldLine) => {
@@ -248,7 +249,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
           })
       case il: VCFInfoHeaderLine =>
         val key = il.getID
-        SupportedHeaderLines.infoHeaderLines
+        DefaultHeaderLines.infoHeaderLines
           .find(_.getID == key)
           .fold(Some(il).asInstanceOf[Option[VCFCompoundHeaderLine]])(defaultLine => {
             auditLine(il, defaultLine, (newId, oldLine) => {
@@ -260,19 +261,21 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
           })
       case l =>
         Some(l)
-    }) ++ SupportedHeaderLines.allHeaderLines
+    } ++ DefaultHeaderLines.allHeaderLines
   }
 
   private def headerLines(header: VCFHeader): Seq[VCFHeaderLine] = {
     (header.getFilterLines ++
       header.getFormatHeaderLines ++
       header.getInfoHeaderLines ++
-      header.getOtherHeaderLines).toSeq
+      header.getOtherHeaderLines)
   }
 
   private def loadHeaderLines(filePath: String): Seq[VCFHeaderLine] = {
-    val header = readVcfHeader(filePath + "/_header")
-    headerLines(header)
+    getFsAndFilesWithFilter(filePath, new FileFilter("_header"))
+      .map(p => headerLines(readVcfHeader(p.toString)))
+      .flatten
+      .distinct
   }
 
   /**
@@ -398,7 +401,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
    *
    * @throws FileNotFoundException if the path does not match any files.
    */
-  private def getFiles(path: Path, fs: FileSystem): Array[Path] = {
+  protected def getFiles(path: Path, fs: FileSystem): Array[Path] = {
 
     // elaborate out the path; this returns FileStatuses
     val paths = if (fs.isDirectory(path)) fs.listStatus(path) else fs.globStatus(path)
@@ -427,7 +430,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
    *
    * @throws FileNotFoundException if the path does not match any files.
    */
-  private[rdd] def getFsAndFiles(path: Path): Array[Path] = {
+  protected def getFsAndFiles(path: Path): Array[Path] = {
 
     // get the underlying fs for the file
     val fs = Option(path.getFileSystem(sc.hadoopConfiguration)).getOrElse(
@@ -449,7 +452,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
    *
    * @throws FileNotFoundException if the path does not match any files.
    */
-  private def getFsAndFilesWithFilter(filename: String, filter: PathFilter): Array[Path] = {
+  protected def getFsAndFilesWithFilter(filename: String, filter: PathFilter): Array[Path] = {
 
     val path = new Path(filename)
 
@@ -467,7 +470,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
     }
 
     // the path must match at least one file
-    if (paths.isEmpty) {
+    if (paths == null || paths.isEmpty) {
       throw new FileNotFoundException(
         s"Couldn't find any files matching ${path.toUri}"
       )
@@ -475,6 +478,51 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
 
     // map the paths returned to their paths
     paths.map(_.getPath)
+  }
+
+  /**
+   * Checks to see if a set of SAM/BAM/CRAM files are queryname sorted.
+   *
+   * If we are loading fragments and the SAM/BAM/CRAM files are sorted by the
+   * read names, this implies that all of the reads in a pair are consecutive in
+   * the file. If this is the case, we can configure Hadoop-BAM to keep all of
+   * the reads from a fragment in a single split. This allows us to eliminate
+   * an expensive groupBy when loading a BAM file as fragments.
+   *
+   * @param filePath The file path to load reads from. Globs/directories are
+   *   supported.
+   * @param stringency The validation stringency to use when reading the header.
+   * @return Returns true if all files described by the filepath are queryname
+   *   sorted.
+   */
+  private[rdd] def filesAreQuerynameSorted(filePath: String,
+                                           stringency: ValidationStringency = ValidationStringency.STRICT): Boolean = {
+    val path = new Path(filePath)
+
+    val bamFiles = getFsAndFiles(path)
+    val filteredFiles = bamFiles.filter(p => {
+      val pPath = p.getName()
+      pPath.endsWith(".bam") || pPath.endsWith(".cram") ||
+        pPath.endsWith(".sam") || pPath.startsWith("part-")
+    })
+
+    filteredFiles
+      .forall(fp => {
+        try {
+          // the sort order is saved in the file header
+          sc.hadoopConfiguration.set(SAMHeaderReader.VALIDATION_STRINGENCY_PROPERTY, stringency.toString)
+          val samHeader = SAMHeaderReader.readSAMHeaderFrom(fp, sc.hadoopConfiguration)
+
+          samHeader.getSortOrder == SAMFileHeader.SortOrder.queryname
+        } catch {
+          case e: Throwable => {
+            log.error(
+              s"Loading header failed for $fp:n${e.getMessage}\n\t${e.getStackTrace.take(25).map(_.toString).mkString("\n\t")}"
+            )
+            false
+          }
+        }
+      })
   }
 
   /**
@@ -962,8 +1010,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
     // load vcf metadata
     val (sd, samples, headers) = loadVcfMetadata(filePath)
 
-    val vcc = new VariantContextConverter(Some(sd))
-
+    val vcc = new VariantContextConverter(headers, stringency)
     VariantContextRDD(records.flatMap(p => vcc.convert(p._2.get)),
       sd,
       samples,
@@ -1005,8 +1052,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
     // load vcf metadata
     val (sd, samples, headers) = loadVcfMetadata(filePath)
 
-    val vcc = new VariantContextConverter(Some(sd))
-
+    val vcc = new VariantContextConverter(headers, stringency)
     VariantContextRDD(records.flatMap(p => vcc.convert(p._2.get)),
       sd,
       samples,
@@ -1257,8 +1303,6 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
 
     val records = parsedLines.flatMap(_._2)
 
-    val seqDictMap = seqDict.records.map(sr => sr.name -> sr).toMap
-
     if (Metrics.isRecording)
       records.instrument()
 
@@ -1325,64 +1369,6 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
   }
 
   /**
-   * Loads variant annotations stored in VCF format.
-   *
-   * @param filePath The path to the VCF file(s) to load annotations from.
-   * @return Returns VariantAnnotationRDD.
-   */
-  def loadVcfAnnotations(
-    filePath: String): VariantAnnotationRDD = {
-    loadVcf(filePath).toVariantAnnotationRDD
-  }
-
-  /**
-   * Loads VariantAnnotations stored in Parquet, with metadata.
-   *
-   * @param filePath The path to load files from.
-   * @param predicate An optional predicate to push down into the file.
-   * @param projection An optional projection to use for reading.
-   * @return Returns VariantAnnotationRDD.
-   */
-  def loadParquetVariantAnnotations(
-    filePath: String,
-    predicate: Option[FilterPredicate] = None,
-    projection: Option[Schema] = None): VariantAnnotationRDD = {
-
-    // load header lines
-    val headers = loadHeaderLines(filePath)
-
-    val sd = loadAvroSequences(filePath)
-    val rdd = loadParquet[VariantAnnotation](filePath, predicate, projection)
-
-    VariantAnnotationRDD(rdd, sd, headers)
-  }
-
-  /**
-   * Loads VariantAnnotations into an RDD, and automatically detects
-   * the underlying storage format.
-   *
-   * Can load variant annotations from either Parquet or VCF.
-   *
-   * @see loadVcfAnnotations
-   * @see loadParquetVariantAnnotations
-   *
-   * @param filePath The path to load files from.
-   * @param projection An optional projection to use for reading.
-   * @return Returns VariantAnnotationRDD.
-   */
-  def loadVariantAnnotations(
-    filePath: String,
-    projection: Option[Schema] = None): VariantAnnotationRDD = {
-    if (filePath.endsWith(".vcf")) {
-      log.info(s"Loading $filePath as VCF, and converting to variant annotations. Projection is ignored.")
-      loadVcfAnnotations(filePath)
-    } else {
-      log.info(s"Loading $filePath as Parquet containing VariantAnnotations.")
-      loadParquetVariantAnnotations(filePath, None, projection)
-    }
-  }
-
-  /**
    * Loads Features from a file, autodetecting the file type.
    *
    * Loads files ending in .bed as BED6/12, .gff3 as GFF3, .gtf/.gff as
@@ -1442,14 +1428,12 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
    *
    * @see loadSequences
    */
-  def loadReferenceFile(filePath: String, fragmentLength: Long): ReferenceFile = {
-    if (filePath.endsWith(".2bit")) {
+  def loadReferenceFile(filePath: String, fragmentLength: Long)(implicit factory: Factory): ReferenceFile =
+    if (filePath.endsWith(".2bit"))
       //TODO(ryan): S3ByteAccess
       new TwoBitFile(new LocalFileByteAccess(new File(filePath)))
-    } else {
+    else
       ReferenceContigMap(loadSequences(filePath, fragmentLength = fragmentLength).rdd)
-    }
-  }
 
   /**
    * Auto-detects the file type and loads contigs as a NucleotideContigFragmentRDD.
@@ -1500,6 +1484,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
    *
    * @param filePath The path to load.
    * @param projection An optional subset of fields to load.
+   * @param stringency The validation stringency to use when validating the VCF.
    * @return Returns a GenotypeRDD.
    *
    * @see loadVcf
@@ -1507,10 +1492,11 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
    */
   def loadGenotypes(
     filePath: String,
-    projection: Option[Schema] = None): GenotypeRDD = {
+    projection: Option[Schema] = None,
+    stringency: ValidationStringency = ValidationStringency.STRICT): GenotypeRDD = {
     if (isVcfExt(filePath)) {
       log.info(s"Loading $filePath as VCF, and converting to Genotypes. Projection is ignored.")
-      loadVcf(filePath).toGenotypeRDD
+      loadVcf(filePath, stringency).toGenotypeRDD
     } else {
       log.info(s"Loading $filePath as Parquet containing Genotypes. Sequence dictionary for translation is ignored.")
       loadParquetGenotypes(filePath, None, projection)
@@ -1525,6 +1511,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
    *
    * @param filePath The path to load.
    * @param projection An optional subset of fields to load.
+   * @param stringency The validation stringency to use when validating the VCF.
    * @return Returns a VariantRDD.
    *
    * @see loadVcf
@@ -1532,10 +1519,11 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
    */
   def loadVariants(
     filePath: String,
-    projection: Option[Schema] = None): VariantRDD = {
+    projection: Option[Schema] = None,
+    stringency: ValidationStringency = ValidationStringency.STRICT): VariantRDD = {
     if (isVcfExt(filePath)) {
       log.info(s"Loading $filePath as VCF, and converting to Variants. Projection is ignored.")
-      loadVcf(filePath).toVariantRDD
+      loadVcf(filePath, stringency).toVariantRDD
     } else {
       log.info(s"Loading $filePath as Parquet containing Variants. Sequence dictionary for translation is ignored.")
       loadParquetVariants(filePath, None, projection)
@@ -1621,8 +1609,17 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
     if (filePath.endsWith(".sam") ||
       filePath.endsWith(".bam") ||
       filePath.endsWith(".cram")) {
-      log.info(s"Loading $filePath as SAM/BAM and converting to Fragments.")
-      loadBam(filePath).toFragments
+
+      // check to see if the input files are all queryname sorted
+      if (filesAreQuerynameSorted(filePath)) {
+        log.info(s"Loading $filePath as queryname sorted SAM/BAM and converting to Fragments.")
+        sc.hadoopConfiguration.setBoolean(BAMInputFormat.KEEP_PAIRED_READS_TOGETHER_PROPERTY,
+          true)
+        loadBam(filePath).querynameSortedToFragments
+      } else {
+        log.info(s"Loading $filePath as SAM/BAM and converting to Fragments.")
+        loadBam(filePath).toFragments
+      }
     } else if (filePath.endsWith(".reads.adam")) {
       log.info(s"Loading $filePath as ADAM AlignmentRecords and converting to Fragments.")
       loadAlignments(filePath).toFragments

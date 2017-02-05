@@ -18,25 +18,29 @@
 package org.bdgenomics.adam.models
 
 import java.io.File
-import htsjdk.samtools.{
-  SAMSequenceDictionary,
-  SAMSequenceRecord
-}
+
+import htsjdk.samtools.{ SAMSequenceDictionary, SAMSequenceRecord }
 import htsjdk.variant.utils.SAMSequenceDictionaryExtractor
 import htsjdk.variant.vcf.VCFFileReader
 import org.bdgenomics.adam.util.ADAMFunSuite
+import org.hammerlab.genomics.reference.test.ClearContigNames
+import org.hammerlab.genomics.reference.{ ContigName, NumLoci }
+import org.hammerlab.genomics.reference.test.LociConversions.intToLocus
 import scala.collection.JavaConversions._
 
-class SequenceDictionarySuite extends ADAMFunSuite {
+class SequenceDictionarySuite
+  extends ADAMFunSuite
+    with ClearContigNames {
+
   test("Convert from sam sequence record and back") {
     val sr = new SAMSequenceRecord("1", 1000)
     sr.setAttribute(SAMSequenceRecord.URI_TAG, "http://bigdatagenomics.github.io/1")
 
     val asASR: SequenceRecord = SequenceRecord.fromSAMSequenceRecord(sr)
 
-    assert(asASR.name === "1")
-    assert(asASR.length === 1000L)
-    assert(asASR.url === Some("http://bigdatagenomics.github.io/1"))
+    asASR.name should === ("1")
+    asASR.length should === (1000)
+    asASR.url should === (Some("http://bigdatagenomics.github.io/1"))
 
     val asPSR: SAMSequenceRecord = asASR.toSAMSequenceRecord
 
@@ -50,7 +54,7 @@ class SequenceDictionarySuite extends ADAMFunSuite {
     val chr1 = ssd.getSequence("1") // Validate that extra fields are parsed
     assert(chr1 != null)
     val refseq = chr1.getAttribute("REFSEQ")
-    assert(refseq === "NC_000001.10")
+    refseq should === ("NC_000001.10")
 
     val asd = SequenceDictionary(ssd)
     assert(asd.containsRefName("1"))
@@ -81,19 +85,19 @@ class SequenceDictionarySuite extends ADAMFunSuite {
     val rec = record("chr1")
     val asd = SequenceDictionary(rec)
     val recFromName = asd(rec.name)
-    assert(recFromName === Some(rec))
+    recFromName should === (Some(rec))
   }
 
   test("SequenceDictionary's with same single element are equal") {
     val asd1 = SequenceDictionary(record("chr1"))
     val asd2 = SequenceDictionary(record("chr1"))
-    assert(asd1 === asd2)
+    asd1 should === (asd2)
   }
 
   test("SequenceDictionary's with same two elements are equals") {
     val asd1 = SequenceDictionary(record("chr1"), record("chr2"))
     val asd2 = SequenceDictionary(record("chr1"), record("chr2"))
-    assert(asd1 === asd2)
+    asd1 should === (asd2)
   }
 
   test("SequenceDictionary's with different elements are unequal") {
@@ -123,9 +127,9 @@ class SequenceDictionarySuite extends ADAMFunSuite {
     val s2 = SequenceDictionary(record("foo"))
     val s3 = SequenceDictionary(record("foo"), record("bar"))
 
-    assert(s1 + record("foo") === s2)
-    assert(s2 + record("foo") === s2)
-    assert(s2 + record("bar") === s3)
+    s1 + record("foo") should === (s2)
+    s2 + record("foo") should === (s2)
+    s2 + record("bar") should === (s3)
   }
 
   test("The append operation ++ works correctly") {
@@ -134,10 +138,10 @@ class SequenceDictionarySuite extends ADAMFunSuite {
     val s2b = SequenceDictionary(record("bar"))
     val s3 = SequenceDictionary(record("foo"), record("bar"))
 
-    assert(s1 ++ s1 === s1)
-    assert(s1 ++ s2a === s2a)
-    assert(s1 ++ s2b === s2b)
-    assert(s2a ++ s2b === s3)
+    s1 ++ s1 should === (s1)
+    s1 ++ s2a should === (s2a)
+    s1 ++ s2b should === (s2b)
+    s2a ++ s2b should === (s3)
   }
 
   test("ContainsRefName works correctly for different string types") {
@@ -161,11 +165,11 @@ class SequenceDictionarySuite extends ADAMFunSuite {
     val str0: String = "chr0"
     val str1: java.lang.String = "chr1"
 
-    assert(dict(str0).get.name === "chr0")
-    assert(dict(str1).get.name === "chr1")
+    dict(str0).get.name should === ("chr0")
+    dict(str1).get.name should === ("chr1")
   }
 
-  def record(name: String, length: Long = 1000, md5: Option[String] = None): SequenceRecord =
+  def record(name: ContigName, length: NumLoci = 1000, md5: Option[String] = None): SequenceRecord =
     SequenceRecord(name, length).copy(md5 = md5)
 
   test("convert from sam sequence record and back") {
@@ -174,9 +178,9 @@ class SequenceDictionarySuite extends ADAMFunSuite {
 
     val conv = SequenceRecord.fromSAMSequenceRecord(sr)
 
-    assert(conv.name === "chr0")
-    assert(conv.length === 1000L)
-    assert(conv.url.get === "http://bigdatagenomics.github.io/chr0")
+    conv.name should === ("chr0")
+    conv.length should === (1000)
+    conv.url.get should === ("http://bigdatagenomics.github.io/chr0")
 
     val convSr = conv.toSAMSequenceRecord
 
@@ -190,7 +194,7 @@ class SequenceDictionarySuite extends ADAMFunSuite {
 
     val ssd = new SAMSequenceDictionary(srs)
 
-    val asd = SequenceDictionary.fromSAMSequenceDictionary(ssd)
+    val asd = SequenceDictionary(ssd)
 
     val toSSD = asd.toSAMSequenceDictionary
 
@@ -198,20 +202,27 @@ class SequenceDictionarySuite extends ADAMFunSuite {
   }
 
   test("conversion to sam sequence dictionary has correct sort order") {
-    val sd = new SequenceDictionary(Vector(SequenceRecord("MT", 1000L),
-      SequenceRecord("4", 1000L),
-      SequenceRecord("1", 1000L),
-      SequenceRecord("3", 1000L),
-      SequenceRecord("2", 1000L),
-      SequenceRecord("X", 1000L))).sorted
+    val sd =
+      new SequenceDictionary(
+        Vector(
+          SequenceRecord("MT", 1000),
+          SequenceRecord("4", 1000),
+          SequenceRecord("1", 1000),
+          SequenceRecord("3", 1000),
+          SequenceRecord("2", 1000),
+          SequenceRecord("X", 1000)
+        )
+      )
+      .sorted
+
     val ssd = sd.toSAMSequenceDictionary
     val seq = ssd.getSequences
-    assert(seq.get(0).getSequenceName === "1")
-    assert(seq.get(1).getSequenceName === "2")
-    assert(seq.get(2).getSequenceName === "3")
-    assert(seq.get(3).getSequenceName === "4")
-    assert(seq.get(4).getSequenceName === "MT")
-    assert(seq.get(5).getSequenceName === "X")
+    seq.get(0).getSequenceName should === ("1")
+    seq.get(1).getSequenceName should === ("2")
+    seq.get(2).getSequenceName should === ("3")
+    seq.get(3).getSequenceName should === ("4")
+    seq.get(4).getSequenceName should === ("MT")
+    seq.get(5).getSequenceName should === ("X")
   }
 
   test("load sequence dictionary from VCF file") {
@@ -219,13 +230,13 @@ class SequenceDictionarySuite extends ADAMFunSuite {
     val fileReader = new VCFFileReader(new File(path), false)
     val sd = SequenceDictionary.fromVCFHeader(fileReader.getFileHeader)
 
-    assert(sd.records.size === 1)
-    assert(sd.records.head.name === "1")
+    sd.records.size should === (1)
+    sd.records.head.name should === ("1")
   }
 
   test("empty sequence dictionary must be empty") {
     val sd = SequenceDictionary.empty
-    assert(sd.records.size === 0)
+    sd.records.size should === (0)
     assert(sd.isEmpty)
   }
 }

@@ -17,23 +17,20 @@
  */
 package org.bdgenomics.adam.converters
 
-import htsjdk.samtools.SamReaderFactory
 import java.io.File
-import org.bdgenomics.adam.models.{
-  RecordGroupDictionary,
-  RecordGroup,
-  SAMFileHeaderWritable,
-  SequenceDictionary,
-  SequenceRecord
-}
-import org.bdgenomics.formats.avro.{
-  AlignmentRecord,
-  Fragment
-}
-import org.scalatest.FunSuite
+
+import htsjdk.samtools.SamReaderFactory
+import org.bdgenomics.adam.models.{ RecordGroup, RecordGroupDictionary, SAMFileHeaderWritable, SequenceDictionary, SequenceRecord }
+import org.bdgenomics.formats.avro.{ AlignmentRecord, Fragment }
+import org.hammerlab.genomics.reference.test.ClearContigNames
+import org.hammerlab.genomics.reference.test.LociConversions.intToLocus
+import org.hammerlab.test.Suite
+
 import scala.collection.JavaConversions._
 
-class AlignmentRecordConverterSuite extends FunSuite {
+class AlignmentRecordConverterSuite
+  extends Suite
+    with ClearContigNames {
 
   // allocate converters
   val adamRecordConverter = new AlignmentRecordConverter

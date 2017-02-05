@@ -17,11 +17,15 @@
  */
 package org.bdgenomics.adam.converters
 
-import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.util.ADAMFunSuite
 import java.io.File
 
-class FastaConverterSuite extends ADAMFunSuite {
+import org.bdgenomics.adam.rdd.ADAMContext._
+import org.bdgenomics.adam.util.ADAMFunSuite
+import org.hammerlab.genomics.reference.test.ClearContigNames
+
+class FastaConverterSuite
+  extends ADAMFunSuite
+    with ClearContigNames {
 
   val converter = new FastaConverter(1000)
 
@@ -44,7 +48,8 @@ class FastaConverterSuite extends ADAMFunSuite {
     val contig = converter.convert(None, 0, Seq("AAATTTGCGC"), None)
 
     assert(contig.head.getFragmentSequence.map(_.toString).reduce(_ + _) === "AAATTTGCGC")
-    assert(contig.head.getContig.getContigLength === 10)
+    //assert(contig.head.getContig.getContigLength === 10)
+    contig.head.getContig.getContigLength should ===(10)
     assert(contig.head.getContig.getContigName === null)
     assert(contig.head.getDescription === null)
   }

@@ -17,17 +17,20 @@
  */
 package org.bdgenomics.adam.models
 
-import htsjdk.variant.variantcontext.{
-  Allele,
-  GenotypeBuilder,
-  VariantContextBuilder
-}
-import org.bdgenomics.adam.converters.VariantContextConverter
+import htsjdk.samtools.ValidationStringency
+import htsjdk.variant.variantcontext.{ Allele, GenotypeBuilder, VariantContextBuilder }
+import org.bdgenomics.adam.converters.{ DefaultHeaderLines, VariantContextConverter }
 import org.bdgenomics.formats.avro._
-import org.scalatest.FunSuite
+import org.hammerlab.genomics.reference.test.ClearContigNames
+import org.hammerlab.test.Suite
+import org.scalactic.ConversionCheckedTripleEquals
+import org.scalatest.{ FunSuite, Matchers }
+
 import scala.collection.JavaConversions._
 
-class ReferenceRegionSuite extends FunSuite {
+class ReferenceRegionSuite
+  extends Suite
+    with ClearContigNames {
 
   test("contains(: ReferenceRegion)") {
     assert(region("chr0", 10, 100).contains(region("chr0", 50, 70)))
@@ -57,9 +60,9 @@ class ReferenceRegionSuite extends FunSuite {
     val r12 = region("chr0", 0, 100)
     val r13 = region("chr0", 10, 150)
 
-    assert(r1.merge(r1) === r1)
-    assert(r1.merge(r2) === r12)
-    assert(r1.merge(r3) === r13)
+    r1.merge(r1) should === (r1)
+    r1.merge(r2) should === (r12)
+    r1.merge(r3) should === (r13)
   }
 
   test("overlaps") {
@@ -102,43 +105,43 @@ class ReferenceRegionSuite extends FunSuite {
   test("distance(: ReferenceRegion)") {
 
     // distance on the right
-    assert(region("chr0", 10, 100).distance(region("chr0", 200, 300)) === Some(101))
+    region("chr0", 10, 100).distance(region("chr0", 200, 300)) should be(Some(101))
 
     // distance on the left
-    assert(region("chr0", 100, 200).distance(region("chr0", 10, 50)) === Some(51))
+    region("chr0", 100, 200).distance(region("chr0", 10, 50)) should be(Some(51))
 
     // different sequences
-    assert(region("chr0", 100, 200).distance(region("chr1", 10, 50)) === None)
+    region("chr0", 100, 200).distance(region("chr1", 10, 50)) should be(None)
 
     // touches on the right
-    assert(region("chr0", 10, 100).distance(region("chr0", 100, 200)) === Some(1))
+    region("chr0", 10, 100).distance(region("chr0", 100, 200)) should be(Some(1))
 
     // overlaps
-    assert(region("chr0", 10, 100).distance(region("chr0", 50, 150)) === Some(0))
+    region("chr0", 10, 100).distance(region("chr0", 50, 150)) should be(Some(0))
 
     // touches on the left
-    assert(region("chr0", 10, 100).distance(region("chr0", 0, 10)) === Some(1))
+    region("chr0", 10, 100).distance(region("chr0", 0, 10)) should be(Some(1))
   }
 
   test("distance(: ReferencePosition)") {
 
     // middle
-    assert(region("chr0", 10, 100).distance(point("chr0", 50)) === Some(0))
+    region("chr0", 10, 100).distance(point("chr0", 50)) should be(Some(0))
 
     // left edge
-    assert(region("chr0", 10, 100).distance(point("chr0", 10)) === Some(0))
+    region("chr0", 10, 100).distance(point("chr0", 10)) should be(Some(0))
 
     // right edge
-    assert(region("chr0", 10, 100).distance(point("chr0", 100)) === Some(1))
+    region("chr0", 10, 100).distance(point("chr0", 100)) should be(Some(1))
 
     // right
-    assert(region("chr0", 10, 100).distance(point("chr0", 150)) === Some(51))
+    region("chr0", 10, 100).distance(point("chr0", 150)) should be(Some(51))
 
     // left
-    assert(region("chr0", 100, 200).distance(point("chr0", 50)) === Some(50))
+    region("chr0", 100, 200).distance(point("chr0", 50)) should be(Some(50))
 
     // different sequences
-    assert(region("chr0", 100, 200).distance(point("chr1", 50)) === None)
+    region("chr0", 100, 200).distance(point("chr1", 50)) should be(None)
 
   }
 
@@ -200,10 +203,10 @@ class ReferenceRegionSuite extends FunSuite {
       .setReadNegativeStrand(false)
       .build()
     val rr = ReferenceRegion.stranded(read)
-    assert(rr.referenceName === "ctg")
-    assert(rr.start === 10L)
-    assert(rr.end === 15L)
-    assert(rr.strand === Strand.FORWARD)
+    rr.referenceName should === ("ctg")
+    rr.start should === (10L)
+    rr.end should === (15L)
+    rr.strand should === (Strand.FORWARD)
   }
 
   test("create stranded region from read on reverse strand") {
@@ -215,10 +218,10 @@ class ReferenceRegionSuite extends FunSuite {
       .setReadNegativeStrand(true)
       .build()
     val rr = ReferenceRegion.stranded(read)
-    assert(rr.referenceName === "ctg")
-    assert(rr.start === 10L)
-    assert(rr.end === 15L)
-    assert(rr.strand === Strand.REVERSE)
+    rr.referenceName should === ("ctg")
+    rr.start should === (10L)
+    rr.end should === (15L)
+    rr.strand should === (Strand.REVERSE)
   }
 
   test("create region from mapped read contains read start and end") {
@@ -240,7 +243,7 @@ class ReferenceRegionSuite extends FunSuite {
     val r1 = region("chr1", 0L, 6L)
     val r2 = region("chr1", 6L, 10L)
 
-    assert(r1.distance(r2) === Some(1))
+    r1.distance(r2) should be(Some(1))
     assert(r1.isAdjacent(r2))
     assert(r1.merge(r2) == region("chr1", 0L, 10L))
   }
@@ -265,7 +268,7 @@ class ReferenceRegionSuite extends FunSuite {
     val hull1 = r1.hull(r2)
     val hull2 = r2.hull(r1)
 
-    assert(hull1 === hull2)
+    hull1 should === (hull2)
     assert(hull1.overlaps(r1))
     assert(hull1.overlaps(r2))
     assert(hull1.start == 0L)
@@ -289,9 +292,9 @@ class ReferenceRegionSuite extends FunSuite {
 
     val r = ReferenceRegion.unstranded(read)
 
-    assert(r.referenceName === "chrM")
-    assert(r.start === 5L)
-    assert(r.end === 10L)
+    r.referenceName should === ("chrM")
+    r.start should === (5L)
+    r.end should === (10L)
   }
 
   test("intersection fails on non-overlapping regions") {
@@ -305,9 +308,9 @@ class ReferenceRegionSuite extends FunSuite {
 
   test("compute intersection") {
     val overlapRegion = ReferenceRegion("chr1", 1L, 10L).intersection(ReferenceRegion("chr1", 5L, 15L))
-    assert(overlapRegion.referenceName === "chr1")
-    assert(overlapRegion.start === 5L)
-    assert(overlapRegion.end === 10L)
+    overlapRegion.referenceName should === ("chr1")
+    overlapRegion.start should === (5L)
+    overlapRegion.end should === (10L)
   }
 
   def region(refName: String, start: Long, end: Long): ReferenceRegion =
@@ -329,9 +332,9 @@ class ReferenceRegionSuite extends FunSuite {
   }
 
   test("check the width of a reference region") {
-    assert(ReferenceRegion("chr1", 100, 201).width === 101)
-    assert(ReferenceRegion("chr2", 200, 401, Strand.FORWARD).width === 201)
-    assert(ReferenceRegion("chr3", 399, 1000, Strand.REVERSE).width === 601)
+    ReferenceRegion("chr1", 100, 201).width should === (101)
+    ReferenceRegion("chr2", 200, 401, Strand.FORWARD).width should === (201)
+    ReferenceRegion("chr3", 399, 1000, Strand.REVERSE).width should === (601)
   }
 
   test("make a reference region for a variant or genotype") {
@@ -349,26 +352,26 @@ class ReferenceRegionSuite extends FunSuite {
     val rrV = ReferenceRegion(v)
     val rrG = ReferenceRegion(g)
 
-    assert(rrV.referenceName === "chr")
-    assert(rrV.start === 1L)
-    assert(rrV.end === 3L)
-    assert(rrV === rrG)
+    rrV.referenceName should === ("chr")
+    rrV.start should === (1L)
+    rrV.end should === (3L)
+    rrV should === (rrG)
   }
 
   test("uniformly pad a reference region") {
     val rr = ReferenceRegion("1", 2L, 3L)
     val padded = rr.pad(2)
-    assert(padded.referenceName == "1")
-    assert(padded.start === 0L)
-    assert(padded.end === 5L)
+    padded.referenceName should === ("1")
+    padded.start should === (0L)
+    padded.end should === (5L)
   }
 
   test("unevenly pad a reference region") {
     val rr = ReferenceRegion("1", 2L, 4L)
     val padded = rr.pad(2, 1)
-    assert(padded.referenceName == "1")
-    assert(padded.start === 0L)
-    assert(padded.end === 5L)
+    padded.referenceName should === ("1")
+    padded.start should === (0L)
+    padded.end should === (5L)
   }
 
   test("can build an open ended reference region") {
@@ -440,7 +443,8 @@ class ReferenceRegionSuite extends FunSuite {
   }
 
   test("convert a genotype and then get the reference region") {
-    val converter = new VariantContextConverter
+    val converter = new VariantContextConverter(DefaultHeaderLines.allHeaderLines,
+      ValidationStringency.LENIENT)
     val vcb = new VariantContextBuilder()
       .alleles(List(Allele.create("A", true), Allele.create("T")))
       .start(1L)
@@ -450,13 +454,13 @@ class ReferenceRegionSuite extends FunSuite {
       vcb.getAlleles(),
       Map.empty[String, java.lang.Object])).make()
     val gts = converter.convert(vc).flatMap(_.genotypes)
-    assert(gts.size === 1)
+    gts.size should === (1)
     val gt = gts.head
 
     val rr = ReferenceRegion(gt)
-    assert(rr.referenceName === "1")
-    assert(rr.start === 0L)
-    assert(rr.end === 1L)
+    rr.referenceName should === ("1")
+    rr.start should === (0L)
+    rr.end should === (1L)
   }
 
   test("create region from feature with null alignment positions fails") {
@@ -494,10 +498,10 @@ class ReferenceRegionSuite extends FunSuite {
       .setStrand(Strand.FORWARD)
       .build()
     val rr = ReferenceRegion.stranded(feature)
-    assert(rr.referenceName === "ctg")
-    assert(rr.start === 10L)
-    assert(rr.end === 15L)
-    assert(rr.strand === Strand.FORWARD)
+    rr.referenceName should === ("ctg")
+    rr.start should === (10L)
+    rr.end should === (15L)
+    rr.strand should === (Strand.FORWARD)
   }
 
   test("create stranded region from feature on reverse strand") {
@@ -508,9 +512,9 @@ class ReferenceRegionSuite extends FunSuite {
       .setStrand(Strand.REVERSE)
       .build()
     val rr = ReferenceRegion.stranded(feature)
-    assert(rr.referenceName === "ctg")
-    assert(rr.start === 10L)
-    assert(rr.end === 15L)
-    assert(rr.strand === Strand.REVERSE)
+    rr.referenceName should === ("ctg")
+    rr.start should === (10L)
+    rr.end should === (15L)
+    rr.strand should === (Strand.REVERSE)
   }
 }

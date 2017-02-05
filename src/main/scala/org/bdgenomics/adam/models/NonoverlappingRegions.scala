@@ -17,6 +17,8 @@
  */
 package org.bdgenomics.adam.models
 
+import org.hammerlab.genomics.reference.ContigName
+
 /**
  * The evaluation of a regionJoin takes place with respect to a complete partition on the total space
  * of the genome.  NonoverlappingRegions is a class to compute the value of that partition, and to allow
@@ -46,7 +48,7 @@ private[adam] class NonoverlappingRegions(regions: Iterable[ReferenceRegion]) ex
   /**
    * The name of the reference contig this covers.
    */
-  val referenceName: String = regions.head.referenceName
+  val referenceName: ContigName = regions.head.referenceName
 
   // invariant: all the values in the 'regions' list have the same referenceId
   assert(regions.forall(_.referenceName == referenceName))
@@ -207,13 +209,13 @@ private[adam] object NonoverlappingRegions {
  *                dictionary.
  */
 private[adam] class MultiContigNonoverlappingRegions(
-    regions: Seq[(String, Iterable[ReferenceRegion])]) extends Serializable {
+    regions: Seq[(ContigName, Iterable[ReferenceRegion])]) extends Serializable {
   assert(
     regions != null,
     "Regions was set to null"
   )
 
-  private val regionMap: Map[String, NonoverlappingRegions] =
+  private val regionMap: Map[ContigName, NonoverlappingRegions] =
     Map(regions.map(r => (r._1, new NonoverlappingRegions(r._2))): _*)
 
   /**
@@ -236,7 +238,6 @@ private[adam] class MultiContigNonoverlappingRegions(
    * completely outside the hull of all the input-set regions.
    *
    * @param value The input value
-   * @tparam U
    * @return a boolean -- the input value should only participate in the regionJoin if the return value
    *         here is 'true'.
    */

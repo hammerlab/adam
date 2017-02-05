@@ -18,9 +18,12 @@
 package org.bdgenomics.adam.algorithms.consensus
 
 import org.bdgenomics.adam.models.ReferenceRegion
-import org.scalatest.FunSuite
+import org.hammerlab.genomics.reference.test.ClearContigNames
+import org.hammerlab.test.Suite
 
-class ConsensusSuite extends FunSuite {
+class ConsensusSuite
+  extends Suite
+    with ClearContigNames {
 
   test("test the insertion of a consensus insertion into a reference") {
     val c = Consensus("TCGA", ReferenceRegion("0", 10L, 11L))

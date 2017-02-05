@@ -19,8 +19,11 @@ package org.bdgenomics.adam.rdd.variant
 
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.util.ADAMFunSuite
+import org.hammerlab.genomics.reference.test.ClearContigNames
 
-class VariantRDDSuite extends ADAMFunSuite {
+class VariantRDDSuite
+  extends ADAMFunSuite
+    with ClearContigNames {
 
   sparkTest("use broadcast join to pull down variants mapped to targets") {
     val variantsPath = testFile("small.vcf")
@@ -203,5 +206,22 @@ class VariantRDDSuite extends ADAMFunSuite {
     assert(c0.count(_._1.isEmpty) === 3)
     assert(c.filter(_._1.isEmpty).forall(_._2.size == 1))
     assert(c0.filter(_._1.isEmpty).forall(_._2.size == 1))
+  }
+
+  sparkTest("convert back to variant contexts") {
+    val variantsPath = testFile("small.vcf")
+    val variants = sc.loadVariants(variantsPath)
+    val variantContexts = variants.toVariantContextRDD
+
+    assert(variantContexts.sequences.containsRefName("1"))
+    assert(variantContexts.samples.isEmpty)
+
+    val vcs = variantContexts.rdd.collect
+    assert(vcs.size === 6)
+
+    val vc = vcs.head
+    assert(vc.position.referenceName === "1")
+    assert(vc.variant.variant.contigName === "1")
+    assert(vc.genotypes.isEmpty)
   }
 }

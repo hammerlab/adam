@@ -17,15 +17,16 @@
  */
 package org.bdgenomics.adam.projections
 
-import java.io.File
-import java.util.logging.Level
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.TestSaveArgs
-import org.bdgenomics.adam.util.{ ParquetLogger, ADAMFunSuite }
+import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.AlignmentRecord
+import org.hammerlab.genomics.reference.test.ClearContigNames
 
-class FieldEnumerationSuite extends ADAMFunSuite {
+class FieldEnumerationSuite
+  extends ADAMFunSuite
+    with ClearContigNames {
 
   test("Empty projections are illegal") {
     intercept[IllegalArgumentException] {

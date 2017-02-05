@@ -1,1 +1,2 @@
-addSbtPlugin("org.hammerlab" % "sbt-parent" % "1.5.6")
+resolvers += Resolver.sonatypeRepo("snapshots")
+addSbtPlugin("org.hammerlab" % "sbt-parent" % "1.6.3-SNAPSHOT")

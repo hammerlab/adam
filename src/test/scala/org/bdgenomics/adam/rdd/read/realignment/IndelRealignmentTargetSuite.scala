@@ -23,8 +23,11 @@ import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rich.RichAlignmentRecord
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.AlignmentRecord
+import org.hammerlab.genomics.reference.test.ClearContigNames
 
-class IndelRealignmentTargetSuite extends ADAMFunSuite {
+class IndelRealignmentTargetSuite
+  extends ADAMFunSuite
+    with ClearContigNames {
 
   // Note: this can't be lazy vals because Spark won't find the RDDs after the first test
   def mason_reads: RDD[RichAlignmentRecord] = {

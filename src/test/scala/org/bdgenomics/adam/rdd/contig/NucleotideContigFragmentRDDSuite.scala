@@ -23,11 +23,16 @@ import com.google.common.io.Files
 import org.bdgenomics.adam.models._
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro._
+import org.hammerlab.genomics.reference.test.ClearContigNames
+import org.hammerlab.genomics.reference.test.LociConversions.intToLocus
 import org.scalatest.Matchers
 
 import scala.collection.mutable.ListBuffer
 
-class NucleotideContigFragmentRDDSuite extends ADAMFunSuite with Matchers {
+class NucleotideContigFragmentRDDSuite
+  extends ADAMFunSuite
+    with Matchers
+    with ClearContigNames {
 
   sparkTest("generate sequence dict from fasta") {
     val contig0 = Contig.newBuilder
@@ -54,7 +59,7 @@ class NucleotideContigFragmentRDDSuite extends ADAMFunSuite with Matchers {
       Some(
         SequenceRecord(
           "chr0",
-          1000L,
+          1000,
           url = "http://bigdatagenomics.github.io/chr0.fa"
         )
       )
@@ -64,7 +69,7 @@ class NucleotideContigFragmentRDDSuite extends ADAMFunSuite with Matchers {
       Some(
         SequenceRecord(
           "chr1",
-          900L
+          900
         )
       )
     )
@@ -125,7 +130,7 @@ class NucleotideContigFragmentRDDSuite extends ADAMFunSuite with Matchers {
 
     val sequence = "ACTGTACTC"
     val sequence0 = sequence.take(7) // ACTGTAC
-    val sequence1 = sequence.drop(3).take(5) // GTACT
+    val sequence1 = sequence.slice(3, 8) // GTACT
     val sequence2 = sequence.takeRight(6).reverse // CTCATG
     val fragment0 = NucleotideContigFragment.newBuilder()
       .setContig(contig1)
@@ -172,7 +177,7 @@ class NucleotideContigFragmentRDDSuite extends ADAMFunSuite with Matchers {
 
     val sequence = "ACTGTACTC"
     val sequence0 = sequence.take(7) // ACTGTAC
-    val sequence1 = sequence.drop(3).take(5) // GTACT
+    val sequence1 = sequence.slice(3, 8) // GTACT
     val sequence2 = sequence.takeRight(6).reverse // CTCATG
     val fragment0 = NucleotideContigFragment.newBuilder()
       .setContig(contig1)
@@ -225,11 +230,11 @@ class NucleotideContigFragmentRDDSuite extends ADAMFunSuite with Matchers {
     var passed = true
     val rdd = NucleotideContigFragmentRDD(sc.parallelize(fragments.toList))
     try {
-      val result = rdd.extract(new ReferenceRegion("chr1", 0L, 1000L))
+      rdd.extract(new ReferenceRegion("chr1", 0L, 1000L))
     } catch {
-      case e: AssertionError => passed = false
+      case _: AssertionError => passed = false
     }
-    assert(passed == true)
+    passed should be(true)
   }
 
   sparkTest("save single contig fragment as FASTA text file") {
@@ -508,7 +513,7 @@ class NucleotideContigFragmentRDDSuite extends ADAMFunSuite with Matchers {
 
     val sequence = "ACTGTACTC"
     val sequence0 = sequence.take(7) // ACTGTAC
-    val sequence1 = sequence.drop(3).take(5) // GTACT
+    val sequence1 = sequence.slice(3, 8) // GTACT
     val sequence2 = sequence.takeRight(6).reverse // CTCATG
     val fragment0 = NucleotideContigFragment.newBuilder()
       .setContig(contig1)

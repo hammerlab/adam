@@ -18,11 +18,8 @@
 package org.bdgenomics.adam.rdd
 
 import org.apache.spark.Partitioner
-import org.bdgenomics.adam.models.{
-  ReferencePosition,
-  ReferenceRegion,
-  SequenceDictionary
-}
+import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion, SequenceDictionary }
+import org.hammerlab.genomics.reference.ContigName
 
 /**
  * Repartitions objects that are keyed by a ReferencePosition or ReferenceRegion
@@ -35,7 +32,7 @@ case class ReferencePartitioner(sd: SequenceDictionary) extends Partitioner {
 
   override def numPartitions: Int = referenceNames.length
 
-  private def partitionFromName(name: String): Int = {
+  private def partitionFromName(name: ContigName): Int = {
     // which reference is this in?
     val pIdx = referenceNames.indexOf(name)
 
@@ -45,13 +42,10 @@ case class ReferencePartitioner(sd: SequenceDictionary) extends Partitioner {
     pIdx
   }
 
-  override def getPartition(key: Any): Int = key match {
-    case rp: ReferencePosition => {
-      partitionFromName(rp.referenceName)
+  override def getPartition(key: Any): Int =
+    key match {
+      case rp: ReferencePosition => partitionFromName(rp.referenceName)
+      case rr: ReferenceRegion => partitionFromName(rr.referenceName)
+      case _ => throw new IllegalArgumentException("Only ReferencePositions or ReferenceRegions can be used as a key.")
     }
-    case rr: ReferenceRegion => {
-      partitionFromName(rr.referenceName)
-    }
-    case _ => throw new IllegalArgumentException("Only ReferencePositions or ReferenceRegions can be used as a key.")
-  }
 }

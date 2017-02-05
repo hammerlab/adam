@@ -17,33 +17,44 @@
  */
 package org.bdgenomics.adam.rdd.variant
 
+import htsjdk.samtools.ValidationStringency
 import htsjdk.variant.vcf.{ VCFHeader, VCFHeaderLine }
-import java.io.OutputStream
-import org.apache.hadoop.io.LongWritable
 import org.apache.hadoop.fs.Path
+import org.apache.hadoop.io.LongWritable
 import org.apache.spark.rdd.RDD
-import org.bdgenomics.adam.converters.{
-  SupportedHeaderLines,
-  VariantContextConverter
-}
-import org.bdgenomics.adam.models.{
-  ReferencePosition,
-  ReferenceRegion,
-  SequenceDictionary,
-  VariantContext
-}
-import org.bdgenomics.adam.rdd.{
-  FileMerger,
-  MultisampleGenomicRDD,
-  VCFHeaderUtils
-}
-import org.bdgenomics.adam.rich.RichVariant
+import org.bdgenomics.adam.converters.{ DefaultHeaderLines, VariantContextConverter }
+import org.bdgenomics.adam.models.{ ReferenceRegion, ReferenceRegionSerializer, SequenceDictionary, VariantContext, VariantContextSerializer }
+import org.bdgenomics.adam.rdd.{ FileMerger, MultisampleGenomicRDD, VCFHeaderUtils }
 import org.bdgenomics.formats.avro.Sample
-import org.bdgenomics.utils.misc.Logging
 import org.bdgenomics.utils.cli.SaveArgs
+import org.bdgenomics.utils.interval.array.{ IntervalArray, IntervalArraySerializer }
+import org.bdgenomics.utils.misc.Logging
+import org.hammerlab.genomics.reference.ContigName.Factory
 import org.seqdoop.hadoop_bam._
-import scala.collection.JavaConversions._
 
+import scala.collection.JavaConversions._
+import scala.reflect.ClassTag
+
+private[adam] case class VariantContextArray(
+    array: Array[(ReferenceRegion, VariantContext)],
+    maxIntervalWidth: Long) extends IntervalArray[ReferenceRegion, VariantContext] {
+
+  protected def replace(arr: Array[(ReferenceRegion, VariantContext)],
+                        maxWidth: Long): IntervalArray[ReferenceRegion, VariantContext] = {
+    VariantContextArray(arr, maxWidth)
+  }
+}
+
+private[adam] class VariantContextArraySerializer extends IntervalArraySerializer[ReferenceRegion, VariantContext, VariantContextArray] {
+
+  protected val kSerializer = new ReferenceRegionSerializer
+  protected val tSerializer = new VariantContextSerializer
+
+  protected def builder(arr: Array[(ReferenceRegion, VariantContext)],
+                        maxIntervalWidth: Long): VariantContextArray = {
+    VariantContextArray(arr, maxIntervalWidth)
+  }
+}
 /**
  * An RDD containing VariantContexts attached to a reference and samples.
  *
@@ -56,30 +67,12 @@ import scala.collection.JavaConversions._
 case class VariantContextRDD(rdd: RDD[VariantContext],
                              sequences: SequenceDictionary,
                              @transient samples: Seq[Sample],
-                             @transient headerLines: Seq[VCFHeaderLine] = SupportedHeaderLines.allHeaderLines) extends MultisampleGenomicRDD[VariantContext, VariantContextRDD]
+                             @transient headerLines: Seq[VCFHeaderLine] = DefaultHeaderLines.allHeaderLines) extends MultisampleGenomicRDD[VariantContext, VariantContextRDD]
     with Logging {
 
-  /**
-   * Left outer join database variant annotations.
-   *
-   * @param ann Annotation RDD to join against.
-   * @return Returns a VariantContextRDD where annotations have been filled in.
-   */
-  def joinVariantAnnotations(ann: VariantAnnotationRDD): VariantContextRDD = {
-    replaceRdd(rdd.keyBy(_.variant)
-      .leftOuterJoin(ann.rdd.keyBy(dba => RichVariant(dba.getVariant)))
-      .values
-      .map(kv => VariantContext(kv._1, kv._2)))
-  }
-
-  /**
-   * @return Returns a VariantAnnotationRDD containing the variant
-   *   annotations attached to this VariantContextRDD.
-   */
-  def toVariantAnnotationRDD: VariantAnnotationRDD = {
-    VariantAnnotationRDD(rdd.flatMap(_.annotations),
-      sequences,
-      headerLines)
+  protected def buildTree(rdd: RDD[(ReferenceRegion, VariantContext)])(
+    implicit tTag: ClassTag[VariantContext]): IntervalArray[ReferenceRegion, VariantContext] = {
+    IntervalArray(rdd, VariantContextArray.apply(_, _))
   }
 
   /**
@@ -105,7 +98,6 @@ case class VariantContextRDD(rdd: RDD[VariantContext],
    * Converts an RDD of ADAM VariantContexts to HTSJDK VariantContexts
    * and saves to disk as VCF.
    *
-   * @param filePath The filepath to save to.
    * @param sortOnSave Whether to sort before saving.
    */
   def saveAsVcf(args: SaveArgs,
@@ -122,9 +114,11 @@ case class VariantContextRDD(rdd: RDD[VariantContext],
    *   the sharded output after completing the write to HDFS. If false, the
    *   output of this call will be written as shards, where each shard has a
    *   valid VCF header. Default is false.
+   * @param stringency The validation stringency to use when writing the VCF.
    */
   def saveAsVcf(filePath: String,
-                asSingleFile: Boolean = false) {
+                asSingleFile: Boolean = false,
+                stringency: ValidationStringency = ValidationStringency.LENIENT)(implicit factory: Factory) {
     val vcfFormat = VCFFormat.inferFromFilePath(filePath)
     assert(vcfFormat == VCFFormat.VCF, "BCF not yet supported") // TODO: Add BCF support
 
@@ -134,11 +128,14 @@ case class VariantContextRDD(rdd: RDD[VariantContext],
     val sampleIds = samples.map(_.getSampleId)
 
     // convert the variants to htsjdk VCs
-    val converter = new VariantContextConverter(Some(sequences))
-    val writableVCs: RDD[(LongWritable, VariantContextWritable)] = rdd.map(vc => {
-      val vcw = new VariantContextWritable
-      vcw.set(converter.convert(vc))
-      (new LongWritable(vc.position.pos), vcw)
+    val converter = new VariantContextConverter(headerLines, stringency)
+    val writableVCs: RDD[(LongWritable, VariantContextWritable)] = rdd.flatMap(vc => {
+      converter.convert(vc)
+        .map(htsjdkVc => {
+          val vcw = new VariantContextWritable
+          vcw.set(htsjdkVc)
+          (new LongWritable(vc.position.pos), vcw)
+        })
     })
 
     // make header

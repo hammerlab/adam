@@ -20,24 +20,38 @@ package org.bdgenomics.adam.util
 import java.net.URL
 
 import htsjdk.samtools.util.Log
-import org.bdgenomics.utils.misc.SparkFunSuite
+import org.bdgenomics.adam.serialization.ADAMKryoRegistrator
+import org.hammerlab.genomics.reference.test.{ ClearContigNames, ContigNameCanEqualString, LocusCanEqualInt }
+import org.hammerlab.spark.test.suite.KryoSparkSuite
+import org.hammerlab.test.matchers.files.FileMatcher.fileMatch
+import org.hammerlab.test.resources.File
+import org.scalactic.TypeCheckedTripleEquals
 
-abstract class ADAMFunSuite extends SparkFunSuite {
+abstract class ADAMFunSuite
+  extends KryoSparkSuite(classOf[ADAMKryoRegistrator], referenceTracking = true)
+    with ContigNameCanEqualString
+    with LocusCanEqualInt
+    with ClearContigNames
+    with TypeCheckedTripleEquals {
 
   // added to resolve #1280
   Log.setGlobalLogLevel(Log.LogLevel.ERROR)
 
-  override def resourceUrl(path: String): URL = {
+  def resourceUrl(path: String): URL =
     Thread.currentThread().getContextClassLoader.getResource(path)
+
+  def testFile(name: String): String = File(name).path
+
+  def sparkTest(name: String)(body: ⇒ Unit): Unit = {
+    test(name) { body }
   }
 
-  override val appName: String = "adam"
-  override val properties: Map[String, String] = Map(
-    "spark.serializer" -> "org.apache.spark.serializer.KryoSerializer",
-    "spark.kryo.registrator" -> "org.bdgenomics.adam.serialization.ADAMKryoRegistrator",
-    "spark.kryo.referenceTracking" -> "true",
-    "spark.kryo.registrationRequired" -> "true"
-  )
+  def tmpLocation(extension: String = ".adam"): String = tmpFile(suffix = extension)
 
+  override def tmpFile(prefix: String, suffix: String): String = tmpPath(prefix, suffix)
+
+  def checkFiles(expectedPath: String, actualPath: String): Unit = {
+    expectedPath should fileMatch(actualPath)
+  }
 }
 

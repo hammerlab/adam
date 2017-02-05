@@ -32,6 +32,7 @@ class SampleFieldSuite extends ADAMFunSuite {
       .setSampleId("sample_id")
       .setName("name")
       .build()))
+
     rdd.saveAsParquet(TestSaveArgs(path))
 
     val projection = Projection(

@@ -18,6 +18,7 @@
 package org.bdgenomics.adam.rdd.read.recalibration
 
 import java.io.File
+
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.SnpTable
 import org.bdgenomics.adam.rdd.ADAMContext._
@@ -25,10 +26,13 @@ import org.bdgenomics.adam.rich.DecadentRead._
 import org.bdgenomics.adam.rich.RichVariant
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.AlignmentRecord
+import org.hammerlab.genomics.reference.test.ClearContigNames
 
-class BaseQualityRecalibrationSuite extends ADAMFunSuite {
+class BaseQualityRecalibrationSuite
+  extends ADAMFunSuite
+    with ClearContigNames {
 
-  sparkTest("BQSR Test Input #1 w/ VCF Sites") {
+  ignore("BQSR Test Input #1 w/ VCF Sites") {
     val readsFilepath = testFile("bqsr1.sam")
     val snpsFilepath = testFile("bqsr1.vcf")
     val obsFilepath = testFile("bqsr1-ref.observed")
