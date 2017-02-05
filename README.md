@@ -1,13 +1,13 @@
 ADAM
 ====
 
-[![Build Status](https://travis-ci.org/hammerlab/adam.svg?branch=sbt)](https://travis-ci.org/hammerlab/adam) [![Coverage Status](https://coveralls.io/repos/github/hammerlab/adam/badge.svg?branch=sbt)](https://coveralls.io/github/hammerlab/adam?branch=sbt) [![Maven Central](https://img.shields.io/maven-central/v/org.hammerlab.adam/adam-core_2.11.svg?maxAge=600)](http://search.maven.org/#search%7Cga%7C1%7Chammerlab%20adam-core)
+[![Build Status](https://travis-ci.org/hammerlab/adam.svg?branch=sbt)](https://travis-ci.org/hammerlab/adam) [![Coverage Status](https://coveralls.io/repos/github/hammerlab/adam/badge.svg?branch=sbt)](https://coveralls.io/github/hammerlab/adam?branch=sbt) [![Maven Central](https://img.shields.io/maven-central/v/org.hammerlab.adam/core_2.11.svg?maxAge=600)](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.hammerlab.adam%22%20AND%20a%3A%22core_2.11%22)
 
 This fork of [bigdatagenomics/adam](https://github.com/bigdatagenomics/adam):
 - reduces the repo to the `adam-core` module,
 - [ports it to SBT](build.sbt) (using [hammerlab/sbt-parent](https://github.com/hammerlab/sbt-parent) to simplify build/packaging configuration),
 - is continuously-built and test-coverage-measured by [TravisCI](https://travis-ci.org/) and [Coveralls](https://coveralls.io/) (resp.; see badges above), and
-- is occasionally published to Maven Central as [`org.hammerlab.adam:adam-core`](http://search.maven.org/#search%7Cga%7C1%7Chammerlab%20adam-core).
+- is occasionally published to Maven Central as [`org.hammerlab.adam:core`](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.hammerlab.adam%22%20AND%20a%3A%22core_2.11%22).
 
 The code (and README, from this point on) is essentially unchanged from upstream, which is periodically merged in.
 
