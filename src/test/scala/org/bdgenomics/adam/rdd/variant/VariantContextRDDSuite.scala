@@ -46,7 +46,8 @@ class VariantContextRDDSuite
       .build
     val v0 = Variant.newBuilder
       .setContigName("11")
-      .setStart(17409572)
+      .setStart(17409572L)
+      .setEnd(17409573L)
       .setReferenceAllele("T")
       .setAlternateAllele("C")
       .setNames(ImmutableList.of("rs3131972", "rs201888535"))

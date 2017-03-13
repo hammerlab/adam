@@ -89,6 +89,16 @@ private[adam] object VariantContextConverter {
     }
   }
 
+  private val OPT_NON_REF = Some(Allele.create("<NON_REF>", false))
+
+  private def optNonRef(v: Variant): Option[Allele] = {
+    if (v.getAlternateAllele != null) {
+      None
+    } else {
+      OPT_NON_REF
+    }
+  }
+
   /**
    * Converts the alleles in a variant into a Java collection of htsjdk alleles.
    *
@@ -98,7 +108,8 @@ private[adam] object VariantContextConverter {
    */
   private def convertAlleles(v: Variant): java.util.Collection[Allele] = {
     val asSeq = Seq(convertAlleleOpt(v.getReferenceAllele, true),
-      convertAlleleOpt(v.getAlternateAllele)).flatten
+      convertAlleleOpt(v.getAlternateAllele),
+      optNonRef(v)).flatten
 
     asSeq
   }
@@ -1831,7 +1842,7 @@ private[adam] class VariantContextConverter(
       val builder = new VariantContextBuilder()
         .chr(v.getContigName)
         .start(v.getStart + 1)
-        .stop(v.getStart + v.getReferenceAllele.length)
+        .stop(v.getEnd)
         .alleles(VariantContextConverter.convertAlleles(v))
 
       // bind the conversion functions and fold
@@ -1946,10 +1957,10 @@ private[adam] class VariantContextConverter(
   def convert(
     vc: ADAMVariantContext): Option[HtsjdkVariantContext] = {
 
-    val vcb = new VariantContextBuilder(variantExtractFn(vc))
-
     // attach genotypes
     try {
+      val vcb = new VariantContextBuilder(variantExtractFn(vc))
+
       Some(vcb.genotypes(vc.genotypes.map(g => genotypeExtractFn(g)))
         .make)
     } catch {

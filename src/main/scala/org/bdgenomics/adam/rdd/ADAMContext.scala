@@ -44,7 +44,7 @@ import org.bdgenomics.adam.projections.{ FeatureField, Projection }
 import org.bdgenomics.adam.rdd.contig.NucleotideContigFragmentRDD
 import org.bdgenomics.adam.rdd.feature._
 import org.bdgenomics.adam.rdd.fragment.FragmentRDD
-import org.bdgenomics.adam.rdd.read.{ AlignedReadRDD, AlignmentRecordRDD, UnalignedReadRDD }
+import org.bdgenomics.adam.rdd.read.AlignmentRecordRDD
 import org.bdgenomics.adam.rdd.variant._
 import org.bdgenomics.adam.rich.RichAlignmentRecord
 import org.bdgenomics.adam.util.{ ReferenceContigMap, ReferenceFile, TwoBitFile }
@@ -107,11 +107,7 @@ object ADAMContext {
 
   implicit def fragmentsToReadsConversionFn(fRdd: FragmentRDD,
                                             rdd: RDD[AlignmentRecord]): AlignmentRecordRDD = {
-    if (fRdd.sequences.isEmpty) {
-      UnalignedReadRDD(rdd, fRdd.recordGroups)
-    } else {
-      AlignedReadRDD(rdd, fRdd.sequences, fRdd.recordGroups)
-    }
+    AlignmentRecordRDD(rdd, fRdd.sequences, fRdd.recordGroups)
   }
 
   // Add ADAM Spark context methods
@@ -601,7 +597,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
 
     val samRecordConverter = new SAMRecordConverter
 
-    AlignedReadRDD(records.map(p => samRecordConverter.convert(p._2.get)),
+    AlignmentRecordRDD(records.map(p => samRecordConverter.convert(p._2.get)),
       seqDict,
       readGroups)
   }
@@ -656,7 +652,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
 
     val lociBroadcast = sc.broadcast(loci)
     val samRecordConverter = new SAMRecordConverter
-    AlignedReadRDD(
+    AlignmentRecordRDD(
       records
         .map(p => samRecordConverter.convert(p._2.get))
         .filter(r =>
@@ -803,7 +799,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
     // convert avro to sequence dictionary
     val rgd = loadAvroReadGroupMetadata(filePath)
 
-    AlignedReadRDD(rdd, sd, rgd)
+    AlignmentRecordRDD(rdd, sd, rgd)
   }
 
   /**
@@ -833,7 +829,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
 
     // convert records
     val fastqRecordConverter = new FastqRecordConverter
-    UnalignedReadRDD.fromRdd(records.flatMap(fastqRecordConverter.convertPair))
+    AlignmentRecordRDD.unaligned(records.flatMap(fastqRecordConverter.convertPair))
   }
 
   /**
@@ -909,7 +905,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
       case ValidationStringency.SILENT =>
     }
 
-    UnalignedReadRDD.fromRdd(reads1.rdd ++ reads2.rdd)
+    AlignmentRecordRDD.unaligned(reads1.rdd ++ reads2.rdd)
   }
 
   /**
@@ -946,7 +942,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
 
     // convert records
     val fastqRecordConverter = new FastqRecordConverter
-    UnalignedReadRDD.fromRdd(records.map(
+    AlignmentRecordRDD.unaligned(records.map(
       fastqRecordConverter.convertRead(
         _,
         recordGroupOpt.map(recordGroup =>
@@ -1581,11 +1577,10 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
     } else if (filePath.endsWith(".fa") ||
       filePath.endsWith(".fasta")) {
       log.info(s"Loading $filePath as FASTA and converting to AlignmentRecords. Projection is ignored.")
-      UnalignedReadRDD(loadFasta(filePath, fragmentLength = 10000).toReads,
-        RecordGroupDictionary.empty)
+      AlignmentRecordRDD.unaligned(loadFasta(filePath, fragmentLength = 10000).toReads)
     } else if (filePath.endsWith("contig.adam")) {
       log.info(s"Loading $filePath as Parquet of NucleotideContigFragment and converting to AlignmentRecords. Projection is ignored.")
-      UnalignedReadRDD(loadParquetContigFragments(filePath).toReads, RecordGroupDictionary.empty)
+      AlignmentRecordRDD.unaligned(loadParquetContigFragments(filePath).toReads)
     } else {
       log.info(s"Loading $filePath as Parquet of AlignmentRecords.")
       loadParquetAlignments(filePath, None, projection)

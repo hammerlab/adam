@@ -40,7 +40,7 @@ abstract class ADAMFunSuite
   def resourceUrl(path: String): URL =
     Thread.currentThread().getContextClassLoader.getResource(path)
 
-  def testFile(name: String): String = File(name).path
+  def testFile(name: String): String = File(name)
 
   def sparkTest(name: String)(body: ⇒ Unit): Unit = {
     test(name) { body }

@@ -83,12 +83,19 @@ private[adam] class AlignmentRecordArraySerializer extends IntervalArraySerializ
   }
 }
 
-sealed trait AlignmentRecordRDD extends AvroReadGroupGenomicRDD[AlignmentRecord, AlignmentRecordRDD] {
+object AlignmentRecordRDD {
 
-  protected def buildTree(rdd: RDD[(ReferenceRegion, AlignmentRecord)])(
-    implicit tTag: ClassTag[AlignmentRecord]): IntervalArray[ReferenceRegion, AlignmentRecord] = {
-    IntervalArray(rdd, AlignmentRecordArray.apply(_, _))
+  def unaligned(rdd: RDD[AlignmentRecord]): AlignmentRecordRDD = {
+    AlignmentRecordRDD(rdd,
+      SequenceDictionary.empty,
+      RecordGroupDictionary.empty)
   }
+}
+
+case class AlignmentRecordRDD(
+    rdd: RDD[AlignmentRecord],
+    sequences: SequenceDictionary,
+    recordGroups: RecordGroupDictionary) extends AvroReadGroupGenomicRDD[AlignmentRecord, AlignmentRecordRDD] {
 
   /**
    * Replaces the underlying RDD and SequenceDictionary and emits a new object.
@@ -98,7 +105,20 @@ sealed trait AlignmentRecordRDD extends AvroReadGroupGenomicRDD[AlignmentRecord,
    * @return Returns a new AlignmentRecordRDD.
    */
   protected def replaceRddAndSequences(newRdd: RDD[AlignmentRecord],
-                                       newSequences: SequenceDictionary): AlignmentRecordRDD
+                                       newSequences: SequenceDictionary): AlignmentRecordRDD = {
+    AlignmentRecordRDD(newRdd,
+      newSequences,
+      recordGroups)
+  }
+
+  protected def replaceRdd(newRdd: RDD[AlignmentRecord]): AlignmentRecordRDD = {
+    copy(rdd = newRdd)
+  }
+
+  protected def buildTree(rdd: RDD[(ReferenceRegion, AlignmentRecord)])(
+    implicit tTag: ClassTag[AlignmentRecord]): IntervalArray[ReferenceRegion, AlignmentRecord] = {
+    IntervalArray(rdd, AlignmentRecordArray.apply(_, _))
+  }
 
   /**
    * Convert this set of reads into fragments.
@@ -932,56 +952,3 @@ sealed trait AlignmentRecordRDD extends AvroReadGroupGenomicRDD[AlignmentRecord,
     replaceRdd(finalRdd)
   }
 }
-
-case class AlignedReadRDD(rdd: RDD[AlignmentRecord],
-                          sequences: SequenceDictionary,
-                          recordGroups: RecordGroupDictionary) extends AlignmentRecordRDD {
-
-  protected def replaceRddAndSequences(newRdd: RDD[AlignmentRecord],
-                                       newSequences: SequenceDictionary): AlignmentRecordRDD = {
-    AlignedReadRDD(newRdd,
-      newSequences,
-      recordGroups)
-  }
-
-  protected def replaceRdd(newRdd: RDD[AlignmentRecord]): AlignedReadRDD = {
-    copy(rdd = newRdd)
-  }
-}
-
-object UnalignedReadRDD {
-
-  /**
-   * Creates an unaligned read RDD where no record groups are attached.
-   *
-   * @param rdd RDD of reads.
-   * @return Returns an unaligned read RDD with an empty record group dictionary.
-   */
-  private[rdd] def fromRdd(rdd: RDD[AlignmentRecord]): UnalignedReadRDD = {
-    UnalignedReadRDD(rdd, RecordGroupDictionary.empty)
-  }
-}
-
-case class UnalignedReadRDD(rdd: RDD[AlignmentRecord],
-                            recordGroups: RecordGroupDictionary) extends AlignmentRecordRDD
-    with Unaligned {
-
-  protected def replaceRdd(newRdd: RDD[AlignmentRecord]): UnalignedReadRDD = {
-    copy(rdd = newRdd)
-  }
-
-  protected def replaceRddAndSequences(newRdd: RDD[AlignmentRecord],
-                                       newSequences: SequenceDictionary): AlignmentRecordRDD = {
-
-    // are we still unaligned?
-    if (newSequences.isEmpty) {
-      UnalignedReadRDD(newRdd,
-        recordGroups)
-    } else {
-      AlignedReadRDD(newRdd,
-        newSequences,
-        recordGroups)
-    }
-  }
-}
-

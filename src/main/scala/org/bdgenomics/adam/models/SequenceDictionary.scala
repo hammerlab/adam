@@ -71,7 +71,7 @@ object SequenceDictionary {
    * @param header htsjdk SAMFileHeader to extract sequences from.
    * @return A SequenceDictionary with populated sequence records.
    */
-  def apply(header: SAMFileHeader): SequenceDictionary = {
+  def apply(header: SAMFileHeader)(implicit factory: Factory): SequenceDictionary = {
     SequenceDictionary(header.getSequenceDictionary)
   }
 
@@ -81,7 +81,7 @@ object SequenceDictionary {
    * @param contigs Seq of Contig records.
    * @return Returns a sequence dictionary.
    */
-  def fromAvro(contigs: Seq[Contig]): SequenceDictionary = {
+  def fromAvro(contigs: Seq[Contig])(implicit factory: Factory): SequenceDictionary = {
     new SequenceDictionary(contigs.map(SequenceRecord.fromADAMContig).toVector)
   }
 
@@ -94,7 +94,7 @@ object SequenceDictionary {
    * @param header VCF file header.
    * @return Returns an ADAM style sequence dictionary.
    */
-  def fromVCFHeader(header: VCFHeader): SequenceDictionary = {
+  def fromVCFHeader(header: VCFHeader)(implicit factory: Factory): SequenceDictionary = {
     val samDict = header.getSequenceDictionary
 
     // vcf files can have null sequence dictionaries
@@ -110,7 +110,7 @@ object SequenceDictionary {
    * @param samDict SAM style sequence dictionary.
    * @return Returns an ADAM style sequence dictionary.
    */
-  def fromSAMSequenceDictionary(samDict: SAMSequenceDictionary): SequenceDictionary = {
+  def fromSAMSequenceDictionary(samDict: SAMSequenceDictionary)(implicit factory: Factory): SequenceDictionary = {
     val samDictRecords = samDict.getSequences
     new SequenceDictionary(samDictRecords.iterator().map(SequenceRecord.fromSAMSequenceRecord).toVector)
   }

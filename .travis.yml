@@ -4,20 +4,15 @@ jdk:
   - oraclejdk8
 
 scala:
-  - 2.10.6
   - 2.11.8
 
 env:
-  - vars="-Dhadoop.version=2.3.0 -Dspark.version=1.3.1"
-  - vars="-Dhadoop.version=2.3.0 -Dspark.version=1.4.1"
-  - vars="-Dhadoop.version=2.3.0 -Dspark.version=1.5.2"
-  - vars="-Dhadoop.version=2.3.0 -Dspark.version=1.6.1"
-  - vars="-Dhadoop.version=2.3.0 -Dspark.version=2.0.0"
-  - vars="-Dhadoop.version=2.6.0 -Dspark.version=1.3.1"
-  - vars="-Dhadoop.version=2.6.0 -Dspark.version=1.4.1"
-  - vars="-Dhadoop.version=2.6.0 -Dspark.version=1.5.2"
-  - vars="-Dhadoop.version=2.6.0 -Dspark.version=1.6.1"
-  - vars="-Dhadoop.version=2.6.0 -Dspark.version=2.0.0"
+  - vars="-Dhadoop.version=2.3.0 -Dspark.version=1.6.3"
+  - vars="-Dhadoop.version=2.3.0 -Dspark.version=2.0.2"
+  - vars="-Dhadoop.version=2.3.0 -Dspark.version=2.1.0"
+  - vars="-Dhadoop.version=2.6.0 -Dspark.version=1.6.3"
+  - vars="-Dhadoop.version=2.6.0 -Dspark.version=2.0.2"
+  - vars="-Dhadoop.version=2.6.0 -Dspark.version=2.1.0"
 
 script: sbt $vars ++$TRAVIS_SCALA_VERSION clean coverage test
 

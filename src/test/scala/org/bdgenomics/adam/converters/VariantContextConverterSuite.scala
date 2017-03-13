@@ -25,6 +25,28 @@ import htsjdk.variant.utils.SAMSequenceDictionaryExtractor
 import htsjdk.variant.variantcontext.{ Allele, GenotypeBuilder, GenotypeType, VariantContextBuilder, Genotype ⇒ HtsjdkGenotype, VariantContext ⇒ HtsjdkVariantContext }
 import htsjdk.variant.vcf.{ VCFFormatHeaderLine, VCFHeaderLineCount, VCFHeaderLineType, VCFInfoHeaderLine }
 import org.bdgenomics.adam.models.{ SequenceDictionary, VariantContext ⇒ ADAMVariantContext }
+import htsjdk.variant.variantcontext.{
+  Allele,
+  Genotype => HtsjdkGenotype,
+  GenotypeBuilder,
+  GenotypeType,
+  VariantContext => HtsjdkVariantContext,
+  VariantContextBuilder
+}
+import htsjdk.variant.vcf.{
+  VCFConstants,
+  VCFFormatHeaderLine,
+  VCFHeaderLineCount,
+  VCFHeaderLineType,
+  VCFInfoHeaderLine,
+  VCFStandardHeaderLines
+}
+import java.io.File
+import org.bdgenomics.adam.models.{
+  SequenceDictionary,
+  VariantContext => ADAMVariantContext
+}
+import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.util.{ ADAMFunSuite, PhredUtils }
 import org.bdgenomics.formats.avro._
 import org.hammerlab.genomics.reference.test.ClearContigNames
@@ -73,6 +95,7 @@ class VariantContextConverterSuite
   def adamSNVBuilder(contig: String = "1"): Variant.Builder = Variant.newBuilder()
     .setContigName(contig)
     .setStart(0L)
+    .setEnd(1L)
     .setReferenceAllele("A")
     .setAlternateAllele("T")
 
@@ -1851,6 +1874,7 @@ class VariantContextConverterSuite
   val v = Variant.newBuilder
     .setContigName("1")
     .setStart(0L)
+    .setEnd(1L)
     .setReferenceAllele("A")
     .setAlternateAllele("T")
     .build
@@ -2521,5 +2545,18 @@ class VariantContextConverterSuite
     val adamGt = adamVc.genotypes.head
     assert(adamGt.getVariantCallingAnnotations.getAttributes.containsKey("STRING_G"))
     assert(adamGt.getVariantCallingAnnotations.getAttributes.get("STRING_G") === "foo,bar,baz")
+  }
+
+  sparkTest("respect end position for symbolic alts") {
+    val vcRecords = sc.loadVcf(testFile("gvcf_dir/gvcf_multiallelic.g.vcf"))
+      .rdd
+      .collect()
+
+    val symbolic = vcRecords.filter(_.variant.variant.getStart == 16157520L)
+      .head
+    val optHtsjdkVc = converter.convert(symbolic)
+
+    assert(optHtsjdkVc.isDefined)
+    assert(optHtsjdkVc.get.getEnd === 16157602)
   }
 }

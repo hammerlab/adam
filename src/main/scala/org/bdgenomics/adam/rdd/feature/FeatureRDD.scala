@@ -28,9 +28,10 @@ import org.bdgenomics.adam.serialization.AvroSerializer
 import org.bdgenomics.formats.avro.{ Feature, Strand }
 import org.bdgenomics.utils.interval.array.{ IntervalArray, IntervalArraySerializer }
 import org.bdgenomics.utils.misc.Logging
-import org.hammerlab.genomics.reference.NumLoci
+import org.hammerlab.genomics.reference.{ ContigName, NumLoci }
 
 import scala.collection.JavaConversions._
+import scala.math.max
 import scala.reflect.ClassTag
 
 private[adam] case class FeatureArray(
@@ -97,33 +98,26 @@ private object FeatureOrdering extends FeatureOrdering[Feature] {}
 object FeatureRDD {
 
   /**
-   * @param elem The feature to extract a sequence record from.
-   * @return Gets the SequenceRecord for this feature.
-   */
-  private def getSequenceRecord(elem: Feature): SequenceRecord =
-    SequenceRecord(elem.getContigName, NumLoci(1L))
-
-  /**
    * Builds a FeatureRDD without SequenceDictionary information by running an
    * aggregate to rebuild the SequenceDictionary.
    *
    * @param rdd The underlying Feature RDD to build from.
    * @return Returns a new FeatureRDD.
    */
-  def apply(rdd: RDD[Feature]): FeatureRDD = {
+  def apply(rdd: RDD[Feature])(implicit cf: ContigName.Factory): FeatureRDD = {
 
     // cache the rdd, since we're making multiple passes
     rdd.cache()
 
-    // aggregate to create the sequence dictionary
-    val sd =
-      new SequenceDictionary(
-        rdd
-          .map(getSequenceRecord)
-          .distinct
-          .collect
-          .toVector
-      )
+    // create sequence records with length max(start, end) + 1L
+    val sequenceRecords =
+      rdd
+        .keyBy(_.getContigName)
+        .mapValues { feature => NumLoci(max(feature.getStart, feature.getEnd) + 1L) }
+        .reduceByKey(_ max _)
+        .map { case (contigName, size) => SequenceRecord(contigName, size) }
+
+    val sd = new SequenceDictionary(sequenceRecords.collect.toVector)
 
     FeatureRDD(rdd, sd)
   }
