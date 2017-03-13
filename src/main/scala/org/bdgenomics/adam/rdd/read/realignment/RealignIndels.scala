@@ -284,6 +284,7 @@ private[read] class RealignIndels(
 
         // loop over all consensuses and evaluate
         consensus.foreach(c => {
+
           // generate a reference sequence from the consensus
           val consensusSequence = c.insertIntoReference(reference, refRegion)
 
@@ -294,7 +295,7 @@ private[read] class RealignIndels(
 
             // if the read's mismatch quality improves over the original alignment, save
             // its alignment in the consensus sequence, else store -1
-            if (qual < originalQual) {
+            if (qual <= originalQual) {
               (r, (qual, pos))
             } else {
               (r, (originalQual, -1))
@@ -359,23 +360,41 @@ private[read] class RealignIndels(
                 // compensate the end
                 builder.setEnd(refStart + remapping + r.getSequence.length + endPenalty)
 
+                val startLength = bestConsensus.index.start - (refStart + remapping)
+                val adjustedIdElement = if (endLength < 0) {
+                  new CigarElement(idElement.getLength + endLength.toInt, idElement.getOperator)
+                } else if (startLength < 0) {
+                  new CigarElement(idElement.getLength + startLength.toInt, idElement.getOperator)
+                } else {
+                  idElement
+                }
+
                 val cigarElements = List[CigarElement](
-                  new CigarElement((bestConsensus.index.start - (refStart + remapping)).toInt, CigarOperator.M),
-                  idElement,
+                  new CigarElement(startLength.toInt, CigarOperator.M),
+                  adjustedIdElement,
                   new CigarElement(endLength.toInt, CigarOperator.M)
-                )
+                ).filter(_.getLength > 0)
 
                 new Cigar(cigarElements)
               }
 
               // update mdtag and cigar
-              builder.setMismatchingPositions(MdTag.moveAlignment(r, newCigar, reference.drop(remapping), refStart + remapping).toString())
-              builder.setOldPosition(r.getStart())
-              builder.setOldCigar(r.getCigar())
-              builder.setCigar(newCigar.toString)
+              try {
+                builder.setMismatchingPositions(MdTag.moveAlignment(r, newCigar, reference.drop(remapping), refStart + remapping).toString())
+                builder.setOldPosition(r.getStart())
+                builder.setOldCigar(r.getCigar())
+                builder.setCigar(newCigar.toString)
+                new RichAlignmentRecord(builder.build())
+              } catch {
+                case t: Throwable => {
+                  log.warn("Caught %s when trying to move alignment to %s for %s.".format(
+                    t, newCigar, r))
+                  new RichAlignmentRecord(r)
+                }
+              }
+            } else {
               new RichAlignmentRecord(builder.build())
-            } else
-              new RichAlignmentRecord(builder.build())
+            }
           })
 
           log.info("On " + refRegion + ", realigned " + realignedReadCount + " reads to " +
