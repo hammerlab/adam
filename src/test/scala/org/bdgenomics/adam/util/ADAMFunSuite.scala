@@ -24,6 +24,7 @@ import org.bdgenomics.adam.serialization.ADAMKryoRegistrator
 import org.hammerlab.genomics.reference.test.{ ClearContigNames, ContigNameCanEqualString, LocusCanEqualInt }
 import org.hammerlab.spark.test.suite.KryoSparkSuite
 import org.hammerlab.test.matchers.files.FileMatcher.fileMatch
+import org.hammerlab.test.resources.Url
 import org.hammerlab.test.resources.File
 import org.scalactic.TypeCheckedTripleEquals
 
@@ -37,8 +38,7 @@ abstract class ADAMFunSuite
   // added to resolve #1280
   Log.setGlobalLogLevel(Log.LogLevel.ERROR)
 
-  def resourceUrl(path: String): URL =
-    Thread.currentThread().getContextClassLoader.getResource(path)
+  def resourceUrl(path: String): URL = Url(path)
 
   def testFile(name: String): String = File(name)
 

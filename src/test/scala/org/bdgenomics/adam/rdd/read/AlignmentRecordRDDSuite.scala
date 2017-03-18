@@ -123,7 +123,7 @@ class AlignmentRecordRDDSuite
     val coverage: CoverageRDD = reads.transform(_.repartition(1)).toCoverage(true)
 
     assert(coverage.rdd.count == 18)
-    assert(coverage.flatten.rdd.count == 170)
+    assert(coverage.flatten().rdd.count == 170)
   }
 
   sparkTest("sorting reads by reference index") {
@@ -191,7 +191,7 @@ class AlignmentRecordRDDSuite
     val reads12B = rdd12B.rdd.collect()
 
     reads12A.indices.foreach {
-      case i: Int =>
+      i ⇒
         val (readA, readB) = (reads12A(i), reads12B(i))
         assert(readA.getSequence === readB.getSequence)
         assert(readA.getQual === readB.getQual)
@@ -222,7 +222,7 @@ class AlignmentRecordRDDSuite
     val readsB = rddB.rdd.collect()
 
     readsA.indices.foreach {
-      case i: Int =>
+      i ⇒
         val (readA, readB) = (readsA(i), readsB(i))
         assert(readA.getSequence === readB.getSequence)
         assert(readA.getQual === readB.getQual)
@@ -315,7 +315,7 @@ class AlignmentRecordRDDSuite
     val reads12B = rdd12B.rdd.collect()
 
     reads12A.indices.foreach {
-      case i: Int =>
+      i ⇒
         val (readA, readB) = (reads12A(i), reads12B(i))
         assert(readA.getSequence === readB.getSequence)
         assert(readA.getQual === readB.getQual)
