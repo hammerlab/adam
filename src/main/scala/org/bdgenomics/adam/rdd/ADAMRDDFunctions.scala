@@ -40,7 +40,8 @@ import scala.reflect.ClassTag
 /**
  * Argument configuration for saving any output format.
  */
-trait ADAMSaveAnyArgs extends SaveArgs {
+trait ADAMSaveAnyArgs
+  extends SaveArgs {
 
   /**
    * If true and saving as FASTQ, we will sort by read name.
@@ -66,7 +67,9 @@ trait ADAMSaveAnyArgs extends SaveArgs {
   var deferMerging: Boolean
 }
 
-private[rdd] abstract class ADAMRDDFunctions[T <% IndexedRecord: Manifest] extends Serializable with Logging {
+private[rdd] abstract class ADAMRDDFunctions[T <% IndexedRecord: Manifest]
+  extends Serializable
+    with Logging {
 
   val rdd: RDD[T]
 

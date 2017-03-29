@@ -26,6 +26,7 @@ deps ++= Seq(
   libs.value('htsjdk),
   libs.value('loci) exclude("com.github.samtools", "htsjdk"),
   libs.value('log4j),
+  libs.value('spark_util),
   "com.netflix.servo" % "servo-core" % "0.10.0",
   "it.unimi.dsi" % "fastutil" % "6.6.5",
   "org.apache.avro" % "avro" % "1.8.0",

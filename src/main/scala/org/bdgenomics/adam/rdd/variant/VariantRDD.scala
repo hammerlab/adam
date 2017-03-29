@@ -22,39 +22,25 @@ import htsjdk.variant.vcf.{ VCFHeader, VCFHeaderLine }
 import org.apache.hadoop.fs.Path
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.converters.DefaultHeaderLines
-import org.bdgenomics.adam.models.{
-  ReferenceRegion,
-  ReferenceRegionSerializer,
-  SequenceDictionary,
-  VariantContext
-}
-import org.bdgenomics.adam.rdd.{
-  AvroGenomicRDD,
-  JavaSaveArgs,
-  VCFHeaderUtils
-}
+import org.bdgenomics.adam.models.{ ReferenceRegion, ReferenceRegionSerializer, SequenceDictionary, VariantContext }
+import org.bdgenomics.adam.rdd.{ AvroGenomicRDD, JavaSaveArgs, VCFHeaderUtils }
 import org.bdgenomics.adam.serialization.AvroSerializer
-import org.bdgenomics.formats.avro.{
-  Contig,
-  Sample,
-  Variant
-}
-import org.bdgenomics.formats.avro.{ Contig, Variant }
-import org.bdgenomics.utils.interval.array.{
-  IntervalArray,
-  IntervalArraySerializer
-}
+import org.bdgenomics.formats.avro.{ Contig, Sample, Variant }
+import org.bdgenomics.utils.interval.array.{ IntervalArray, IntervalArraySerializer }
+
 import scala.collection.JavaConversions._
 import scala.reflect.ClassTag
 
 private[adam] case class VariantArray(
     array: Array[(ReferenceRegion, Variant)],
-    maxIntervalWidth: Long) extends IntervalArray[ReferenceRegion, Variant] {
+    maxIntervalWidth: Long)
+  extends IntervalArray[ReferenceRegion, Variant] {
+
+  override def duplicate(): IntervalArray[ReferenceRegion, Variant] = copy()
 
   protected def replace(arr: Array[(ReferenceRegion, Variant)],
-                        maxWidth: Long): IntervalArray[ReferenceRegion, Variant] = {
+                        maxWidth: Long): IntervalArray[ReferenceRegion, Variant] =
     VariantArray(arr, maxWidth)
-  }
 }
 
 private[adam] class VariantArraySerializer extends IntervalArraySerializer[ReferenceRegion, Variant, VariantArray] {
@@ -119,7 +105,7 @@ case class VariantRDD(rdd: RDD[Variant],
    *   valid VCF header.
    * @param stringency The validation stringency to use when writing the VCF.
    */
-  def saveAsVcf(filePath: String,
+  def saveAsVcf(filePath: Path,
                 asSingleFile: Boolean,
                 stringency: ValidationStringency) {
     toVariantContextRDD.saveAsVcf(filePath, asSingleFile, stringency)

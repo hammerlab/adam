@@ -343,11 +343,10 @@ trait GenomicRDD[T, U <: GenomicRDD[T, U]] {
 
   protected def getReferenceRegions(elem: T): Seq[ReferenceRegion]
 
-  protected def flattenRddByRegions(): RDD[(ReferenceRegion, T)] = {
-    rdd.flatMap(elem => {
+  protected def flattenRddByRegions(): RDD[(ReferenceRegion, T)] =
+    rdd.flatMap { elem ⇒
       getReferenceRegions(elem).map(r => (r, elem))
-    })
-  }
+    }
 
   /**
    * Runs a filter that selects data in the underlying RDD that overlaps a
@@ -357,16 +356,17 @@ trait GenomicRDD[T, U <: GenomicRDD[T, U]] {
    * @return Returns a new GenomicRDD containing only data that overlaps the
    *   query region.
    */
-  def filterByOverlappingRegion(query: ReferenceRegion): U = {
-    replaceRdd(rdd.filter(elem => {
+  def filterByOverlappingRegion(query: ReferenceRegion): U =
+    replaceRdd(
+      rdd.filter {
+        elem ⇒
+          // where can this item sit?
+          val regions = getReferenceRegions(elem)
 
-      // where can this item sit?
-      val regions = getReferenceRegions(elem)
-
-      // do any of these overlap with our query region?
-      regions.exists(_.overlaps(query))
-    }))
-  }
+          // do any of these overlap with our query region?
+          regions.exists(_.overlaps(query))
+      }
+    )
 
   /**
    * Runs a filter that selects data in the underlying RDD that overlaps several genomic regions.

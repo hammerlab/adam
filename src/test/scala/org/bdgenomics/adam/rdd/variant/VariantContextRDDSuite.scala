@@ -17,10 +17,8 @@
  */
 package org.bdgenomics.adam.rdd.variant
 
-import java.io.File
-
 import com.google.common.collect.ImmutableList
-import com.google.common.io.Files
+import org.apache.hadoop.fs.Path
 import org.bdgenomics.adam.models.{ SequenceDictionary, VariantContext }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.TestSaveArgs
@@ -38,12 +36,13 @@ class VariantContextRDDSuite
     with ConversionCheckedTripleEquals
     with ClearContigNames {
 
-  val tempDir = Files.createTempDir()
+  val tempDir = tmpDir()
 
   def variants: VariantContextRDD = {
     val contig = Contig.newBuilder.setContigName("11")
       .setContigLength(249250621L)
       .build
+
     val v0 = Variant.newBuilder
       .setContigName("11")
       .setStart(17409572L)
@@ -68,9 +67,9 @@ class VariantContextRDDSuite
   }
 
   sparkTest("can write, then read in .vcf file") {
-    val path = new File(tempDir, "test.vcf")
-    variants.saveAsVcf(TestSaveArgs(path.getAbsolutePath), sortOnSave = false)
-    assert(path.exists)
+    val path = new Path(tempDir.toString, "test.vcf")
+    variants.saveAsVcf(TestSaveArgs(path), sortOnSave = false)
+    assert(path.getFileSystem(sc.hadoopConfiguration).exists(path))
 
     val vcRdd = sc.loadVcf("%s/test.vcf/part-r-00000".format(tempDir))
     vcRdd.rdd.count should === (1)
@@ -92,9 +91,10 @@ class VariantContextRDDSuite
   }
 
   sparkTest("can write as a single file, then read in .vcf file") {
-    val path = new File(tempDir, "test_single.vcf")
-    variants.saveAsVcf(path.getAbsolutePath, asSingleFile = true)
-    assert(path.exists)
+    val path = new Path(tempDir.toString, "test_single.vcf")
+    variants.saveAsVcf(path, asSingleFile = true)
+    assert(path.getFileSystem(sc.hadoopConfiguration).exists(path))
+
     val vcRdd = sc.loadVcf("%s/test_single.vcf".format(tempDir))
     vcRdd.rdd.count should === (1)
     vcRdd.sequences.records.size should === (1)
@@ -121,9 +121,12 @@ class VariantContextRDDSuite
     val variants = sc.loadVcf(inputPath)
     val outputPath = tmpFile("sorted.vcf")
 
-    variants.sort()
-      .saveAsVcf(outputPath,
-        asSingleFile = true)
+    variants
+      .sort()
+      .saveAsVcf(
+        outputPath,
+        asSingleFile = true
+      )
 
     checkFiles(outputPath, "sorted.vcf")
   }
@@ -134,8 +137,10 @@ class VariantContextRDDSuite
     val outputPath = tmpFile("sorted.lex.vcf")
 
     variants.sortLexicographically()
-      .saveAsVcf(outputPath,
-        asSingleFile = true)
+      .saveAsVcf(
+        outputPath,
+        asSingleFile = true
+      )
 
     checkFiles(outputPath, "sorted.lex.vcf")
   }

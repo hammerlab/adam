@@ -35,7 +35,9 @@ import org.scalactic.ConversionCheckedTripleEquals
 import org.scalatest.Matchers
 import org.seqdoop.hadoop_bam.CRAMInputFormat
 
-case class TestSaveArgs(var outputPath: String) extends ADAMSaveAnyArgs {
+case class TestSaveArgs(path: Path)
+  extends ADAMSaveAnyArgs {
+  override val outputPath: String = path.toString
   var sortFastqOutput = false
   var asSingleFile = false
   var deferMerging = false
@@ -74,7 +76,7 @@ class ADAMContextSuite
     val bamReadsAdamFile = new File(Files.createTempDir(), "bamReads.adam")
     bamReads.saveAsParquet(bamReadsAdamFile.getAbsolutePath)
     intercept[IllegalArgumentException] {
-      val noReturnType = sc.loadParquet(bamReadsAdamFile.getAbsolutePath)
+      sc.loadParquet(bamReadsAdamFile.getAbsolutePath)
     }
     //finally just make sure we did not break anything,we came might as well
     val returnType: RDD[AlignmentRecord] = sc.loadParquet(bamReadsAdamFile.getAbsolutePath)
@@ -455,10 +457,14 @@ class ADAMContextSuite
   sparkTest("can read a SnpEff-annotated .vcf file") {
     val path = testFile("small_snpeff.vcf")
     val variantRdd = sc.loadVariants(path)
-    val variants = variantRdd.rdd.sortBy(_.getStart).collect
+    val variants =
+      variantRdd
+        .rdd
+        .sortBy(_.getStart)
+        .collect
 
     variants.foreach(v => v.getStart.longValue match {
-      case 14396L => {
+      case 14396L ⇒
         assert(v.getReferenceAllele === "CTGT")
         assert(v.getAlternateAllele === "C")
         assert(v.getAnnotation.getTranscriptEffects.size === 4)
@@ -471,28 +477,24 @@ class ADAMContextSuite
         assert(te.getFeatureType === "transcript")
         assert(te.getFeatureId === "ENST00000488147.1")
         assert(te.getBiotype === "unprocessed_pseudogene")
-      }
-      case 14521L => {
+      case 14521L ⇒
         assert(v.getReferenceAllele === "G")
         assert(v.getAlternateAllele === "A")
         assert(v.getAnnotation.getTranscriptEffects.size === 4)
-      }
-      case 19189L => {
+      case 19189L ⇒
         assert(v.getReferenceAllele === "GC")
         assert(v.getAlternateAllele === "G")
         assert(v.getAnnotation.getTranscriptEffects.size === 3)
-      }
-      case 63734L => {
+      case 63734L ⇒
         assert(v.getReferenceAllele === "CCTA")
         assert(v.getAlternateAllele === "C")
         assert(v.getAnnotation.getTranscriptEffects.size === 1)
-      }
-      case 752720L => {
+      case 752720L ⇒
         assert(v.getReferenceAllele === "A")
         assert(v.getAlternateAllele === "G")
         assert(v.getAnnotation.getTranscriptEffects.size === 2)
-      }
-      case _ => fail("unexpected variant start " + v.getStart)
+      case _ ⇒
+        fail("unexpected variant start " + v.getStart)
     })
   }
 }

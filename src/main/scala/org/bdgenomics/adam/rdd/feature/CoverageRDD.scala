@@ -38,10 +38,11 @@ private[adam] case class CoverageArray(
     array: Array[(ReferenceRegion, Coverage)],
     maxIntervalWidth: Long) extends IntervalArray[ReferenceRegion, Coverage] {
 
+  def duplicate(): IntervalArray[ReferenceRegion, Coverage] = copy()
+
   protected def replace(arr: Array[(ReferenceRegion, Coverage)],
-                        maxWidth: Long): IntervalArray[ReferenceRegion, Coverage] = {
+                        maxWidth: Long): IntervalArray[ReferenceRegion, Coverage] =
     CoverageArray(arr, maxWidth)
-  }
 }
 
 private[adam] class CoverageArraySerializer(kryo: Kryo) extends IntervalArraySerializer[ReferenceRegion, Coverage, CoverageArray] {

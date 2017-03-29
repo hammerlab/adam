@@ -18,6 +18,7 @@
 package org.bdgenomics.adam.rdd.variant
 
 import htsjdk.samtools.ValidationStringency
+import htsjdk.samtools.ValidationStringency.LENIENT
 import htsjdk.variant.vcf.{ VCFHeader, VCFHeaderLine }
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.LongWritable
@@ -37,12 +38,14 @@ import scala.reflect.ClassTag
 
 private[adam] case class VariantContextArray(
     array: Array[(ReferenceRegion, VariantContext)],
-    maxIntervalWidth: Long) extends IntervalArray[ReferenceRegion, VariantContext] {
+    maxIntervalWidth: Long)
+  extends IntervalArray[ReferenceRegion, VariantContext] {
+
+  override def duplicate(): IntervalArray[ReferenceRegion, VariantContext] = copy()
 
   protected def replace(arr: Array[(ReferenceRegion, VariantContext)],
-                        maxWidth: Long): IntervalArray[ReferenceRegion, VariantContext] = {
+                        maxWidth: Long): IntervalArray[ReferenceRegion, VariantContext] =
     VariantContextArray(arr, maxWidth)
-  }
 }
 
 private[adam] class VariantContextArraySerializer extends IntervalArraySerializer[ReferenceRegion, VariantContext, VariantContextArray] {
@@ -102,7 +105,7 @@ case class VariantContextRDD(rdd: RDD[VariantContext],
    */
   def saveAsVcf(args: SaveArgs,
                 sortOnSave: Boolean) {
-    saveAsVcf(args.outputPath, sortOnSave)
+    saveAsVcf(new Path(args.outputPath), sortOnSave)
   }
 
   /**
@@ -116,9 +119,9 @@ case class VariantContextRDD(rdd: RDD[VariantContext],
    *   valid VCF header. Default is false.
    * @param stringency The validation stringency to use when writing the VCF.
    */
-  def saveAsVcf(filePath: String,
+  def saveAsVcf(filePath: Path,
                 asSingleFile: Boolean = false,
-                stringency: ValidationStringency = ValidationStringency.LENIENT)(implicit factory: Factory) {
+                stringency: ValidationStringency = LENIENT)(implicit factory: Factory) {
     val vcfFormat = VCFFormat.inferFromFilePath(filePath)
     assert(vcfFormat == VCFFormat.VCF, "BCF not yet supported") // TODO: Add BCF support
 
@@ -173,16 +176,18 @@ case class VariantContextRDD(rdd: RDD[VariantContext],
       )
 
       // merge shards
-      FileMerger.mergeFiles(rdd.context.hadoopConfiguration,
+      FileMerger.mergeFiles(
+        rdd.context.hadoopConfiguration,
         fs,
-        new Path(filePath),
+        filePath,
         new Path(tailPath),
-        Some(headPath))
+        Some(headPath)
+      )
     } else {
 
       // write shards
       writableVCs.saveAsNewAPIHadoopFile(
-        filePath,
+        filePath.toString,
         classOf[LongWritable],
         classOf[VariantContextWritable],
         classOf[ADAMVCFOutputFormat[LongWritable]],

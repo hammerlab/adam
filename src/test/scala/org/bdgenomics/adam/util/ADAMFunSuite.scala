@@ -18,18 +18,20 @@
 package org.bdgenomics.adam.util
 
 import java.net.URL
+import java.nio.file.Path
 
 import htsjdk.samtools.util.Log
 import org.bdgenomics.adam.serialization.ADAMKryoRegistrator
 import org.hammerlab.genomics.reference.test.{ ClearContigNames, ContigNameCanEqualString, LocusCanEqualInt }
 import org.hammerlab.spark.test.suite.KryoSparkSuite
 import org.hammerlab.test.matchers.files.FileMatcher.fileMatch
-import org.hammerlab.test.resources.Url
-import org.hammerlab.test.resources.File
+import org.hammerlab.test.resources.{ File, Url }
 import org.scalactic.TypeCheckedTripleEquals
+import org.hammerlab.paths
 
 abstract class ADAMFunSuite
   extends KryoSparkSuite(classOf[ADAMKryoRegistrator], referenceTracking = true)
+    with paths.Conversions
     with ContigNameCanEqualString
     with LocusCanEqualInt
     with ClearContigNames
@@ -42,16 +44,23 @@ abstract class ADAMFunSuite
 
   def testFile(name: String): String = File(name)
 
-  def sparkTest(name: String)(body: ⇒ Unit): Unit = {
+  def sparkTest(name: String)(body: ⇒ Unit): Unit =
     test(name) { body }
-  }
 
-  def tmpLocation(extension: String = ".adam"): String = tmpFile(suffix = extension)
+  def tmpLocation(extension: String = ".adam"): Path = tmpFile(suffix = extension)
 
-  override def tmpFile(prefix: String, suffix: String): String = tmpPath(prefix, suffix)
+  /**
+   * Lots of tests use [[tmpFile]] to get a path to a not-yet-created temporary file.
+   *
+   * [[org.hammerlab.test.files.TmpFiles]] creates a file with [[tmpFile]] and returns a path with [[tmpPath]], so we
+   * just reroute them here to avoid potential merge conflicts with upstream by rewriting many tests' calls.
+   */
+  override def tmpFile(prefix: String, suffix: String): Path = tmpPath(prefix, suffix)
 
-  def checkFiles(expectedPath: String, actualPath: String): Unit = {
-    expectedPath should fileMatch(actualPath)
+  implicit val pathToString = paths.pathToString _
+
+  def checkFiles(actualPath: Path, expectedPath: File): Unit = {
+    actualPath should fileMatch(expectedPath)
   }
 }
 

@@ -19,34 +19,29 @@ package org.bdgenomics.adam.rdd.variant
 
 import htsjdk.samtools.ValidationStringency
 import htsjdk.variant.vcf.VCFHeaderLine
+import org.apache.hadoop.fs.Path
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.converters.DefaultHeaderLines
-import org.bdgenomics.adam.models.{
-  ReferencePosition,
-  ReferenceRegion,
-  ReferenceRegionSerializer,
-  SequenceDictionary,
-  VariantContext
-}
+import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion, ReferenceRegionSerializer, SequenceDictionary, VariantContext }
 import org.bdgenomics.adam.rdd.{ JavaSaveArgs, MultisampleAvroGenomicRDD }
 import org.bdgenomics.adam.rich.RichVariant
 import org.bdgenomics.adam.serialization.AvroSerializer
+import org.bdgenomics.formats.avro.{ Genotype, Sample }
 import org.bdgenomics.utils.cli.SaveArgs
-import org.bdgenomics.utils.interval.array.{
-  IntervalArray,
-  IntervalArraySerializer
-}
-import org.bdgenomics.formats.avro.{ Contig, Genotype, Sample }
+import org.bdgenomics.utils.interval.array.{ IntervalArray, IntervalArraySerializer }
+
 import scala.reflect.ClassTag
 
 private[adam] case class GenotypeArray(
     array: Array[(ReferenceRegion, Genotype)],
-    maxIntervalWidth: Long) extends IntervalArray[ReferenceRegion, Genotype] {
+    maxIntervalWidth: Long)
+  extends IntervalArray[ReferenceRegion, Genotype] {
+
+  override def duplicate(): IntervalArray[ReferenceRegion, Genotype] = copy()
 
   protected def replace(arr: Array[(ReferenceRegion, Genotype)],
-                        maxWidth: Long): IntervalArray[ReferenceRegion, Genotype] = {
+                        maxWidth: Long): IntervalArray[ReferenceRegion, Genotype] =
     GenotypeArray(arr, maxWidth)
-  }
 }
 
 private[adam] class GenotypeArraySerializer extends IntervalArraySerializer[ReferenceRegion, Genotype, GenotypeArray] {
@@ -99,9 +94,8 @@ case class GenotypeRDD(rdd: RDD[Genotype],
     })
     val vcRdd = vcIntRdd.groupByKey
       .map {
-        case (v: RichVariant, g) => {
+        case (v: RichVariant, g) =>
           new VariantContext(ReferencePosition(v.variant), v, g)
-        }
       }
 
     VariantContextRDD(vcRdd, sequences, samples, headerLines)
@@ -154,7 +148,7 @@ case class GenotypeRDD(rdd: RDD[Genotype],
    *   valid VCF header.
    * @param stringency The validation stringency to use when writing the VCF.
    */
-  def saveAsVcf(filePath: String,
+  def saveAsVcf(filePath: Path,
                 asSingleFile: Boolean,
                 stringency: ValidationStringency) {
     toVariantContextRDD.saveAsVcf(filePath, asSingleFile, stringency)

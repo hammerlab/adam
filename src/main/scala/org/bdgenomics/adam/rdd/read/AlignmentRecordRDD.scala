@@ -42,8 +42,7 @@ import org.bdgenomics.adam.rdd.{
   ADAMSaveAnyArgs,
   FileMerger,
   JavaSaveArgs,
-  SAMHeaderWriter,
-  Unaligned
+  SAMHeaderWriter
 }
 import org.bdgenomics.adam.rdd.feature.CoverageRDD
 import org.bdgenomics.adam.rdd.read.realignment.RealignIndels
@@ -64,12 +63,14 @@ import scala.reflect.ClassTag
 
 private[adam] case class AlignmentRecordArray(
     array: Array[(ReferenceRegion, AlignmentRecord)],
-    maxIntervalWidth: Long) extends IntervalArray[ReferenceRegion, AlignmentRecord] {
+    maxIntervalWidth: Long)
+  extends IntervalArray[ReferenceRegion, AlignmentRecord] {
+
+  override def duplicate(): IntervalArray[ReferenceRegion, AlignmentRecord] = copy()
 
   protected def replace(arr: Array[(ReferenceRegion, AlignmentRecord)],
-                        maxWidth: Long): IntervalArray[ReferenceRegion, AlignmentRecord] = {
+                        maxWidth: Long): IntervalArray[ReferenceRegion, AlignmentRecord] =
     AlignmentRecordArray(arr, maxWidth)
-  }
 }
 
 private[adam] class AlignmentRecordArraySerializer extends IntervalArraySerializer[ReferenceRegion, AlignmentRecord, AlignmentRecordArray] {
@@ -221,13 +222,12 @@ case class AlignmentRecordRDD(
    */
   private[rdd] def maybeSaveBam(args: ADAMSaveAnyArgs,
                                 isSorted: Boolean = false): Boolean = {
-
     if (args.outputPath.endsWith(".sam") ||
       args.outputPath.endsWith(".bam") ||
       args.outputPath.endsWith(".cram")) {
       log.info("Saving data in SAM/BAM/CRAM format")
       saveAsSam(
-        args.outputPath,
+        new Path(args.outputPath),
         isSorted = isSorted,
         asSingleFile = args.asSingleFile,
         deferMerging = args.deferMerging
@@ -380,7 +380,7 @@ case class AlignmentRecordRDD(
    *   output shards as a headerless file, but we will not merge the shards.
    */
   def saveAsSam(
-    filePath: String,
+    filePath: Path,
     asType: Option[SAMFormat] = None,
     asSingleFile: Boolean = false,
     isSorted: Boolean = false,
@@ -401,7 +401,7 @@ case class AlignmentRecordRDD(
     // get file system
     val headPath = new Path(filePath + "_head")
     val tailPath = new Path(filePath + "_tail")
-    val outputPath = new Path(filePath)
+    val outputPath = filePath
     val fs = headPath.getFileSystem(rdd.context.hadoopConfiguration)
 
     // TIL: sam and bam are written in completely different ways!
@@ -415,7 +415,7 @@ case class AlignmentRecordRDD(
 
       // create htsjdk specific streams for writing the bam header
       val compressedOut: OutputStream = new BlockCompressedOutputStream(os, null)
-      val binaryCodec = new BinaryCodec(compressedOut);
+      val binaryCodec = new BinaryCodec(compressedOut)
 
       // write a bam header - cribbed from Hadoop-BAM
       binaryCodec.writeBytes("BAM\001".getBytes())
@@ -428,10 +428,10 @@ case class AlignmentRecordRDD(
       binaryCodec.writeInt(ssd.size())
       ssd.getSequences
         .toList
-        .foreach(r => {
+        .foreach { r ⇒
           binaryCodec.writeString(r.getSequenceName(), true, true)
           binaryCodec.writeInt(r.getSequenceLength())
-        })
+        }
 
       // flush and close all the streams
       compressedOut.flush()
@@ -463,10 +463,18 @@ case class AlignmentRecordRDD(
         .asInstanceOf[OutputStream]
 
       // create a cram container writer
-      val csw = new CRAMContainerStreamWriter(os, null, // null -> do not write index
-        new ReferenceSource(Paths.get(URI.create(refSource))),
-        header,
-        filePath) // write filepath as id
+      val csw =
+        new CRAMContainerStreamWriter(
+          os,
+          null,  // null -> do not write index
+          new ReferenceSource(
+            Paths.get(
+              URI.create(refSource)
+            )
+          ),
+          header,
+          filePath.toString
+        ) // write filepath as id
 
       // write the header
       csw.writeHeader(header)
@@ -489,7 +497,7 @@ case class AlignmentRecordRDD(
         case SAMFormat.CRAM => classOf[InstrumentedADAMCRAMOutputFormat[LongWritable]]
       }
       withKey.saveAsNewAPIHadoopFile(
-        filePath,
+        filePath.toString,
         classOf[LongWritable],
         classOf[SAMRecordWritable],
         headeredOutputFormat,
@@ -499,10 +507,10 @@ case class AlignmentRecordRDD(
       // clean up the header after writing
       fs.delete(headPath, true)
     } else {
-      log.info(s"Writing single ${fileType} file (not Hadoop-style directory)")
+      log.info(s"Writing single $fileType file (not Hadoop-style directory)")
 
       val tailPath = new Path(filePath + "_tail")
-      val outputPath = new Path(filePath)
+      val outputPath = filePath
 
       // set up output format
       val headerLessOutputFormat = fileType match {
@@ -542,14 +550,16 @@ case class AlignmentRecordRDD(
    * @param isSorted If the output is sorted, this will modify the header.
    */
   def saveAsSam(
-    filePath: java.lang.String,
+    filePath: Path,
     asType: SAMFormat,
     asSingleFile: java.lang.Boolean,
     isSorted: java.lang.Boolean) {
-    saveAsSam(filePath,
+    saveAsSam(
+      filePath,
       asType = Option(asType),
       asSingleFile = asSingleFile,
-      isSorted = isSorted)
+      isSorted = isSorted
+    )
   }
 
   /**

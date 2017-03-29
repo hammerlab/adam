@@ -36,12 +36,14 @@ import scala.reflect.ClassTag
 
 private[adam] case class FeatureArray(
     array: Array[(ReferenceRegion, Feature)],
-    maxIntervalWidth: Long) extends IntervalArray[ReferenceRegion, Feature] {
+    maxIntervalWidth: Long)
+  extends IntervalArray[ReferenceRegion, Feature] {
+
+  override def duplicate(): IntervalArray[ReferenceRegion, Feature] = copy()
 
   protected def replace(arr: Array[(ReferenceRegion, Feature)],
-                        maxWidth: Long): IntervalArray[ReferenceRegion, Feature] = {
+                        maxWidth: Long): IntervalArray[ReferenceRegion, Feature] =
     FeatureArray(arr, maxWidth)
-  }
 }
 
 private[adam] class FeatureArraySerializer extends IntervalArraySerializer[ReferenceRegion, Feature, FeatureArray] {

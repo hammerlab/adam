@@ -21,6 +21,7 @@ import java.io.File
 import java.nio.file.Files
 
 import htsjdk.samtools.ValidationStringency
+import org.apache.hadoop.fs.Path
 import org.bdgenomics.adam.converters.DefaultHeaderLines
 import org.bdgenomics.adam.models.{ RecordGroupDictionary, ReferenceRegion, SequenceDictionary, SequenceRecord }
 import org.bdgenomics.adam.rdd.ADAMContext._
@@ -31,6 +32,8 @@ import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro._
 import org.hammerlab.genomics.reference.test.ClearContigNames
 import org.hammerlab.genomics.reference.test.LociConversions.intToLocus
+import org.hammerlab.paths._
+import org.seqdoop.hadoop_bam.SAMFormat.{ BAM, CRAM, SAM }
 import org.seqdoop.hadoop_bam.{ CRAMInputFormat, SAMFormat }
 
 import scala.util.Random
@@ -59,7 +62,10 @@ class AlignmentRecordRDDSuite
       if (mapped) {
         val contigName = random.nextInt(numReadsToCreate / 10).toString
         val start = random.nextInt(1000000)
-        builder.setContigName(contigName).setStart(start).setEnd(start)
+        builder
+          .setContigName(contigName)
+          .setStart(start)
+          .setEnd(start)
       }
       builder.setReadName((0 until 20).map(i => (random.nextInt(100) + 64)).mkString)
       builder.build()
@@ -135,7 +141,10 @@ class AlignmentRecordRDDSuite
       if (mapped) {
         val contigName = random.nextInt(numReadsToCreate / 10).toString
         val start = random.nextInt(1000000)
-        builder.setContigName(contigName).setStart(start).setEnd(start)
+        builder
+          .setContigName(contigName)
+          .setStart(start)
+          .setEnd(start)
       }
       builder.setReadName((0 until 20).map(i => (random.nextInt(100) + 64)).mkString)
       builder.build()
@@ -179,11 +188,14 @@ class AlignmentRecordRDDSuite
     val ardd = sc.loadBam(reads12Path)
     val rdd12A = ardd.rdd
 
-    val tempFile = Files.createTempDirectory("reads12")
-    ardd.saveAsSam(tempFile.toAbsolutePath.toString + "/reads12.sam",
-      asType = Some(SAMFormat.SAM))
+    val tempFile = tmpDir("reads12")
+    val outputPath = new Path(tempFile, "reads12.sam")
+    ardd.saveAsSam(
+      outputPath,
+      asType = Some(SAM)
+    )
 
-    val rdd12B = sc.loadBam(tempFile.toAbsolutePath.toString + "/reads12.sam/part-r-00000")
+    val rdd12B = sc.loadBam(new Path(outputPath, "part-r-00000"))
 
     assert(rdd12B.rdd.count() === rdd12A.rdd.count())
 
@@ -209,10 +221,12 @@ class AlignmentRecordRDDSuite
     val rddA = ardd.rdd
 
     val tempFile = tmpFile("artificial.cram")
-    ardd.saveAsSam(tempFile,
-      asType = Some(SAMFormat.CRAM),
+    ardd.saveAsSam(
+      tempFile,
+      asType = Some(CRAM),
       asSingleFile = true,
-      isSorted = true)
+      isSorted = true
+    )
 
     val rddB = sc.loadBam(tempFile)
 
@@ -240,10 +254,12 @@ class AlignmentRecordRDDSuite
     val rddA = ardd.rdd
 
     val tempFile = tmpFile("artificial.cram")
-    ardd.saveAsSam(tempFile,
-      asType = Some(SAMFormat.CRAM),
+    ardd.saveAsSam(
+      tempFile,
+      asType = Some(CRAM),
       asSingleFile = false,
-      isSorted = true)
+      isSorted = true
+    )
 
     val rddB = sc.loadBam(tempFile + "/part-r-00000")
 
@@ -270,19 +286,23 @@ class AlignmentRecordRDDSuite
 
   sparkTest("convert malformed FASTQ (no quality scores) => SAM => well-formed FASTQ => SAM") {
     val noqualPath = Thread.currentThread().getContextClassLoader.getResource("fastq_noqual.fq").getFile
-    val tempBase = Files.createTempDirectory("noqual").toAbsolutePath.toString
 
     //read FASTQ (malformed)
     val rddA = sc.loadFastq(noqualPath, None, None, ValidationStringency.LENIENT)
 
+    val tempBase = tmpDir("noqual")
+    val noqualAPath = new Path(tempBase, "noqualA.sam")
+
     //write SAM (fixed and now well-formed)
-    rddA.saveAsSam(tempBase + "/noqualA.sam")
+    rddA.saveAsSam(noqualAPath)
 
     //read SAM
-    val rddB = sc.loadAlignments(tempBase + "/noqualA.sam")
+    val rddB = sc.loadAlignments(noqualAPath)
+
+    val noqualBPath = new Path(tempBase, "noqualB.fastq")
 
     //write FASTQ (well-formed)
-    rddB.saveAsFastq(tempBase + "/noqualB.fastq")
+    rddB.saveAsFastq(noqualBPath)
 
     //read FASTQ (well-formed)
     val rddC = sc.loadFastq(tempBase + "/noqualB.fastq", None, None, ValidationStringency.STRICT)
@@ -291,7 +311,7 @@ class AlignmentRecordRDDSuite
     val noqualB = rddB.rdd.collect()
     val noqualC = rddC.rdd.collect()
     noqualA.indices.foreach {
-      case i: Int =>
+      i ⇒
         val (readA, readB, readC) = (noqualA(i), noqualB(i), noqualC(i))
         assert(readA.getQual != "*")
         assert(readB.getQual == "B" * readB.getSequence.length)
@@ -387,22 +407,35 @@ class AlignmentRecordRDDSuite
     val reads = ardd.sortReadsByReferencePosition()
 
     val actualSortedPath = tmpFile("ordered.sam")
-    reads.saveAsSam(actualSortedPath,
+
+    reads.saveAsSam(
+      actualSortedPath,
       isSorted = true,
-      asSingleFile = true)
+      asSingleFile = true
+    )
 
     checkFiles(actualSortedPath, "ordered.sam")
   }
 
   def testBQSR(asSam: Boolean, filename: String) {
     val inputPath = testFile("bqsr1.sam")
-    val tempFile = Files.createTempDirectory("bqsr1")
+    val tempFile = tmpDir("bqsr1")
+    val path = new Path(tempFile, filename)
     val rRdd = sc.loadAlignments(inputPath)
     rRdd.rdd.cache()
-    rRdd.saveAsSam("%s/%s".format(tempFile.toAbsolutePath.toString, filename),
-      asType = if (asSam) Some(SAMFormat.SAM) else Some(SAMFormat.BAM),
-      asSingleFile = true)
-    val rdd2 = sc.loadAlignments("%s/%s".format(tempFile.toAbsolutePath.toString, filename))
+    rRdd.saveAsSam(
+      path,
+      asType =
+        Some(
+          if (asSam)
+            SAM
+          else
+            BAM
+        ),
+      asSingleFile = true
+    )
+
+    val rdd2 = sc.loadAlignments(path)
     rdd2.rdd.cache()
 
     val (fsp1, fsf1) = rRdd.flagStat()
@@ -538,7 +571,7 @@ class AlignmentRecordRDDSuite
     val inputPath = testFile("small.sam")
     val reads: AlignmentRecordRDD = sc.loadAlignments(inputPath)
     val outputPath = tmpLocation(".sam")
-    reads.saveAsSam(outputPath, asType = Some(SAMFormat.SAM))
+    reads.saveAsSam(outputPath, asType = Some(SAM))
     assert(new File(outputPath).exists())
   }
 
@@ -547,7 +580,7 @@ class AlignmentRecordRDDSuite
     val reads: AlignmentRecordRDD = sc.loadAlignments(inputPath)
     val outputPath = tmpLocation(".sam")
     reads.saveAsSam(outputPath,
-      asType = Some(SAMFormat.SAM),
+      asType = Some(SAM),
       asSingleFile = true)
     assert(new File(outputPath).exists())
   }
@@ -557,7 +590,7 @@ class AlignmentRecordRDDSuite
     val reads: AlignmentRecordRDD = sc.loadAlignments(inputPath)
     val outputPath = tmpLocation(".sam")
     reads.saveAsSam(outputPath,
-      asType = Some(SAMFormat.SAM),
+      asType = Some(SAM),
       asSingleFile = true,
       isSorted = true)
     assert(new File(outputPath).exists())
@@ -567,7 +600,7 @@ class AlignmentRecordRDDSuite
     val inputPath = testFile("small.sam")
     val reads: AlignmentRecordRDD = sc.loadAlignments(inputPath)
     val outputPath = tmpLocation(".bam")
-    reads.saveAsSam(outputPath, asType = Some(SAMFormat.BAM))
+    reads.saveAsSam(outputPath, asType = Some(BAM))
     assert(new File(outputPath).exists())
   }
 
@@ -575,9 +608,11 @@ class AlignmentRecordRDDSuite
     val inputPath = testFile("small.sam")
     val reads: AlignmentRecordRDD = sc.loadAlignments(inputPath)
     val outputPath = tmpLocation(".bam")
-    reads.saveAsSam(outputPath,
-      asType = Some(SAMFormat.BAM),
-      asSingleFile = true)
+    reads.saveAsSam(
+      outputPath,
+      asType = Some(BAM),
+      asSingleFile = true
+    )
     assert(new File(outputPath).exists())
   }
 
@@ -585,10 +620,12 @@ class AlignmentRecordRDDSuite
     val inputPath = testFile("small.sam")
     val reads: AlignmentRecordRDD = sc.loadAlignments(inputPath)
     val outputPath = tmpLocation(".bam")
-    reads.saveAsSam(outputPath,
-      asType = Some(SAMFormat.BAM),
+    reads.saveAsSam(
+      outputPath,
+      asType = Some(BAM),
       asSingleFile = true,
-      isSorted = true)
+      isSorted = true
+    )
     assert(new File(outputPath).exists())
   }
 
@@ -675,7 +712,9 @@ class AlignmentRecordRDDSuite
     val smallPath = testFile("small.sam")
     val scriptPath = testFile("env_test_command.sh")
     val ardd = sc.loadBam(reads12Path)
-    val reads12Records = ardd.rdd.count
+
+    ardd.rdd.count
+
     val smallRecords = sc.loadBam(smallPath).rdd.count
     val writePath = tmpLocation("reads12.sam")
 
@@ -697,7 +736,7 @@ class AlignmentRecordRDDSuite
     val ardd = sc.loadBam(readsPath)
 
     implicit val tFormatter = SAMInFormatter
-    implicit val uFormatter = new VCFOutFormatter(DefaultHeaderLines.allHeaderLines)
+    implicit val uFormatter = VCFOutFormatter(DefaultHeaderLines.allHeaderLines)
 
     val pipedRdd: VariantContextRDD = ardd.pipe("/bin/bash $0 %s $1".format(tempPath),
       files = Seq(scriptPath, vcfPath))
@@ -853,8 +892,8 @@ class AlignmentRecordRDDSuite
 
     val c = jRdd.rdd.collect
     val c0 = jRdd0.rdd.collect
-    assert(c.size === 5)
-    assert(c0.size === 5)
+    assert(c.length === 5)
+    assert(c0.length === 5)
     assert(c.forall(_._2.size == 1))
     assert(c0.forall(_._2.size == 1))
   }

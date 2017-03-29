@@ -43,12 +43,14 @@ import scala.reflect.ClassTag
 
 private[adam] case class FragmentArray(
     array: Array[(ReferenceRegion, Fragment)],
-    maxIntervalWidth: Long) extends IntervalArray[ReferenceRegion, Fragment] {
+    maxIntervalWidth: Long)
+  extends IntervalArray[ReferenceRegion, Fragment] {
+
+  override def duplicate(): IntervalArray[ReferenceRegion, Fragment] = copy()
 
   protected def replace(arr: Array[(ReferenceRegion, Fragment)],
-                        maxWidth: Long): IntervalArray[ReferenceRegion, Fragment] = {
+                        maxWidth: Long): IntervalArray[ReferenceRegion, Fragment] =
     FragmentArray(arr, maxWidth)
-  }
 }
 
 private[adam] class FragmentArraySerializer extends IntervalArraySerializer[ReferenceRegion, Fragment, FragmentArray] {
