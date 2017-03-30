@@ -17,20 +17,15 @@
  */
 package org.bdgenomics.adam.rdd.feature
 
+import java.nio.file.Path
+
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.serializers.FieldSerializer
 import org.apache.spark.rdd.RDD
-import org.bdgenomics.adam.models.{
-  Coverage,
-  ReferenceRegion,
-  ReferenceRegionSerializer,
-  SequenceDictionary
-}
+import org.bdgenomics.adam.models.{ Coverage, ReferenceRegion, ReferenceRegionSerializer, SequenceDictionary }
 import org.bdgenomics.adam.rdd.GenomicRDD
-import org.bdgenomics.utils.interval.array.{
-  IntervalArray,
-  IntervalArraySerializer
-}
+import org.bdgenomics.utils.interval.array.{ IntervalArray, IntervalArraySerializer }
+
 import scala.annotation.tailrec
 import scala.reflect.ClassTag
 
@@ -68,7 +63,7 @@ case class CoverageRDD(rdd: RDD[Coverage],
 
   protected def buildTree(rdd: RDD[(ReferenceRegion, Coverage)])(
     implicit tTag: ClassTag[Coverage]): IntervalArray[ReferenceRegion, Coverage] = {
-    IntervalArray(rdd, CoverageArray.apply(_, _))
+    IntervalArray(rdd, CoverageArray(_, _))
   }
 
   /**
@@ -86,9 +81,8 @@ case class CoverageRDD(rdd: RDD[Coverage],
    *
    * @param filePath The location to write the output.
    */
-  def save(filePath: java.lang.String, asSingleFile: java.lang.Boolean) = {
+  def save(filePath: Path, asSingleFile: Boolean) =
     this.toFeatureRDD.save(filePath, asSingleFile = asSingleFile)
-  }
 
   /**
    * Merges adjacent ReferenceRegions with the same coverage value.
@@ -124,11 +118,16 @@ case class CoverageRDD(rdd: RDD[Coverage],
     if (!iter.hasNext) {
       // if lastCoverage has not yet been added, add to condensed
       val nextCondensed =
-        if (condensed.map(r => ReferenceRegion(r)).filter(_.overlaps(ReferenceRegion(lastCoverage))).isEmpty) {
+        if (
+          !condensed
+            .map(ReferenceRegion(_))
+            .exists(_.overlaps(ReferenceRegion(lastCoverage)))
+        ) {
           lastCoverage :: condensed
         } else {
           condensed
         }
+
       nextCondensed.toIterator
     } else {
       val cov = iter.next

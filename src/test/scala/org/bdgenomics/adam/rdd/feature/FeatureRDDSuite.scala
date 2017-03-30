@@ -18,8 +18,6 @@
 package org.bdgenomics.adam.rdd.feature
 
 import com.google.common.collect.ImmutableMap
-import java.io.File
-
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.{ Feature, Strand }
@@ -28,7 +26,6 @@ import org.scalactic.{ Equivalence, TypeCheckedTripleEquals }
 
 class FeatureRDDSuite
   extends ADAMFunSuite
-    with ClearContigNames
     with TypeCheckedTripleEquals {
 
   implicit val strongFeatureEq = new Equivalence[Feature] {
@@ -60,12 +57,6 @@ class FeatureRDDSuite
     }
   }
 
-  def tempLocation(suffix: String = ".adam"): String = {
-    val tempFile = File.createTempFile("FeatureRDDFunctionsSuite", "")
-    val tempDir = tempFile.getParentFile
-    new File(tempDir, tempFile.getName + suffix).getAbsolutePath
-  }
-
   sparkTest("round trip GTF format") {
     val inputPath = testFile("Homo_sapiens.GRCh37.75.trun100.gtf")
     val features = sc.loadGtf(inputPath)
@@ -73,7 +64,7 @@ class FeatureRDDSuite
     val firstGtfRecord = FeatureRDD.toGtf(features.rdd.first)
 
     val gtfSplitTabs = firstGtfRecord.split('\t')
-    assert(gtfSplitTabs.size === 9)
+    assert(gtfSplitTabs.length === 9)
     assert(gtfSplitTabs(0) === "1")
     assert(gtfSplitTabs(1) === "pseudogene")
     assert(gtfSplitTabs(2) === "gene")
@@ -84,14 +75,14 @@ class FeatureRDDSuite
     assert(gtfSplitTabs(7) === ".")
 
     val gtfAttributes = gtfSplitTabs(8).split(";").map(_.trim)
-    assert(gtfAttributes.size === 4)
+    assert(gtfAttributes.length === 4)
     assert(gtfAttributes(0) === "gene_id \"ENSG00000223972\"")
     assert(gtfAttributes(1) === "gene_biotype \"pseudogene\"")
     // gene name/source move to the end
     assert(gtfAttributes(2) === "gene_name \"DDX11L1\"")
     assert(gtfAttributes(3) === "gene_source \"ensembl_havana\"")
 
-    val outputPath = tempLocation(".gtf")
+    val outputPath = tmpLocation(".gtf")
     features.saveAsGtf(outputPath, asSingleFile = true)
     val reloadedFeatures = sc.loadGtf(outputPath)
     assert(reloadedFeatures.rdd.count === features.rdd.count)
@@ -104,7 +95,7 @@ class FeatureRDDSuite
   sparkTest("save GTF as GFF3 format") {
     val inputPath = testFile("Homo_sapiens.GRCh37.75.trun100.gtf")
     val features = sc.loadGtf(inputPath)
-    val outputPath = tempLocation(".gff3")
+    val outputPath = tmpLocation(".gff3")
     features.saveAsGff3(outputPath)
     val reloadedFeatures = sc.loadGff3(outputPath)
     assert(features.rdd.count === reloadedFeatures.rdd.count)
@@ -113,7 +104,7 @@ class FeatureRDDSuite
   sparkTest("save GTF as BED format") {
     val inputPath = testFile("Homo_sapiens.GRCh37.75.trun100.gtf")
     val features = sc.loadGtf(inputPath)
-    val outputPath = tempLocation(".bed")
+    val outputPath = tmpLocation(".bed")
     features.saveAsBed(outputPath)
     val reloadedFeatures = sc.loadBed(outputPath)
     assert(features.rdd.count === reloadedFeatures.rdd.count)
@@ -122,7 +113,7 @@ class FeatureRDDSuite
   sparkTest("save GTF as IntervalList format") {
     val inputPath = testFile("Homo_sapiens.GRCh37.75.trun100.gtf")
     val features = sc.loadGtf(inputPath)
-    val outputPath = tempLocation(".interval_list")
+    val outputPath = tmpLocation(".interval_list")
     features.saveAsIntervalList(outputPath)
     val reloadedFeatures = sc.loadIntervalList(outputPath)
     assert(features.rdd.count === reloadedFeatures.rdd.count)
@@ -131,7 +122,7 @@ class FeatureRDDSuite
   sparkTest("save GTF as NarrowPeak format") {
     val inputPath = testFile("Homo_sapiens.GRCh37.75.trun100.gtf")
     val features = sc.loadGtf(inputPath)
-    val outputPath = tempLocation(".narrowPeak")
+    val outputPath = tmpLocation(".narrowPeak")
     features.saveAsNarrowPeak(outputPath)
     val reloadedFeatures = sc.loadNarrowPeak(outputPath)
     assert(features.rdd.count === reloadedFeatures.rdd.count)
@@ -140,7 +131,7 @@ class FeatureRDDSuite
   sparkTest("save GFF3 as GTF format") {
     val inputPath = testFile("dvl1.200.gff3")
     val features = sc.loadGff3(inputPath)
-    val outputPath = tempLocation(".gtf")
+    val outputPath = tmpLocation(".gtf")
     features.saveAsGtf(outputPath)
     val reloadedFeatures = sc.loadGtf(outputPath)
     assert(features.rdd.count === reloadedFeatures.rdd.count)
@@ -149,7 +140,7 @@ class FeatureRDDSuite
   sparkTest("save GFF3 as BED format") {
     val inputPath = testFile("dvl1.200.gff3")
     val features = sc.loadGff3(inputPath)
-    val outputPath = tempLocation(".bed")
+    val outputPath = tmpLocation(".bed")
     features.saveAsBed(outputPath)
     val reloadedFeatures = sc.loadBed(outputPath)
     assert(features.rdd.count === reloadedFeatures.rdd.count)
@@ -158,7 +149,7 @@ class FeatureRDDSuite
   sparkTest("save GFF3 as IntervalList format") {
     val inputPath = testFile("dvl1.200.gff3")
     val features = sc.loadGff3(inputPath)
-    val outputPath = tempLocation(".interval_list")
+    val outputPath = tmpLocation(".interval_list")
     features.saveAsIntervalList(outputPath)
     val reloadedFeatures = sc.loadIntervalList(outputPath)
     assert(features.rdd.count === reloadedFeatures.rdd.count)
@@ -167,7 +158,7 @@ class FeatureRDDSuite
   sparkTest("save GFF3 as NarrowPeak format") {
     val inputPath = testFile("dvl1.200.gff3")
     val features = sc.loadGff3(inputPath)
-    val outputPath = tempLocation(".narrowPeak")
+    val outputPath = tmpLocation(".narrowPeak")
     features.saveAsNarrowPeak(outputPath)
     val reloadedFeatures = sc.loadNarrowPeak(outputPath)
     assert(features.rdd.count === reloadedFeatures.rdd.count)
@@ -176,12 +167,12 @@ class FeatureRDDSuite
   sparkTest("round trip GFF3 format") {
     val inputPath = testFile("dvl1.200.gff3")
     val expected = sc.loadGff3(inputPath)
-    val outputPath = tempLocation(".gff3")
+    val outputPath = tmpLocation(".gff3")
     expected.saveAsGff3(outputPath, asSingleFile = true)
 
     val feature = expected.rdd.first
     val gff3Columns = FeatureRDD.toGff3(feature).split('\t')
-    assert(gff3Columns.size === 9)
+    assert(gff3Columns.length === 9)
     assert(gff3Columns(0) === "1")
     assert(gff3Columns(1) === "Ensembl")
     assert(gff3Columns(2) === "gene")
@@ -191,7 +182,7 @@ class FeatureRDDSuite
     assert(gff3Columns(6) === "+")
     assert(gff3Columns(7) === ".")
     val attrs = gff3Columns(8).split(';')
-    assert(attrs.size === 3)
+    assert(attrs.length === 3)
     assert(attrs(0) === "ID=ENSG00000169962")
     assert(attrs(1) === "Name=ENSG00000169962")
     assert(attrs(2) === "biotype=protein_coding")
@@ -206,7 +197,7 @@ class FeatureRDDSuite
   sparkTest("save BED as GTF format") {
     val inputPath = testFile("dvl1.200.bed")
     val features = sc.loadBed(inputPath)
-    val outputPath = tempLocation(".gtf")
+    val outputPath = tmpLocation(".gtf")
     features.saveAsGtf(outputPath)
     val reloadedFeatures = sc.loadGtf(outputPath)
     assert(features.rdd.count === reloadedFeatures.rdd.count)
@@ -215,7 +206,7 @@ class FeatureRDDSuite
   sparkTest("save BED as GFF3 format") {
     val inputPath = testFile("dvl1.200.bed")
     val features = sc.loadBed(inputPath)
-    val outputPath = tempLocation(".gff3")
+    val outputPath = tmpLocation(".gff3")
     features.saveAsGff3(outputPath)
     val reloadedFeatures = sc.loadGff3(outputPath)
     assert(features.rdd.count === reloadedFeatures.rdd.count)
@@ -224,7 +215,7 @@ class FeatureRDDSuite
   sparkTest("save BED as IntervalList format") {
     val inputPath = testFile("dvl1.200.bed")
     val features = sc.loadBed(inputPath)
-    val outputPath = tempLocation(".interval_list")
+    val outputPath = tmpLocation(".interval_list")
     features.saveAsIntervalList(outputPath)
     val reloadedFeatures = sc.loadIntervalList(outputPath)
     assert(features.rdd.count === reloadedFeatures.rdd.count)
@@ -233,7 +224,7 @@ class FeatureRDDSuite
   sparkTest("save BED as NarrowPeak format") {
     val inputPath = testFile("dvl1.200.bed")
     val features = sc.loadBed(inputPath)
-    val outputPath = tempLocation(".narrowPeak")
+    val outputPath = tmpLocation(".narrowPeak")
     features.saveAsNarrowPeak(outputPath)
     val reloadedFeatures = sc.loadNarrowPeak(outputPath)
     assert(features.rdd.count === reloadedFeatures.rdd.count)
@@ -242,12 +233,12 @@ class FeatureRDDSuite
   sparkTest("round trip BED format") {
     val inputPath = testFile("dvl1.200.bed")
     val expected = sc.loadBed(inputPath)
-    val outputPath = tempLocation(".bed")
+    val outputPath = tmpLocation(".bed")
     expected.saveAsBed(outputPath, asSingleFile = true)
 
     val feature = expected.rdd.first
     val bedCols = FeatureRDD.toBed(feature).split('\t')
-    assert(bedCols.size === 6)
+    assert(bedCols.length === 6)
     assert(bedCols(0) === "1")
     assert(bedCols(1) === "1331345")
     assert(bedCols(2) === "1331536")
@@ -265,7 +256,7 @@ class FeatureRDDSuite
   sparkTest("save IntervalList as GTF format") {
     val inputPath = testFile("SeqCap_EZ_Exome_v3.hg19.interval_list")
     val features = sc.loadIntervalList(inputPath)
-    val outputPath = tempLocation(".gtf")
+    val outputPath = tmpLocation(".gtf")
     features.saveAsGtf(outputPath)
     val reloadedFeatures = sc.loadGtf(outputPath)
     assert(features.rdd.count === reloadedFeatures.rdd.count)
@@ -274,7 +265,7 @@ class FeatureRDDSuite
   sparkTest("save IntervalList as GFF3 format") {
     val inputPath = testFile("SeqCap_EZ_Exome_v3.hg19.interval_list")
     val features = sc.loadIntervalList(inputPath)
-    val outputPath = tempLocation(".gff3")
+    val outputPath = tmpLocation(".gff3")
     features.saveAsGff3(outputPath)
     val reloadedFeatures = sc.loadGff3(outputPath)
     assert(features.rdd.count === reloadedFeatures.rdd.count)
@@ -283,7 +274,7 @@ class FeatureRDDSuite
   sparkTest("save IntervalList as BED format") {
     val inputPath = testFile("SeqCap_EZ_Exome_v3.hg19.interval_list")
     val features = sc.loadIntervalList(inputPath)
-    val outputPath = tempLocation(".bed")
+    val outputPath = tmpLocation(".bed")
     features.saveAsBed(outputPath)
     val reloadedFeatures = sc.loadBed(outputPath)
     assert(features.rdd.count === reloadedFeatures.rdd.count)
@@ -292,14 +283,14 @@ class FeatureRDDSuite
   sparkTest("save IntervalList as IntervalList format") {
     val inputPath = testFile("SeqCap_EZ_Exome_v3.hg19.interval_list")
     val features = sc.loadIntervalList(inputPath)
-    val outputPath = tempLocation(".interval_list")
+    val outputPath = tmpLocation(".interval_list")
     features.saveAsIntervalList(outputPath)
   }
 
   sparkTest("save IntervalList as NarrowPeak format") {
     val inputPath = testFile("SeqCap_EZ_Exome_v3.hg19.interval_list")
     val features = sc.loadIntervalList(inputPath)
-    val outputPath = tempLocation(".narrowPeak")
+    val outputPath = tmpLocation(".narrowPeak")
     features.saveAsNarrowPeak(outputPath)
     val reloadedFeatures = sc.loadNarrowPeak(outputPath)
     assert(features.rdd.count === reloadedFeatures.rdd.count)
@@ -312,7 +303,7 @@ class FeatureRDDSuite
     // test single record
     val feature = expected.rdd.first
     val interval = FeatureRDD.toInterval(feature).split('\t')
-    assert(interval.size === 5)
+    assert(interval.length === 5)
     assert(interval(0) === "chr1")
     assert(interval(1) === "14416")
     assert(interval(2) === "14499")
@@ -320,33 +311,41 @@ class FeatureRDDSuite
     assert(interval(4) === "gn|DDX11L1;gn|RP11-34P13.2;ens|ENSG00000223972;ens|ENSG00000227232;vega|OTTHUMG00000000958;vega|OTTHUMG00000000961")
 
     // test a record with a refseq attribute
-    val refseqFeature = expected.rdd.filter(f => {
-      f.getContigName == "chr7" &&
-        f.getStart == 142111441L &&
-        f.getEnd == 142111617L
-    }).first
-    val rsInterval = FeatureRDD.toInterval(refseqFeature).split('\t')
-    assert(rsInterval.size === 5)
-    assert(rsInterval(0) === "chr7")
-    assert(rsInterval(1) === "142111442")
-    assert(rsInterval(2) === "142111617")
-    assert(rsInterval(3) === "+")
-    assert(rsInterval(4) === "gn|TRBV5-7;ens|ENSG00000211731;refseq|NG_001333")
+    val refseqFeature =
+      expected
+        .rdd
+        .filter { f ⇒
+          f.getContigName == "chr7" &&
+            f.getStart == 142111441L &&
+            f.getEnd == 142111617L
+        }
+        .first
 
-    val outputPath = tempLocation(".interval_list")
+    val rsInterval = FeatureRDD.toInterval(refseqFeature).split('\t')
+    rsInterval should be(
+      Array(
+        "chr7",
+        "142111442",
+        "142111617",
+        "+",
+        "gn|TRBV5-7;ens|ENSG00000211731;refseq|NG_001333"
+      )
+    )
+
+    val outputPath = tmpLocation(".interval_list")
     expected.saveAsIntervalList(outputPath, asSingleFile = true)
 
     val actual = sc.loadIntervalList(outputPath)
     val pairs = expected.rdd.collect.zip(actual.rdd.collect)
-    pairs.foreach(p => {
+    pairs.foreach { p ⇒
       assert(p._1 === p._2)
-    })
+    }
   }
 
   sparkTest("save NarrowPeak as GTF format") {
     val inputPath = testFile("wgEncodeOpenChromDnaseGm19238Pk.trunc10.narrowPeak")
     val features = sc.loadNarrowPeak(inputPath)
-    val outputPath = tempLocation(".gtf")
+    val outputPath = tmpLocation(".gtf")
     features.saveAsGtf(outputPath)
     val reloadedFeatures = sc.loadGtf(outputPath)
     assert(features.rdd.count === reloadedFeatures.rdd.count)
@@ -355,7 +354,7 @@ class FeatureRDDSuite
   sparkTest("save NarrowPeak as GFF3 format") {
     val inputPath = testFile("wgEncodeOpenChromDnaseGm19238Pk.trunc10.narrowPeak")
     val features = sc.loadNarrowPeak(inputPath)
-    val outputPath = tempLocation(".gff3")
+    val outputPath = tmpLocation(".gff3")
     features.saveAsGff3(outputPath)
     val reloadedFeatures = sc.loadGff3(outputPath)
     assert(features.rdd.count === reloadedFeatures.rdd.count)
@@ -364,7 +363,7 @@ class FeatureRDDSuite
   sparkTest("save NarrowPeak as BED format") {
     val inputPath = testFile("wgEncodeOpenChromDnaseGm19238Pk.trunc10.narrowPeak")
     val features = sc.loadNarrowPeak(inputPath)
-    val outputPath = tempLocation(".bed")
+    val outputPath = tmpLocation(".bed")
     features.saveAsBed(outputPath)
     val reloadedFeatures = sc.loadBed(outputPath)
     assert(features.rdd.count === reloadedFeatures.rdd.count)
@@ -373,7 +372,7 @@ class FeatureRDDSuite
   sparkTest("save NarrowPeak as IntervalList format") {
     val inputPath = testFile("wgEncodeOpenChromDnaseGm19238Pk.trunc10.narrowPeak")
     val features = sc.loadNarrowPeak(inputPath)
-    val outputPath = tempLocation(".interval_list")
+    val outputPath = tmpLocation(".interval_list")
     features.saveAsIntervalList(outputPath)
     val reloadedFeatures = sc.loadIntervalList(outputPath)
     assert(features.rdd.count === reloadedFeatures.rdd.count)
@@ -382,19 +381,19 @@ class FeatureRDDSuite
   sparkTest("save NarrowPeak as NarrowPeak format") {
     val inputPath = testFile("wgEncodeOpenChromDnaseGm19238Pk.trunc10.narrowPeak")
     val features = sc.loadNarrowPeak(inputPath)
-    val outputPath = tempLocation(".narrowPeak")
+    val outputPath = tmpLocation(".narrowPeak")
     features.saveAsNarrowPeak(outputPath)
   }
 
   sparkTest("round trip NarrowPeak format") {
     val inputPath = testFile("wgEncodeOpenChromDnaseGm19238Pk.trunc10.narrowPeak")
     val expected = sc.loadNarrowPeak(inputPath)
-    val outputPath = tempLocation(".narrowPeak")
+    val outputPath = tmpLocation(".narrowPeak")
     expected.saveAsNarrowPeak(outputPath, asSingleFile = true)
 
     val feature = expected.rdd.first
     val npColumns = FeatureRDD.toNarrowPeak(feature).split('\t')
-    assert(npColumns.size === 10)
+    assert(npColumns.length === 10)
     assert(npColumns(0) === "chr1")
     assert(npColumns(1) === "713849")
     assert(npColumns(2) === "714434")
@@ -534,7 +533,7 @@ class FeatureRDDSuite
   }
 
   sparkTest("correctly flatmaps CoverageRDD from FeatureRDD") {
-    val f1 = Feature.newBuilder().setContigName("chr1").setStart(1).setEnd(10).setScore(3.0).build()
+    val f1 = Feature.newBuilder().setContigName("chr1").setStart( 1).setEnd(10).setScore(3.0).build()
     val f2 = Feature.newBuilder().setContigName("chr1").setStart(15).setEnd(20).setScore(2.0).build()
     val f3 = Feature.newBuilder().setContigName("chr2").setStart(15).setEnd(20).setScore(2.0).build()
 
@@ -700,8 +699,8 @@ class FeatureRDDSuite
 
     val c = jRdd.rdd.collect
     val c0 = jRdd0.rdd.collect
-    assert(c.size === 5)
-    assert(c0.size === 5)
+    assert(c.length === 5)
+    assert(c0.length === 5)
     assert(c.forall(_._2.size == 1))
     assert(c0.forall(_._2.size == 1))
   }

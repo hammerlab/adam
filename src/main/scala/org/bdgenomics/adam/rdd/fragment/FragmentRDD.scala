@@ -17,27 +17,19 @@
  */
 package org.bdgenomics.adam.rdd.fragment
 
+import java.nio.file.Path
+
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.converters.AlignmentRecordConverter
 import org.bdgenomics.adam.instrumentation.Timers._
-import org.bdgenomics.adam.models.{
-  RecordGroupDictionary,
-  ReferenceRegion,
-  ReferenceRegionSerializer,
-  SequenceDictionary
-}
+import org.bdgenomics.adam.models.{ RecordGroupDictionary, ReferenceRegion, ReferenceRegionSerializer, SequenceDictionary }
 import org.bdgenomics.adam.rdd.{ AvroReadGroupGenomicRDD, JavaSaveArgs }
-import org.bdgenomics.adam.rdd.read.{
-  AlignmentRecordRDD,
-  MarkDuplicates
-}
+import org.bdgenomics.adam.rdd.read.{ AlignmentRecordRDD, MarkDuplicates }
 import org.bdgenomics.adam.serialization.AvroSerializer
 import org.bdgenomics.formats.avro._
-import org.bdgenomics.utils.interval.array.{
-  IntervalArray,
-  IntervalArraySerializer
-}
+import org.bdgenomics.utils.interval.array.{ IntervalArray, IntervalArraySerializer }
 import org.bdgenomics.utils.misc.Logging
+
 import scala.collection.JavaConversions._
 import scala.reflect.ClassTag
 
@@ -137,7 +129,7 @@ case class FragmentRDD(rdd: RDD[Fragment],
    *
    * @param filePath Path to save fragments at.
    */
-  def save(filePath: java.lang.String) {
+  def save(filePath: Path) {
     saveAsParquet(new JavaSaveArgs(filePath))
   }
 

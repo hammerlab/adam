@@ -17,55 +17,31 @@
  */
 package org.bdgenomics.adam.rdd
 
-import htsjdk.variant.variantcontext.writer.{
-  Options,
-  VariantContextWriterBuilder
-}
+import java.nio.file.Files.newOutputStream
+import java.nio.file.Path
+
+import htsjdk.variant.variantcontext.writer.{ Options, VariantContextWriterBuilder }
 import htsjdk.variant.vcf.VCFHeader
-import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.{ FileSystem, Path }
 
 /**
  * Utility for writing VCF headers to a file.
  */
 private[rdd] object VCFHeaderUtils {
-
   /**
    * Writes a vcf header to a file.
    *
    * @param header The header to write.
    * @param path The path to write it to.
-   * @param conf The configuration to get the file system.
    */
   def write(header: VCFHeader,
-            path: Path,
-            conf: Configuration) {
-
-    val fs = path.getFileSystem(conf)
-
-    write(header, path, fs)
-  }
-
-  /**
-   * Writes a vcf header to a file.
-   *
-   * @param header The header to write.
-   * @param path The path to write it to.
-   * @param fs The file system to write to.
-   */
-  def write(header: VCFHeader,
-            path: Path,
-            fs: FileSystem) {
-
-    // get an output stream
-    val os = fs.create(path)
-
+            path: Path) {
     // build a vcw
-    val vcw = new VariantContextWriterBuilder()
-      .setOutputVCFStream(os)
-      .clearIndexCreator()
-      .unsetOption(Options.INDEX_ON_THE_FLY)
-      .build()
+    val vcw =
+      new VariantContextWriterBuilder()
+        .setOutputVCFStream(newOutputStream(path))
+        .clearIndexCreator()
+        .unsetOption(Options.INDEX_ON_THE_FLY)
+        .build()
 
     // write the header
     vcw.writeHeader(header)

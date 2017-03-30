@@ -17,9 +17,10 @@
  */
 package org.bdgenomics.adam.rdd.variant
 
+import java.nio.file.Path
+
 import htsjdk.samtools.ValidationStringency
 import htsjdk.variant.vcf.{ VCFHeader, VCFHeaderLine }
-import org.apache.hadoop.fs.Path
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.converters.DefaultHeaderLines
 import org.bdgenomics.adam.models.{ ReferenceRegion, ReferenceRegionSerializer, SequenceDictionary, VariantContext }
@@ -68,22 +69,25 @@ case class VariantRDD(rdd: RDD[Variant],
 
   protected def buildTree(rdd: RDD[(ReferenceRegion, Variant)])(
     implicit tTag: ClassTag[Variant]): IntervalArray[ReferenceRegion, Variant] = {
-    IntervalArray(rdd, VariantArray.apply(_, _))
+    IntervalArray(rdd, VariantArray(_, _))
   }
 
-  override protected def saveMetadata(filePath: String) {
+  override protected def saveMetadata(filePath: Path) {
 
     // write vcf headers to file
-    VCFHeaderUtils.write(new VCFHeader(headerLines.toSet),
-      new Path("%s/_header".format(filePath)),
-      rdd.context.hadoopConfiguration)
+    VCFHeaderUtils.write(
+      new VCFHeader(headerLines.toSet),
+      filePath.resolve("_header")
+    )
 
     // convert sequence dictionary to avro form and save
     val contigs = sequences.toAvro
-    saveAvro("%s/_seqdict.avro".format(filePath),
+    saveAvro(
+      filePath.resolve("_seqdict.avro"),
       rdd.context,
       Contig.SCHEMA$,
-      contigs)
+      contigs
+    )
   }
 
   /**
@@ -91,7 +95,7 @@ case class VariantRDD(rdd: RDD[Variant],
    *
    * @param filePath Path to save to.
    */
-  def save(filePath: java.lang.String) {
+  def save(filePath: Path) {
     saveAsParquet(new JavaSaveArgs(filePath))
   }
 

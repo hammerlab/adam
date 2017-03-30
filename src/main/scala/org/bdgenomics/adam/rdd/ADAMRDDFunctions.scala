@@ -17,24 +17,24 @@
  */
 package org.bdgenomics.adam.rdd
 
-import java.io.OutputStream
+import java.nio.file.{ Files, Path }
+
 import org.apache.avro.Schema
 import org.apache.avro.file.DataFileWriter
 import org.apache.avro.generic.IndexedRecord
 import org.apache.avro.specific.{ SpecificDatumWriter, SpecificRecordBase }
-import org.apache.hadoop.fs.Path
-import org.apache.hadoop.mapreduce.{ OutputFormat => NewOutputFormat }
+import org.apache.hadoop.mapreduce.{ OutputFormat ⇒ NewOutputFormat }
+import org.apache.parquet.avro.AvroParquetOutputFormat
+import org.apache.parquet.hadoop.ParquetOutputFormat
+import org.apache.parquet.hadoop.metadata.CompressionCodecName
+import org.apache.parquet.hadoop.util.ContextUtil
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.MetricsContext._
 import org.apache.spark.rdd.{ InstrumentedOutputFormat, RDD }
 import org.bdgenomics.adam.instrumentation.Timers._
 import org.bdgenomics.utils.cli.SaveArgs
-import org.bdgenomics.utils.misc.HadoopUtil
-import org.bdgenomics.utils.misc.Logging
-import org.apache.parquet.avro.AvroParquetOutputFormat
-import org.apache.parquet.hadoop.ParquetOutputFormat
-import org.apache.parquet.hadoop.metadata.CompressionCodecName
-import org.apache.parquet.hadoop.util.ContextUtil
+import org.bdgenomics.utils.misc.{ HadoopUtil, Logging }
+
 import scala.reflect.ClassTag
 
 /**
@@ -85,23 +85,20 @@ private[rdd] abstract class ADAMRDDFunctions[T <% IndexedRecord: Manifest]
    * As such, we must force the user to pass in the schema.
    *
    * @tparam U The type of the specific record we are saving.
-   * @param filename Path to save records to.
+   * @param path Path to save records to.
    * @param sc SparkContext used for identifying underlying file system.
    * @param schema Schema of records we are saving.
    * @param avro Seq of records we are saving.
    */
-  protected def saveAvro[U <: SpecificRecordBase](filename: String,
+  protected def saveAvro[U <: SpecificRecordBase](path: Path,
                                                   sc: SparkContext,
                                                   schema: Schema,
                                                   avro: Seq[U])(implicit tUag: ClassTag[U]) {
 
     // get our current file system
-    val path = new Path(filename)
-    val fs = path.getFileSystem(sc.hadoopConfiguration)
 
     // get an output stream
-    val os = fs.create(path)
-      .asInstanceOf[OutputStream]
+    val os = Files.newOutputStream(path)
 
     // set up avro for writing
     val dw = new SpecificDatumWriter[U](schema)
@@ -138,7 +135,7 @@ private[rdd] abstract class ADAMRDDFunctions[T <% IndexedRecord: Manifest]
    * @param schema The schema to set.
    */
   protected def saveRddAsParquet(
-    filePath: String,
+    filePath: Path,
     blockSize: Int = 128 * 1024 * 1024,
     pageSize: Int = 1 * 1024 * 1024,
     compressCodec: CompressionCodecName = CompressionCodecName.GZIP,
@@ -158,10 +155,13 @@ private[rdd] abstract class ADAMRDDFunctions[T <% IndexedRecord: Manifest]
 
     // Add the Void Key
     val recordToSave = rdd.map(p => (null, p))
+
     // Save the values to the ADAM/Parquet file
     recordToSave.saveAsNewAPIHadoopFile(
-      filePath,
-      classOf[java.lang.Void], manifest[T].runtimeClass.asInstanceOf[Class[T]], classOf[InstrumentedADAMAvroParquetOutputFormat],
+      filePath.toString,
+      classOf[java.lang.Void],
+      manifest[T].runtimeClass.asInstanceOf[Class[T]],
+      classOf[InstrumentedADAMAvroParquetOutputFormat],
       ContextUtil.getConfiguration(job)
     )
   }
@@ -169,7 +169,8 @@ private[rdd] abstract class ADAMRDDFunctions[T <% IndexedRecord: Manifest]
 
 @deprecated("Extend ADAMRDDFunctions and mix in GenomicRDD wherever possible in new development.",
   since = "0.20.0")
-private[rdd] class ConcreteADAMRDDFunctions[T <% IndexedRecord: Manifest](val rdd: RDD[T]) extends ADAMRDDFunctions[T] {
+private[rdd] class ConcreteADAMRDDFunctions[T: Manifest](val rdd: RDD[T])(implicit ev: T ⇒ IndexedRecord)
+  extends ADAMRDDFunctions[T] {
 
   /**
    * Saves an RDD of Avro data to Parquet.
@@ -192,7 +193,7 @@ private[rdd] class ConcreteADAMRDDFunctions[T <% IndexedRecord: Manifest](val rd
    * @param schema The schema to set.
    */
   def saveAsParquet(
-    filePath: String,
+    filePath: Path,
     blockSize: Int = 128 * 1024 * 1024,
     pageSize: Int = 1 * 1024 * 1024,
     compressCodec: CompressionCodecName = CompressionCodecName.GZIP,

@@ -18,9 +18,8 @@
 package org.bdgenomics.adam.rdd
 
 import java.io.{ File, FileNotFoundException }
+import java.nio.file.{ Path, Paths }
 
-import com.google.common.io.Files
-import org.apache.hadoop.fs.Path
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.parquet.hadoop.metadata.CompressionCodecName
@@ -33,11 +32,10 @@ import org.bdgenomics.formats.avro._
 import org.hammerlab.genomics.reference.test.ClearContigNames
 import org.scalactic.ConversionCheckedTripleEquals
 import org.scalatest.Matchers
-import org.seqdoop.hadoop_bam.CRAMInputFormat
+import org.seqdoop.hadoop_bam.CRAMInputFormat.REFERENCE_SOURCE_PATH_PROPERTY
 
-case class TestSaveArgs(path: Path)
+case class TestSaveArgs(outputPath: Path)
   extends ADAMSaveAnyArgs {
-  override val outputPath: String = path.toString
   var sortFastqOutput = false
   var asSingleFile = false
   var deferMerging = false
@@ -73,13 +71,13 @@ class ADAMContextSuite
     val readsFilepath = testFile("unmapped.sam")
     val bamReads = sc.loadAlignments(readsFilepath)
     //save it as an Adam file so we can test the Adam loader
-    val bamReadsAdamFile = new File(Files.createTempDir(), "bamReads.adam")
-    bamReads.saveAsParquet(bamReadsAdamFile.getAbsolutePath)
+    val bamReadsAdamFile = tmpLocation(".adam")
+    bamReads.saveAsParquet(bamReadsAdamFile)
     intercept[IllegalArgumentException] {
-      sc.loadParquet(bamReadsAdamFile.getAbsolutePath)
+      sc.loadParquet(bamReadsAdamFile)
     }
     //finally just make sure we did not break anything,we came might as well
-    val returnType: RDD[AlignmentRecord] = sc.loadParquet(bamReadsAdamFile.getAbsolutePath)
+    val returnType: RDD[AlignmentRecord] = sc.loadParquet(bamReadsAdamFile)
     assert(manifest[returnType.type] != manifest[RDD[Nothing]])
   }
 
@@ -92,7 +90,7 @@ class ADAMContextSuite
   sparkTest("can read a small .CRAM file") {
     val path = testFile("artificial.cram")
     val referencePath = resourceUrl("artificial.fa").toString
-    sc.hadoopConfiguration.set(CRAMInputFormat.REFERENCE_SOURCE_PATH_PROPERTY,
+    sc.hadoopConfiguration.set(REFERENCE_SOURCE_PATH_PROPERTY,
       referencePath)
     val reads: RDD[AlignmentRecord] = sc.loadAlignments(path).rdd
     reads.count() should === (10)
@@ -430,13 +428,17 @@ class ADAMContextSuite
   sparkTest("load parquet with globs") {
     val inputPath = testFile("small.sam")
     val reads = sc.loadAlignments(inputPath)
-    val outputPath = tmpLocation()
+    val outputPath = tmpLocation(".adam")
     reads.saveAsParquet(outputPath)
-    reads.saveAsParquet(outputPath.replace(".adam", ".2.adam"))
+    reads.saveAsParquet(Paths.get(outputPath.toString.replace(".adam", ".2.adam")))
 
-    val paths = new Path(outputPath.replace(".adam", "*.adam") + "/*")
+    val globPath =
+      Paths
+        .get(outputPath.replace(".adam", "*.adam"))
+        .resolve("*")
 
-    val reloadedReads = sc.loadParquetAlignments(outputPath.replace(".adam", "*.adam") + "/*")
+    val reloadedReads = sc.loadParquetAlignments(globPath)
+
     (2 * reads.rdd.count) should === (reloadedReads.rdd.count)
   }
 

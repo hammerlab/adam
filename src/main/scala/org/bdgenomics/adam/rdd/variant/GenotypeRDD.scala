@@ -17,9 +17,10 @@
  */
 package org.bdgenomics.adam.rdd.variant
 
+import java.nio.file.Path
+
 import htsjdk.samtools.ValidationStringency
 import htsjdk.variant.vcf.VCFHeaderLine
-import org.apache.hadoop.fs.Path
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.converters.DefaultHeaderLines
 import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion, ReferenceRegionSerializer, SequenceDictionary, VariantContext }
@@ -68,11 +69,12 @@ private[adam] class GenotypeArraySerializer extends IntervalArraySerializer[Refe
 case class GenotypeRDD(rdd: RDD[Genotype],
                        sequences: SequenceDictionary,
                        @transient samples: Seq[Sample],
-                       @transient headerLines: Seq[VCFHeaderLine] = DefaultHeaderLines.allHeaderLines) extends MultisampleAvroGenomicRDD[Genotype, GenotypeRDD] {
+                       @transient headerLines: Seq[VCFHeaderLine] = DefaultHeaderLines.allHeaderLines)
+  extends MultisampleAvroGenomicRDD[Genotype, GenotypeRDD] {
 
   protected def buildTree(rdd: RDD[(ReferenceRegion, Genotype)])(
     implicit tTag: ClassTag[Genotype]): IntervalArray[ReferenceRegion, Genotype] = {
-    IntervalArray(rdd, GenotypeArray.apply(_, _))
+    IntervalArray(rdd, GenotypeArray(_, _))
   }
 
   /**
@@ -81,7 +83,7 @@ case class GenotypeRDD(rdd: RDD[Genotype],
    * @param filePath Path to save file to. If ends in ".vcf", saves as VCF, else
    *   saves as Parquet.
    */
-  def save(filePath: java.lang.String) {
+  def save(filePath: Path) {
     save(new JavaSaveArgs(filePath))
   }
 

@@ -17,9 +17,10 @@
  */
 package org.bdgenomics.adam.rdd
 
-import htsjdk.samtools.{ SAMFileHeader, SAMTextWriter, SAMTextHeaderCodec }
-import java.io.{ OutputStream, StringWriter, Writer }
-import org.apache.hadoop.fs.{ FileSystem, Path }
+import java.io.{ StringWriter, Writer }
+import java.nio.file.{ Files, Path }
+
+import htsjdk.samtools.{ SAMFileHeader, SAMTextHeaderCodec, SAMTextWriter }
 import org.bdgenomics.adam.models.SequenceDictionary
 
 /**
@@ -30,12 +31,10 @@ private[rdd] object SAMHeaderWriter {
   /**
    * Writes a header containing just reference contig information.
    *
-   * @param fs The underlying file system to write to.
    * @param path The path to write the header at.
    * @param sequences The sequence dictionary to write.
    */
-  def writeHeader(fs: FileSystem,
-                  path: Path,
+  def writeHeader(path: Path,
                   sequences: SequenceDictionary) {
 
     // create a header and attach a sequence dictionary
@@ -43,23 +42,20 @@ private[rdd] object SAMHeaderWriter {
     header.setSequenceDictionary(sequences.toSAMSequenceDictionary)
 
     // call to our friend
-    writeHeader(fs, path, header)
+    writeHeader(path, header)
   }
 
   /**
    * Writes a full SAM header to a filesystem.
    *
-   * @param fs The underlying file system to write to.
    * @param path The path to write the header at.
    * @param header The header to write.
    */
-  def writeHeader(fs: FileSystem,
-                  path: Path,
+  def writeHeader(path: Path,
                   header: SAMFileHeader) {
 
     // get an output stream
-    val os = fs.create(path)
-      .asInstanceOf[OutputStream]
+    val os = Files.newOutputStream(path)
 
     // get a string writer and set up the text writer
     val sw: Writer = new StringWriter()

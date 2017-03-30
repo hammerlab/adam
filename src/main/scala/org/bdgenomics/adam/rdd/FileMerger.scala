@@ -17,14 +17,18 @@
  */
 package org.bdgenomics.adam.rdd
 
-import htsjdk.samtools.util.BlockCompressedStreamConstants
+import java.nio.file.Files.{ newDirectoryStream, newInputStream, newOutputStream, delete }
+import java.nio.file.Path
+
 import htsjdk.samtools.cram.build.CramIO
 import htsjdk.samtools.cram.common.CramVersions
-import java.io.{ InputStream, OutputStream }
+import htsjdk.samtools.util.BlockCompressedStreamConstants
+import org.apache.commons.io.FileUtils.deleteDirectory
+import org.apache.commons.io.IOUtils.copyLarge
 import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.{ FileSystem, Path }
 import org.bdgenomics.utils.misc.Logging
-import scala.annotation.tailrec
+
+import scala.collection.JavaConverters._
 
 /**
  * Helper object to merge sharded files together.
@@ -39,7 +43,6 @@ object FileMerger extends Logging {
   /**
    * Merges together sharded files, while preserving partition ordering.
    *
-   * @param fs The file system implementation to use.
    * @param outputPath The location to write the merged file at.
    * @param tailPath The location where the sharded files have been written.
    * @param optHeaderPath Optionally, the location where a header file has
@@ -54,15 +57,14 @@ object FileMerger extends Logging {
    * @see mergeFilesAcrossFilesystems
    */
   private[adam] def mergeFiles(conf: Configuration,
-                               fs: FileSystem,
                                outputPath: Path,
                                tailPath: Path,
                                optHeaderPath: Option[Path] = None,
                                writeEmptyGzipBlock: Boolean = false,
                                writeCramEOF: Boolean = false,
                                optBufferSize: Option[Int] = None) {
-    mergeFilesAcrossFilesystems(conf,
-      fs, fs,
+    mergeFilesAcrossFilesystems(
+      conf,
       outputPath, tailPath, optHeaderPath = optHeaderPath,
       writeEmptyGzipBlock = writeEmptyGzipBlock,
       writeCramEOF = writeCramEOF,
@@ -74,8 +76,6 @@ object FileMerger extends Logging {
    *
    * Can read files from a different filesystem then they are written to.
    *
-   * @param fsIn The file system implementation to use for the tail/head paths.
-   * @param fsOut The file system implementation to use for the output path.
    * @param outputPath The location to write the merged file at.
    * @param tailPath The location where the sharded files have been written.
    * @param optHeaderPath Optionally, the location where a header file has
@@ -88,8 +88,6 @@ object FileMerger extends Logging {
    *   default to 4MB.
    */
   private[adam] def mergeFilesAcrossFilesystems(conf: Configuration,
-                                                fsIn: FileSystem,
-                                                fsOut: FileSystem,
                                                 outputPath: Path,
                                                 tailPath: Path,
                                                 optHeaderPath: Option[Path] = None,
@@ -99,91 +97,89 @@ object FileMerger extends Logging {
 
     // check for buffer size in option, if not in option, check hadoop conf,
     // if not in hadoop conf, fall back on 4MB
-    val bufferSize = optBufferSize.getOrElse(conf.getInt(BUFFER_SIZE_CONF,
-      4 * 1024 * 1024))
+    val bufferSize =
+    optBufferSize
+      .getOrElse(
+        conf.getInt(
+          BUFFER_SIZE_CONF,
+          4 * 1024 * 1024
+        )
+      )
 
-    require(bufferSize > 0,
-      "Cannot have buffer size < 1. %d was provided.".format(bufferSize))
-    require(!(writeEmptyGzipBlock && writeCramEOF),
-      "writeEmptyGzipBlock and writeCramEOF are mutually exclusive.")
+    require(
+      bufferSize > 0,
+      "Cannot have buffer size < 1. %d was provided.".format(bufferSize)
+    )
+
+    require(
+      !(writeEmptyGzipBlock && writeCramEOF),
+      "writeEmptyGzipBlock and writeCramEOF are mutually exclusive."
+    )
+
+    val partIdxRegex = """part-(\d+)""".r
 
     // get a list of all of the files in the tail file
-    val tailFiles = fsIn.globStatus(new Path("%s/part-*".format(tailPath)))
-      .toSeq
-      .map(_.getPath)
-      .sortBy(_.getName)
-      .toArray
-
-    // doing this correctly is surprisingly hard
-    // specifically, copy merge does not care about ordering, which is
-    // fine if your files are unordered, but if the blocks in the file
-    // _are_ ordered, then hahahahahahahahahaha. GOOD. TIMES.
-    //
-    // fortunately, the blocks in our file are ordered
-    // the performance of this section is hilarious
-    // 
-    // specifically, the performance is hilariously bad
-    //
-    // but! it is correct.
+    val tailFiles =
+      newDirectoryStream(tailPath, "part-*")
+        .iterator()
+        .asScala
+        .toArray
+        .sortBy {
+          _.getFileName.toString match {
+            case partIdxRegex(idStr) ⇒
+              idStr.toInt
+            case path ⇒
+              throw new IllegalArgumentException(s"Bad path: $path")
+          }
+        }
 
     // open our output file
-    val os = fsOut.create(outputPath)
+    val os = newOutputStream(outputPath)
 
     // here is a byte array for copying
-    val ba = new Array[Byte](bufferSize)
-
-    @tailrec def copy(is: InputStream,
-                      los: OutputStream) {
-
-      // make a read
-      val bytesRead = is.read(ba)
-
-      // did our read succeed? if so, write to output stream
-      // and continue
-      if (bytesRead >= 0) {
-        los.write(ba, 0, bytesRead)
-
-        copy(is, los)
-      }
-    }
+    val buffer = new Array[Byte](bufferSize)
+//
+//    @tailrec def copy(is: InputStream,
+//                      los: OutputStream) {
+//
+//      // make a read
+//      val bytesRead = is.read(ba)
+//
+//      // did our read succeed? if so, write to output stream
+//      // and continue
+//      if (bytesRead >= 0) {
+//        los.write(ba, 0, bytesRead)
+//
+//        copy(is, los)
+//      }
+//    }
 
     // optionally copy the header
-    optHeaderPath.foreach(p => {
-      log.info("Copying header file (%s)".format(p))
+    optHeaderPath.foreach { p ⇒
+      log.info(s"Copying header file ($p)")
 
       // open our input file
-      val is = fsIn.open(p)
-
-      // until we are out of bytes, copy
-      copy(is, os)
-
-      // close our input stream
+      val is = newInputStream(p)
+      copyLarge(is, os, buffer)
       is.close()
-    })
+    }
 
     // loop over allllll the files and copy them
     val numFiles = tailFiles.length
     var filesCopied = 1
-    tailFiles.toSeq.foreach(p => {
+    tailFiles.toSeq.foreach { p =>
 
       // print a bit of progress logging
-      log.info("Copying file %s, file %d of %d.".format(
-        p.toString,
-        filesCopied,
-        numFiles))
+      log.info(s"Copying file $p, file $filesCopied of $numFiles.")
 
       // open our input file
-      val is = fsIn.open(p)
-
-      // until we are out of bytes, copy
-      copy(is, os)
-
-      // close our input stream
+      val is = newInputStream(p)
+      copyLarge(is, os, buffer)
       is.close()
 
       // increment file copy count
       filesCopied += 1
-    })
+    }
 
     // finish the file off
     if (writeEmptyGzipBlock) {
@@ -197,7 +193,7 @@ object FileMerger extends Logging {
     os.close()
 
     // delete temp files
-    optHeaderPath.foreach(headPath => fsIn.delete(headPath, true))
-    fsIn.delete(tailPath, true)
+    optHeaderPath.foreach(delete)
+    deleteDirectory(tailPath.toFile)
   }
 }

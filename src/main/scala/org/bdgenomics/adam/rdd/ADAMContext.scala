@@ -21,6 +21,7 @@ import java.io.{ File, FileNotFoundException, InputStream }
 
 import htsjdk.samtools.util.Locatable
 import htsjdk.samtools.{ SAMFileHeader, ValidationStringency }
+import ValidationStringency.{STRICT, SILENT, LENIENT}
 import htsjdk.variant.vcf.{ VCFCompoundHeaderLine, VCFFormatHeaderLine, VCFHeader, VCFHeaderLine, VCFInfoHeaderLine }
 import org.apache.avro.Schema
 import org.apache.avro.file.DataFileStream
@@ -67,22 +68,23 @@ import scala.reflect.ClassTag
  *
  * @param rr Reference region to wrap.
  */
-private case class LocatableReferenceRegion(rr: ReferenceRegion) extends Locatable {
+private case class LocatableReferenceRegion(rr: ReferenceRegion)
+  extends Locatable {
 
   /**
    * @return the start position in a 1-based closed coordinate system.
    */
-  def getStart(): Int = rr.start.toInt + 1
+  def getStart: Int = rr.start.toInt + 1
 
   /**
    * @return the end position in a 1-based closed coordinate system.
    */
-  def getEnd(): Int = rr.end.toInt
+  def getEnd: Int = rr.end.toInt
 
   /**
    * @return the reference contig this interval is on.
    */
-  def getContig(): String = rr.referenceName.name
+  def getContig: String = rr.referenceName.name
 }
 
 /**
@@ -114,10 +116,12 @@ object ADAMContext {
   implicit def sparkContextToADAMContext(sc: SparkContext): ADAMContext = new ADAMContext(sc)
 
   // Add generic RDD methods for all types of ADAM RDDs
-  implicit def rddToADAMRDD[T](rdd: RDD[T])(implicit ev1: T => IndexedRecord, ev2: Manifest[T]): ConcreteADAMRDDFunctions[T] = new ConcreteADAMRDDFunctions(rdd)
+  implicit def rddToADAMRDD[T: Manifest](rdd: RDD[T])(implicit ev1: T => IndexedRecord): ConcreteADAMRDDFunctions[T] =
+    new ConcreteADAMRDDFunctions(rdd)
 
   // Add implicits for the rich adam objects
-  implicit def recordToRichRecord(record: AlignmentRecord): RichAlignmentRecord = new RichAlignmentRecord(record)
+  implicit def recordToRichRecord(record: AlignmentRecord): RichAlignmentRecord =
+    new RichAlignmentRecord(record)
 }
 
 /**
@@ -142,23 +146,23 @@ private class FileFilter(private val name: String) extends PathFilter {
  *
  * @param sc The SparkContext to wrap.
  */
-class ADAMContext(@transient val sc: SparkContext) extends Serializable with Logging {
+class ADAMContext(@transient val sc: SparkContext)
+  extends Serializable
+    with Logging {
 
   /**
    * @param samHeader The header to extract a sequence dictionary from.
    * @return Returns the dictionary converted to an ADAM model.
    */
-  private[rdd] def loadBamDictionary(samHeader: SAMFileHeader): SequenceDictionary = {
+  private[rdd] def loadBamDictionary(samHeader: SAMFileHeader): SequenceDictionary =
     SequenceDictionary(samHeader)
-  }
 
   /**
    * @param samHeader The header to extract a read group dictionary from.
    * @return Returns the dictionary converted to an ADAM model.
    */
-  private[rdd] def loadBamReadGroups(samHeader: SAMFileHeader): RecordGroupDictionary = {
+  private[rdd] def loadBamReadGroups(samHeader: SAMFileHeader): RecordGroupDictionary =
     RecordGroupDictionary.fromSAMHeader(samHeader)
-  }
 
   /**
    * @param filePath The (possibly globbed) filepath to load a VCF from.
@@ -198,10 +202,13 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
     headerToMetadata(readVcfHeader(filePath))
   }
 
-  private def readVcfHeader(filePath: String): VCFHeader = {
-    VCFHeaderReader.readHeaderFrom(WrapSeekable.openPath(sc.hadoopConfiguration,
-      new Path(filePath)))
-  }
+  private def readVcfHeader(filePath: String): VCFHeader =
+    VCFHeaderReader.readHeaderFrom(
+      WrapSeekable.openPath(
+        sc.hadoopConfiguration,
+        new Path(filePath)
+      )
+    )
 
   private def cleanAndMixInSupportedLines(
     headerLines: Seq[VCFHeaderLine],
@@ -216,10 +223,10 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
       if (line.getType != defaultLine.getType) {
         val msg = "Field type for provided header line (%s) does not match supported line (%s)".format(
           line, defaultLine)
-        if (stringency == ValidationStringency.STRICT) {
+        if (stringency == STRICT) {
           throw new IllegalArgumentException(msg)
         } else {
-          if (stringency == ValidationStringency.LENIENT) {
+          if (stringency == LENIENT) {
             log.warn(msg)
           }
           Some(replaceFn("BAD_%s".format(line.getID), line))
@@ -231,19 +238,25 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
 
     // remove our supported header lines
     deduped.flatMap {
-      case fl: VCFFormatHeaderLine =>
+      case fl: VCFFormatHeaderLine ⇒
         val key = fl.getID
         DefaultHeaderLines.formatHeaderLines
           .find(_.getID == key)
-          .fold(Some(fl).asInstanceOf[Option[VCFCompoundHeaderLine]])(defaultLine => {
-            auditLine(fl, defaultLine, (newId, oldLine) => {
-              new VCFFormatHeaderLine(newId,
-                oldLine.getCountType,
-                oldLine.getType,
-                oldLine.getDescription)
-            })
-          })
-      case il: VCFInfoHeaderLine =>
+          .fold(Some(fl).asInstanceOf[Option[VCFCompoundHeaderLine]]) {
+            defaultLine ⇒
+              auditLine(
+                fl,
+                defaultLine,
+                (newId, oldLine) ⇒
+                  new VCFFormatHeaderLine(
+                    newId,
+                    oldLine.getCountType,
+                    oldLine.getType,
+                    oldLine.getDescription
+                  )
+              )
+          }
+      case il: VCFInfoHeaderLine ⇒
         val key = il.getID
         DefaultHeaderLines.infoHeaderLines
           .find(_.getID == key)
@@ -260,19 +273,16 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
     } ++ DefaultHeaderLines.allHeaderLines
   }
 
-  private def headerLines(header: VCFHeader): Seq[VCFHeaderLine] = {
-    (header.getFilterLines ++
+  private def headerLines(header: VCFHeader): Seq[VCFHeaderLine] =
+    header.getFilterLines ++
       header.getFormatHeaderLines ++
       header.getInfoHeaderLines ++
-      header.getOtherHeaderLines)
-  }
+      header.getOtherHeaderLines
 
-  private def loadHeaderLines(filePath: String): Seq[VCFHeaderLine] = {
+  private def loadHeaderLines(filePath: String): Seq[VCFHeaderLine] =
     getFsAndFilesWithFilter(filePath, new FileFilter("_header"))
-      .map(p => headerLines(readVcfHeader(p.toString)))
-      .flatten
+      .flatMap(p ⇒ headerLines(readVcfHeader(p.toString)))
       .distinct
-  }
 
   /**
    * @param filePath The (possibly globbed) filepath to load Avro sequence
@@ -492,18 +502,18 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
    *   sorted.
    */
   private[rdd] def filesAreQuerynameSorted(filePath: String,
-                                           stringency: ValidationStringency = ValidationStringency.STRICT): Boolean = {
+                                           stringency: ValidationStringency = STRICT): Boolean = {
     val path = new Path(filePath)
 
     val bamFiles = getFsAndFiles(path)
-    val filteredFiles = bamFiles.filter(p => {
+    val filteredFiles = bamFiles.filter { p ⇒
       val pPath = p.getName()
       pPath.endsWith(".bam") || pPath.endsWith(".cram") ||
         pPath.endsWith(".sam") || pPath.startsWith("part-")
-    })
+    }
 
     filteredFiles
-      .forall(fp => {
+      .forall { fp ⇒
         try {
           // the sort order is saved in the file header
           sc.hadoopConfiguration.set(SAMHeaderReader.VALIDATION_STRINGENCY_PROPERTY, stringency.toString)
@@ -511,14 +521,13 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
 
           samHeader.getSortOrder == SAMFileHeader.SortOrder.queryname
         } catch {
-          case e: Throwable => {
+          case e: Throwable ⇒
             log.error(
               s"Loading header failed for $fp:n${e.getMessage}\n\t${e.getStackTrace.take(25).map(_.toString).mkString("\n\t")}"
             )
             false
-          }
         }
-      })
+      }
   }
 
   /**
@@ -536,7 +545,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
    * @see loadAlignments
    */
   def loadBam(filePath: String,
-              validationStringency: ValidationStringency = ValidationStringency.STRICT): AlignmentRecordRDD = {
+              validationStringency: ValidationStringency = STRICT): AlignmentRecordRDD = {
     val path = new Path(filePath)
 
     val bamFiles = getFsAndFiles(path)
@@ -849,7 +858,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
     filePath1: String,
     filePath2Opt: Option[String],
     recordGroupOpt: Option[String] = None,
-    stringency: ValidationStringency = ValidationStringency.STRICT): AlignmentRecordRDD = {
+    stringency: ValidationStringency = STRICT): AlignmentRecordRDD = {
     filePath2Opt.fold({
       loadUnpairedFastq(filePath1,
         recordGroupOpt,
@@ -889,20 +898,20 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
       stringency = stringency)
 
     stringency match {
-      case ValidationStringency.STRICT | ValidationStringency.LENIENT =>
+      case STRICT | LENIENT =>
         val count1 = reads1.rdd.cache.count
         val count2 = reads2.rdd.cache.count
 
         if (count1 != count2) {
           val msg = s"Fastq 1 ($filePath1) has $count1 reads, fastq 2 ($filePath2) has $count2 reads"
-          if (stringency == ValidationStringency.STRICT)
+          if (stringency == STRICT)
             throw new IllegalArgumentException(msg)
           else {
-            // ValidationStringency.LENIENT
+            // LENIENT
             logError(msg)
           }
         }
-      case ValidationStringency.SILENT =>
+      case SILENT =>
     }
 
     AlignmentRecordRDD.unaligned(reads1.rdd ++ reads2.rdd)
@@ -926,7 +935,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
     recordGroupOpt: Option[String] = None,
     setFirstOfPair: Boolean = false,
     setSecondOfPair: Boolean = false,
-    stringency: ValidationStringency = ValidationStringency.STRICT): AlignmentRecordRDD = {
+    stringency: ValidationStringency = STRICT): AlignmentRecordRDD = {
 
     val job = HadoopUtil.newJob(sc)
     val records = sc.newAPIHadoopFile(
@@ -994,7 +1003,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
    */
   def loadVcf(
     filePath: String,
-    stringency: ValidationStringency = ValidationStringency.STRICT): VariantContextRDD = {
+    stringency: ValidationStringency = STRICT): VariantContextRDD = {
 
     // load records from VCF
     val records = readVcfRecords(filePath, None)
@@ -1036,7 +1045,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
   def loadIndexedVcf(
     filePath: String,
     viewRegions: Iterable[ReferenceRegion],
-    stringency: ValidationStringency = ValidationStringency.STRICT)(implicit s: DummyImplicit): VariantContextRDD = {
+    stringency: ValidationStringency = STRICT)(implicit s: DummyImplicit): VariantContextRDD = {
 
     // load records from VCF
     val records = readVcfRecords(filePath, Some(viewRegions))
@@ -1198,7 +1207,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
    */
   def loadGff3(filePath: String,
                minPartitions: Option[Int] = None,
-               stringency: ValidationStringency = ValidationStringency.LENIENT): FeatureRDD = {
+               stringency: ValidationStringency = LENIENT): FeatureRDD = {
     val records = sc.textFile(filePath, minPartitions.getOrElse(sc.defaultParallelism))
       .flatMap(new GFF3Parser().parse(_, stringency))
 
@@ -1221,7 +1230,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
    */
   def loadGtf(filePath: String,
               minPartitions: Option[Int] = None,
-              stringency: ValidationStringency = ValidationStringency.LENIENT): FeatureRDD = {
+              stringency: ValidationStringency = LENIENT): FeatureRDD = {
     val records = sc.textFile(filePath, minPartitions.getOrElse(sc.defaultParallelism))
       .flatMap(new GTFParser().parse(_, stringency))
 
@@ -1244,7 +1253,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
    */
   def loadBed(filePath: String,
               minPartitions: Option[Int] = None,
-              stringency: ValidationStringency = ValidationStringency.LENIENT): FeatureRDD = {
+              stringency: ValidationStringency = LENIENT): FeatureRDD = {
     val records = sc.textFile(filePath, minPartitions.getOrElse(sc.defaultParallelism))
       .flatMap(new BEDParser().parse(_, stringency))
 
@@ -1267,7 +1276,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
    */
   def loadNarrowPeak(filePath: String,
                      minPartitions: Option[Int] = None,
-                     stringency: ValidationStringency = ValidationStringency.LENIENT): FeatureRDD = {
+                     stringency: ValidationStringency = LENIENT): FeatureRDD = {
     val records = sc.textFile(filePath, minPartitions.getOrElse(sc.defaultParallelism))
       .flatMap(new NarrowPeakParser().parse(_, stringency))
 
@@ -1290,7 +1299,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
    */
   def loadIntervalList(filePath: String,
                        minPartitions: Option[Int] = None,
-                       stringency: ValidationStringency = ValidationStringency.LENIENT): FeatureRDD = {
+                       stringency: ValidationStringency = LENIENT): FeatureRDD = {
 
     val parsedLines = sc.textFile(filePath, minPartitions.getOrElse(sc.defaultParallelism))
       .map(new IntervalListParser().parseWithHeader(_, stringency))
@@ -1489,7 +1498,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
   def loadGenotypes(
     filePath: String,
     projection: Option[Schema] = None,
-    stringency: ValidationStringency = ValidationStringency.STRICT): GenotypeRDD = {
+    stringency: ValidationStringency = STRICT): GenotypeRDD = {
     if (isVcfExt(filePath)) {
       log.info(s"Loading $filePath as VCF, and converting to Genotypes. Projection is ignored.")
       loadVcf(filePath, stringency).toGenotypeRDD
@@ -1516,7 +1525,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
   def loadVariants(
     filePath: String,
     projection: Option[Schema] = None,
-    stringency: ValidationStringency = ValidationStringency.STRICT): VariantRDD = {
+    stringency: ValidationStringency = STRICT): VariantRDD = {
     if (isVcfExt(filePath)) {
       log.info(s"Loading $filePath as VCF, and converting to Variants. Projection is ignored.")
       loadVcf(filePath, stringency).toVariantRDD
@@ -1560,7 +1569,7 @@ class ADAMContext(@transient val sc: SparkContext) extends Serializable with Log
     projection: Option[Schema] = None,
     filePath2Opt: Option[String] = None,
     recordGroupOpt: Option[String] = None,
-    stringency: ValidationStringency = ValidationStringency.STRICT): AlignmentRecordRDD = LoadAlignmentRecords.time {
+    stringency: ValidationStringency = STRICT): AlignmentRecordRDD = LoadAlignmentRecords.time {
 
     if (filePath.endsWith(".sam") ||
       filePath.endsWith(".bam") ||

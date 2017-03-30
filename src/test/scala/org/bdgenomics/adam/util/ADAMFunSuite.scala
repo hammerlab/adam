@@ -50,10 +50,11 @@ abstract class ADAMFunSuite
   def tmpLocation(extension: String = ".adam"): Path = tmpFile(suffix = extension)
 
   /**
-   * Lots of tests use [[tmpFile]] to get a path to a not-yet-created temporary file.
+   * Lots of tests use [[tmpFile]] to get a [[Path]] to a not-yet-created temporary file.
    *
-   * [[org.hammerlab.test.files.TmpFiles]] creates a file with [[tmpFile]] and returns a path with [[tmpPath]], so we
-   * just reroute them here to avoid potential merge conflicts with upstream by rewriting many tests' calls.
+   * [[org.hammerlab.test.files.TmpFiles]] creates and returns a [[Path]] with [[tmpFile]] and only returns one with
+   * [[tmpPath]], so we just reroute them here to avoid potential merge conflicts with upstream by rewriting many tests'
+   * calls.
    */
   override def tmpFile(prefix: String, suffix: String): Path = tmpPath(prefix, suffix)
 

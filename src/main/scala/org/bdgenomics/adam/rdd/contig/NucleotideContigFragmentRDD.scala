@@ -17,23 +17,18 @@
  */
 package org.bdgenomics.adam.rdd.contig
 
+import java.nio.file.Path
+
 import com.google.common.base.Splitter
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.converters.FragmentConverter
-import org.bdgenomics.adam.models.{
-  ReferenceRegion,
-  ReferenceRegionSerializer,
-  SequenceRecord,
-  SequenceDictionary
-}
+import org.bdgenomics.adam.models.{ ReferenceRegion, ReferenceRegionSerializer, SequenceDictionary, SequenceRecord }
 import org.bdgenomics.adam.rdd.{ AvroGenomicRDD, JavaSaveArgs }
 import org.bdgenomics.adam.serialization.AvroSerializer
 import org.bdgenomics.adam.util.ReferenceFile
 import org.bdgenomics.formats.avro.{ AlignmentRecord, NucleotideContigFragment }
-import org.bdgenomics.utils.interval.array.{
-  IntervalArray,
-  IntervalArraySerializer
-}
+import org.bdgenomics.utils.interval.array.{ IntervalArray, IntervalArraySerializer }
+
 import scala.collection.JavaConversions._
 import scala.math.max
 import scala.reflect.ClassTag
@@ -104,7 +99,7 @@ case class NucleotideContigFragmentRDD(
 
   protected def buildTree(rdd: RDD[(ReferenceRegion, NucleotideContigFragment)])(
     implicit tTag: ClassTag[NucleotideContigFragment]): IntervalArray[ReferenceRegion, NucleotideContigFragment] = {
-    IntervalArray(rdd, NucleotideContigFragmentArray.apply(_, _))
+    IntervalArray(rdd, NucleotideContigFragmentArray(_, _))
   }
 
   /**
@@ -146,7 +141,7 @@ case class NucleotideContigFragmentRDD(
    *
    * @param fileName file name
    */
-  def save(fileName: java.lang.String) {
+  def save(fileName: Path) {
     if (fileName.endsWith(".fa") || fileName.endsWith(".fasta")) {
       saveAsFasta(fileName)
     } else {
@@ -160,11 +155,13 @@ case class NucleotideContigFragmentRDD(
    * @param fileName file name
    * @param lineWidth hard wrap FASTA formatted sequence at line width, default 60
    */
-  def saveAsFasta(fileName: String, lineWidth: Int = 60) {
+  def saveAsFasta(fileName: Path, lineWidth: Int = 60) {
 
-    def isFragment(record: NucleotideContigFragment): Boolean = {
-      Option(record.getFragmentNumber).isDefined && Option(record.getNumberOfFragmentsInContig).fold(false)(_ > 1)
-    }
+    def isFragment(record: NucleotideContigFragment): Boolean =
+      Option(record.getFragmentNumber)
+        .isDefined &&
+        Option(record.getNumberOfFragmentsInContig)
+          .fold(false)(_ > 1)
 
     def toFasta(record: NucleotideContigFragment): String = {
       val sb = new StringBuilder()
@@ -181,7 +178,7 @@ case class NucleotideContigFragmentRDD(
       sb.toString
     }
 
-    rdd.map(toFasta).saveAsTextFile(fileName)
+    rdd.map(toFasta).saveAsTextFile(fileName.toString)
   }
 
   /**

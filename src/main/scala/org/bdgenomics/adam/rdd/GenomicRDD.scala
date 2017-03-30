@@ -17,33 +17,32 @@
  */
 package org.bdgenomics.adam.rdd
 
-import htsjdk.variant.vcf.{ VCFHeader, VCFHeaderLine }
+import java.nio.file.Path
 import java.util.concurrent.Executors
+
+import htsjdk.variant.vcf.{ VCFHeader, VCFHeaderLine }
 import org.apache.avro.generic.IndexedRecord
-import org.apache.hadoop.fs.Path
 import org.apache.parquet.hadoop.metadata.CompressionCodecName
 import org.apache.spark.SparkFiles
 import org.apache.spark.api.java.JavaRDD
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.instrumentation.Timers._
-import org.bdgenomics.adam.models.{
-  RecordGroupDictionary,
-  ReferenceRegion,
-  SequenceDictionary
-}
+import org.bdgenomics.adam.models.{ RecordGroupDictionary, ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.formats.avro.{ Contig, RecordGroupMetadata, Sample }
 import org.bdgenomics.utils.cli.SaveArgs
 import org.bdgenomics.utils.interval.array.IntervalArray
+
 import scala.annotation.tailrec
 import scala.collection.JavaConversions._
 import scala.reflect.ClassTag
 
-private[rdd] class JavaSaveArgs(var outputPath: String,
+private[rdd] class JavaSaveArgs(var outputPath: Path,
                                 var blockSize: Int = 128 * 1024 * 1024,
                                 var pageSize: Int = 1 * 1024 * 1024,
                                 var compressionCodec: CompressionCodecName = CompressionCodecName.GZIP,
                                 var disableDictionaryEncoding: Boolean = false,
-                                var asSingleFile: Boolean = false) extends ADAMSaveAnyArgs {
+                                var asSingleFile: Boolean = false)
+  extends ADAMSaveAnyArgs {
   var sortFastqOutput = false
   var deferMerging = false
 }
@@ -807,22 +806,29 @@ abstract class AvroReadGroupGenomicRDD[T <% IndexedRecord: Manifest, U <: AvroRe
    */
   val recordGroups: RecordGroupDictionary
 
-  override protected def saveMetadata(filePath: String) {
+  override protected def saveMetadata(filePath: Path) {
 
     // convert sequence dictionary to avro form and save
     val contigs = sequences.toAvro
-    saveAvro("%s/_seqdict.avro".format(filePath),
+    saveAvro(
+      filePath.resolve("_seqdict.avro"),
       rdd.context,
       Contig.SCHEMA$,
-      contigs)
+      contigs
+    )
 
     // convert record group to avro and save
-    val rgMetadata = recordGroups.recordGroups
-      .map(_.toMetadata)
-    saveAvro("%s/_rgdict.avro".format(filePath),
+    val rgMetadata =
+      recordGroups
+        .recordGroups
+        .map(_.toMetadata)
+
+    saveAvro(
+      filePath.resolve("_rgdict.avro"),
       rdd.context,
       RecordGroupMetadata.SCHEMA$,
-      rgMetadata)
+      rgMetadata
+    )
   }
 }
 
@@ -838,22 +844,26 @@ abstract class MultisampleAvroGenomicRDD[T <% IndexedRecord: Manifest, U <: Mult
    */
   val headerLines: Seq[VCFHeaderLine]
 
-  override protected def saveMetadata(filePath: String) {
+  override protected def saveMetadata(filePath: Path) {
 
     // write vcf headers to file
-    VCFHeaderUtils.write(new VCFHeader(headerLines.toSet),
-      new Path("%s/_header".format(filePath)),
-      rdd.context.hadoopConfiguration)
+    VCFHeaderUtils.write(
+      new VCFHeader(headerLines.toSet),
+      filePath.resolve("_header")
+    )
 
     // get file to write to
-    saveAvro("%s/_samples.avro".format(filePath),
+    saveAvro(
+      filePath.resolve("_samples.avro"),
       rdd.context,
       Sample.SCHEMA$,
-      samples)
+      samples
+    )
 
     // convert sequence dictionary to avro form and save
     val contigs = sequences.toAvro
-    saveAvro("%s/_seqdict.avro".format(filePath),
+    saveAvro(
+      filePath.resolve("_seqdict.avro"),
       rdd.context,
       Contig.SCHEMA$,
       contigs)
@@ -874,11 +884,11 @@ abstract class AvroGenomicRDD[T <% IndexedRecord: Manifest, U <: AvroGenomicRDD[
    * Writes any necessary metadata to disk. If not overridden, writes the
    * sequence dictionary to disk as Avro.
    */
-  protected def saveMetadata(filePath: String) {
-
+  protected def saveMetadata(filePath: Path) {
     // convert sequence dictionary to avro form and save
     val contigs = sequences.toAvro
-    saveAvro("%s/_seqdict.avro".format(filePath),
+    saveAvro(
+      filePath.resolve("_seqdict.avro"),
       rdd.context,
       Contig.SCHEMA$,
       contigs)
@@ -915,16 +925,18 @@ abstract class AvroGenomicRDD[T <% IndexedRecord: Manifest, U <: AvroGenomicRDD[
    *   Default is false.
    */
   def saveAsParquet(
-    filePath: String,
+    filePath: Path,
     blockSize: Int = 128 * 1024 * 1024,
     pageSize: Int = 1 * 1024 * 1024,
     compressCodec: CompressionCodecName = CompressionCodecName.GZIP,
     disableDictionaryEncoding: Boolean = false) {
-    saveRddAsParquet(filePath,
+    saveRddAsParquet(
+      filePath,
       blockSize,
       pageSize,
       compressCodec,
-      disableDictionaryEncoding)
+      disableDictionaryEncoding
+    )
     saveMetadata(filePath)
   }
 
@@ -938,17 +950,19 @@ abstract class AvroGenomicRDD[T <% IndexedRecord: Manifest, U <: AvroGenomicRDD[
    * @param disableDictionaryEncoding Whether or not to disable bit-packing.
    */
   def saveAsParquet(
-    filePath: java.lang.String,
+    filePath: Path,
     blockSize: java.lang.Integer,
     pageSize: java.lang.Integer,
     compressCodec: CompressionCodecName,
     disableDictionaryEncoding: java.lang.Boolean) {
     saveAsParquet(
-      new JavaSaveArgs(filePath,
+      new JavaSaveArgs(
+        filePath,
         blockSize = blockSize,
         pageSize = pageSize,
         compressionCodec = compressCodec,
-        disableDictionaryEncoding = disableDictionaryEncoding))
+        disableDictionaryEncoding = disableDictionaryEncoding)
+    )
   }
 
   /**
@@ -956,7 +970,7 @@ abstract class AvroGenomicRDD[T <% IndexedRecord: Manifest, U <: AvroGenomicRDD[
    *
    * @param filePath Path to save the file at.
    */
-  def saveAsParquet(filePath: java.lang.String) {
+  def saveAsParquet(filePath: Path) {
     saveAsParquet(new JavaSaveArgs(filePath))
   }
 }
