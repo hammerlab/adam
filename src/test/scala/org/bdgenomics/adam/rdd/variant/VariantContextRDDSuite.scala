@@ -79,7 +79,7 @@ class VariantContextRDDSuite
     variants.saveAsVcf(TestSaveArgs(path), sortOnSave = false)
     assert(exists(path))
 
-    val vcRdd = sc.loadVcf(path.resolve("part-r-00000"))
+    val vcRdd = sc.loadVcf(path / "part-r-00000")
     vcRdd.rdd.count should === (1)
 
     val variant = vcRdd.rdd.first.variant.variant

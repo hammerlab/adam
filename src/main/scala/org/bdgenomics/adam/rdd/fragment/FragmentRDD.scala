@@ -17,18 +17,16 @@
  */
 package org.bdgenomics.adam.rdd.fragment
 
-import java.nio.file.Path
-
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.converters.AlignmentRecordConverter
 import org.bdgenomics.adam.instrumentation.Timers._
 import org.bdgenomics.adam.models.{ RecordGroupDictionary, ReferenceRegion, ReferenceRegionSerializer, SequenceDictionary }
-import org.bdgenomics.adam.rdd.{ AvroReadGroupGenomicRDD, JavaSaveArgs }
 import org.bdgenomics.adam.rdd.read.{ AlignmentRecordRDD, MarkDuplicates }
+import org.bdgenomics.adam.rdd.{ AvroReadGroupGenomicRDD, JavaSaveArgs }
 import org.bdgenomics.adam.serialization.AvroSerializer
 import org.bdgenomics.formats.avro._
 import org.bdgenomics.utils.interval.array.{ IntervalArray, IntervalArraySerializer }
-import org.bdgenomics.utils.misc.Logging
+import org.hammerlab.paths.Path
 
 import scala.collection.JavaConversions._
 import scala.reflect.ClassTag
@@ -85,7 +83,7 @@ case class FragmentRDD(rdd: RDD[Fragment],
 
   protected def buildTree(rdd: RDD[(ReferenceRegion, Fragment)])(
     implicit tTag: ClassTag[Fragment]): IntervalArray[ReferenceRegion, Fragment] = {
-    IntervalArray(rdd, FragmentArray.apply(_, _))
+    IntervalArray(rdd, FragmentArray(_, _))
   }
 
   /**
@@ -95,16 +93,15 @@ case class FragmentRDD(rdd: RDD[Fragment],
    * @return Returns a new FragmentRDD where the underlying RDD has been
    *   swapped out.
    */
-  protected def replaceRdd(newRdd: RDD[Fragment]): FragmentRDD = {
+  protected def replaceRdd(newRdd: RDD[Fragment]): FragmentRDD =
     copy(rdd = newRdd)
-  }
 
   /**
    * Essentially, splits up the reads in a Fragment.
    *
    * @return Returns this RDD converted back to reads.
    */
-  def toReads(): AlignmentRecordRDD = {
+  def toReads: AlignmentRecordRDD = {
     val converter = new AlignmentRecordConverter
 
     // convert the fragments to reads
@@ -142,9 +139,8 @@ case class FragmentRDD(rdd: RDD[Fragment],
    * @param elem The Fragment to get the region from.
    * @return Returns all regions covered by this fragment.
    */
-  protected def getReferenceRegions(elem: Fragment): Seq[ReferenceRegion] = {
-    elem.getAlignments
-      .flatMap(r => ReferenceRegion.opt(r))
-      .toSeq
-  }
+  protected def getReferenceRegions(elem: Fragment): Seq[ReferenceRegion] =
+    elem
+      .getAlignments
+      .flatMap(ReferenceRegion.opt)
 }

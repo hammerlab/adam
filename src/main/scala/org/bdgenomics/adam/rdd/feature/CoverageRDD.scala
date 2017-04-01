@@ -17,14 +17,13 @@
  */
 package org.bdgenomics.adam.rdd.feature
 
-import java.nio.file.Path
-
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.serializers.FieldSerializer
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.{ Coverage, ReferenceRegion, ReferenceRegionSerializer, SequenceDictionary }
 import org.bdgenomics.adam.rdd.GenomicRDD
 import org.bdgenomics.utils.interval.array.{ IntervalArray, IntervalArraySerializer }
+import org.hammerlab.paths.Path
 
 import scala.annotation.tailrec
 import scala.reflect.ClassTag

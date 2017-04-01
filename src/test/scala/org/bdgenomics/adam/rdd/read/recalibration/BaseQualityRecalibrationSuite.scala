@@ -17,8 +17,6 @@
  */
 package org.bdgenomics.adam.rdd.read.recalibration
 
-import java.io.File
-
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.SnpTable
 import org.bdgenomics.adam.rdd.ADAMContext._
@@ -47,8 +45,8 @@ class BaseQualityRecalibrationSuite
     assert(bqsr.result.count == reads.count)
 
     // Compare the ObservationTables
-    val referenceObs: Seq[String] = scala.io.Source.fromFile(new File(obsFilepath)).getLines().filter(_.length > 0).toSeq.sortWith((kv1, kv2) => kv1.compare(kv2) < 0)
-    val testObs: Seq[String] = bqsr.observed.toCSV.split('\n').filter(_.length > 0).toSeq.sortWith((kv1, kv2) => kv1.compare(kv2) < 0)
+    val referenceObs: Seq[String] = obsFilepath.lines.filter(_.length > 0).toSeq.sorted
+    val testObs: Seq[String] = bqsr.observed.toCSV.split('\n').filter(_.length > 0).toSeq.sorted
     referenceObs.zip(testObs).foreach(p => assert(p._1 === p._2))
   }
 }

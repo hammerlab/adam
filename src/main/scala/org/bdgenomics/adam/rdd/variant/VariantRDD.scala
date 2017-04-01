@@ -17,8 +17,6 @@
  */
 package org.bdgenomics.adam.rdd.variant
 
-import java.nio.file.Path
-
 import htsjdk.samtools.ValidationStringency
 import htsjdk.variant.vcf.{ VCFHeader, VCFHeaderLine }
 import org.apache.spark.rdd.RDD
@@ -28,6 +26,7 @@ import org.bdgenomics.adam.rdd.{ AvroGenomicRDD, JavaSaveArgs, VCFHeaderUtils }
 import org.bdgenomics.adam.serialization.AvroSerializer
 import org.bdgenomics.formats.avro.{ Contig, Sample, Variant }
 import org.bdgenomics.utils.interval.array.{ IntervalArray, IntervalArraySerializer }
+import org.hammerlab.paths.Path
 
 import scala.collection.JavaConversions._
 import scala.reflect.ClassTag
@@ -77,13 +76,13 @@ case class VariantRDD(rdd: RDD[Variant],
     // write vcf headers to file
     VCFHeaderUtils.write(
       new VCFHeader(headerLines.toSet),
-      filePath.resolve("_header")
+      filePath / "_header"
     )
 
     // convert sequence dictionary to avro form and save
     val contigs = sequences.toAvro
     saveAvro(
-      filePath.resolve("_seqdict.avro"),
+      filePath / "_seqdict.avro",
       rdd.context,
       Contig.SCHEMA$,
       contigs

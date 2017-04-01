@@ -17,11 +17,9 @@
  */
 package org.bdgenomics.adam.rdd
 
-import java.nio.file.Files.newOutputStream
-import java.nio.file.Path
-
 import htsjdk.variant.variantcontext.writer.{ Options, VariantContextWriterBuilder }
 import htsjdk.variant.vcf.VCFHeader
+import org.hammerlab.paths.Path
 
 /**
  * Utility for writing VCF headers to a file.
@@ -38,7 +36,7 @@ private[rdd] object VCFHeaderUtils {
     // build a vcw
     val vcw =
       new VariantContextWriterBuilder()
-        .setOutputVCFStream(newOutputStream(path))
+        .setOutputVCFStream(path.outputStream)
         .clearIndexCreator()
         .unsetOption(Options.INDEX_ON_THE_FLY)
         .build()

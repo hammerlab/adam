@@ -17,15 +17,15 @@
  */
 package org.bdgenomics.adam.models
 
-import java.io.File
-
 import htsjdk.samtools.{ SAMSequenceDictionary, SAMSequenceRecord }
 import htsjdk.variant.utils.SAMSequenceDictionaryExtractor
+import htsjdk.variant.utils.SAMSequenceDictionaryExtractor.extractDictionary
 import htsjdk.variant.vcf.VCFFileReader
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.hammerlab.genomics.reference.test.ClearContigNames
-import org.hammerlab.genomics.reference.{ ContigName, NumLoci }
 import org.hammerlab.genomics.reference.test.LociConversions.intToLocus
+import org.hammerlab.genomics.reference.{ ContigName, NumLoci }
+
 import scala.collection.JavaConversions._
 
 class SequenceDictionarySuite
@@ -47,38 +47,33 @@ class SequenceDictionarySuite
     assert(sr.isSameSequence(asPSR))
   }
 
-  test("Convert from SAM sequence dictionary file (with extra fields)") {
-    val path = testFile("dict_with_accession.dict")
-    val ssd = SAMSequenceDictionaryExtractor.extractDictionary(new File(path))
+  {
+    lazy val path = testFile("dict_with_accession.dict")
+    lazy val ssd = extractDictionary(path.toFile)
+    lazy val asd = SequenceDictionary(ssd)
 
-    val chr1 = ssd.getSequence("1") // Validate that extra fields are parsed
-    assert(chr1 != null)
-    val refseq = chr1.getAttribute("REFSEQ")
-    refseq should === ("NC_000001.10")
+    test("Convert from SAM sequence dictionary file (with extra fields)") {
+      val chr1 = ssd.getSequence("1") // Validate that extra fields are parsed
+      assert(chr1 != null)
+      val refseq = chr1.getAttribute("REFSEQ")
+      refseq should ===("NC_000001.10")
 
-    val asd = SequenceDictionary(ssd)
-    assert(asd.containsRefName("1"))
-    assert(!asd.containsRefName("2"))
-  }
+      assert(asd.containsRefName("1"))
+      assert(!asd.containsRefName("2"))
+    }
 
-  test("merge into existing dictionary") {
-    val path = testFile("dict_with_accession.dict")
-    val ssd = SAMSequenceDictionaryExtractor.extractDictionary(new File(path))
+    test("merge into existing dictionary") {
+      assert(asd.containsRefName("1"))
+      val chr1 = asd("1").get
 
-    val asd = SequenceDictionary(ssd)
-    assert(asd.containsRefName("1"))
-    val chr1 = asd("1").get
+      val myDict = SequenceDictionary(record(chr1.name, chr1.length, md5 = chr1.md5))
+      assert(asd.isCompatibleWith(myDict))
+      assert(myDict.isCompatibleWith(asd))
+    }
 
-    val myDict = SequenceDictionary(record(chr1.name, chr1.length, md5 = chr1.md5))
-    assert(asd.isCompatibleWith(myDict))
-    assert(myDict.isCompatibleWith(asd))
-  }
-
-  test("Convert from SAM sequence dictionary and back") {
-    val path = testFile("dict_with_accession.dict")
-    val ssd = SAMSequenceDictionaryExtractor.extractDictionary(new File(path))
-    val asd = SequenceDictionary(ssd)
-    ssd.assertSameDictionary(asd.toSAMSequenceDictionary)
+    test("Convert from SAM sequence dictionary and back") {
+      ssd.assertSameDictionary(asd.toSAMSequenceDictionary)
+    }
   }
 
   test("Can retrieve sequence by name") {
@@ -227,7 +222,7 @@ class SequenceDictionarySuite
 
   test("load sequence dictionary from VCF file") {
     val path = testFile("small.vcf")
-    val fileReader = new VCFFileReader(new File(path), false)
+    val fileReader = new VCFFileReader(path.toFile, false)
     val sd = SequenceDictionary.fromVCFHeader(fileReader.getFileHeader)
 
     sd.records.size should === (1)

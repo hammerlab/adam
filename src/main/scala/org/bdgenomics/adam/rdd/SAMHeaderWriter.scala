@@ -18,10 +18,10 @@
 package org.bdgenomics.adam.rdd
 
 import java.io.{ StringWriter, Writer }
-import java.nio.file.{ Files, Path }
 
 import htsjdk.samtools.{ SAMFileHeader, SAMTextHeaderCodec, SAMTextWriter }
 import org.bdgenomics.adam.models.SequenceDictionary
+import org.hammerlab.paths.Path
 
 /**
  * Helper object for writing a SAM header.
@@ -55,7 +55,7 @@ private[rdd] object SAMHeaderWriter {
                   header: SAMFileHeader) {
 
     // get an output stream
-    val os = Files.newOutputStream(path)
+    val os = path.outputStream
 
     // get a string writer and set up the text writer
     val sw: Writer = new StringWriter()

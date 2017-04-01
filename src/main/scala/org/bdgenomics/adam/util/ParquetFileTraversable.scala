@@ -27,36 +27,30 @@ import org.bdgenomics.utils.misc.HadoopUtil
  * Implements a traversable collection that is backed by a Parquet file.
  *
  * @param sc A SparkContext to use to get underlying Hadoop FileSystem config.
- * @param file The path to the Parquet file to load.
+ * @param path The path to the Parquet file to load.
  */
-class ParquetFileTraversable[T <: IndexedRecord](sc: SparkContext, file: Path) extends Traversable[T] {
+class ParquetFileTraversable[T <: IndexedRecord](sc: SparkContext, path: Path) extends Traversable[T] {
 
-  /**
-   * @param sc A SparkContext to use to get underlying Hadoop FileSystem config.
-   * @param file The path to the Parquet file to load.
-   */
-  def this(sc: SparkContext, file: String) = this(sc, new Path(file))
-
-  private val fs = file.getFileSystem(sc.hadoopConfiguration)
+  private val fs = path.getFileSystem(sc.hadoopConfiguration)
 
   private val paths: List[Path] = {
-    if (!fs.exists(file)) {
-      throw new IllegalArgumentException("The path %s does not exist".format(file))
+    if (!fs.exists(path)) {
+      throw new IllegalArgumentException("The path %s does not exist".format(path))
     }
-    val status = fs.getFileStatus(file)
+    val status = fs.getFileStatus(path)
     var paths = List[Path]()
     if (HadoopUtil.isDirectory(status)) {
-      val files = fs.listStatus(file)
+      val files = fs.listStatus(path)
       files.foreach {
         file =>
           if (file.getPath.getName.contains("part")) {
             paths ::= file.getPath
           }
       }
-    } else if (fs.isFile(file)) {
-      paths ::= file
+    } else if (fs.isFile(path)) {
+      paths ::= path
     } else {
-      throw new IllegalArgumentException("The path '%s' is neither file nor directory".format(file))
+      throw new IllegalArgumentException("The path '%s' is neither file nor directory".format(path))
     }
     paths
   }

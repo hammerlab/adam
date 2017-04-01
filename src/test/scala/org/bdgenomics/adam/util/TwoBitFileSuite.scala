@@ -17,12 +17,8 @@
  */
 package org.bdgenomics.adam.util
 
-import java.io.File
-
 import org.bdgenomics.adam.models.ReferenceRegion
-import org.bdgenomics.utils.io.LocalFileByteAccess
 import org.hammerlab.genomics.reference.test.ClearContigNames
-import org.hammerlab.genomics.reference.test.LociConversions.intToLocus
 import org.scalactic.ConversionCheckedTripleEquals
 import org.scalatest.Matchers
 
@@ -32,37 +28,29 @@ class TwoBitFileSuite
     with ConversionCheckedTripleEquals
     with ClearContigNames {
 
+  lazy val path = testFile("hg19.chrM.2bit")
+  lazy val hg19 = TwoBitFile(path)
+  lazy val g1k = TwoBitFile(testFile("human_g1k_v37_chr1_59kb.2bit"))
+
   test("correctly read sequence from .2bit file") {
-    val file = new File(testFile("hg19.chrM.2bit"))
-    val byteAccess = new LocalFileByteAccess(file)
-    val twoBitFile = new TwoBitFile(byteAccess)
-    twoBitFile.numSeq should === (1)
-    twoBitFile.seqRecords.toSeq.length should === (1)
-    twoBitFile.extract(ReferenceRegion("hg19_chrM", 0, 10)) should === ("GATCACAGGT")
-    twoBitFile.extract(ReferenceRegion("hg19_chrM", 503, 513)) should === ("CATCCTACCC")
-    twoBitFile.extract(ReferenceRegion("hg19_chrM", 16561, 16571)) should === ("CATCACGATG")
+    hg19.numSeq should === (1)
+    hg19.seqRecords.toSeq.length should === (1)
+    hg19.extract(ReferenceRegion("hg19_chrM", 0, 10)) should === ("GATCACAGGT")
+    hg19.extract(ReferenceRegion("hg19_chrM", 503, 513)) should === ("CATCCTACCC")
+    hg19.extract(ReferenceRegion("hg19_chrM", 16561, 16571)) should === ("CATCACGATG")
   }
 
   test("correctly return masked sequences from .2bit file") {
-    val file = new File(testFile("hg19.chrM.2bit"))
-    val byteAccess = new LocalFileByteAccess(file)
-    val twoBitFile = new TwoBitFile(byteAccess)
-    twoBitFile.extract(ReferenceRegion("hg19_chrM", 0, 10), true) should === ("GATCACAGGT")
-    twoBitFile.extract(ReferenceRegion("hg19_chrM", 2600, 2610), true) should === ("taatcacttg")
+    hg19.extract(ReferenceRegion("hg19_chrM", 0, 10), true) should === ("GATCACAGGT")
+    hg19.extract(ReferenceRegion("hg19_chrM", 2600, 2610), true) should === ("taatcacttg")
   }
 
   test("correctly return Ns from .2bit file") {
-    val file = new File(testFile("human_g1k_v37_chr1_59kb.2bit"))
-    val byteAccess = new LocalFileByteAccess(file)
-    val twoBitFile = new TwoBitFile(byteAccess)
-    twoBitFile.extract(ReferenceRegion("1", 9990, 10010), true) should === ("NNNNNNNNNNTAACCCTAAC")
+    g1k.extract(ReferenceRegion("1", 9990, 10010), true) should === ("NNNNNNNNNNTAACCCTAAC")
   }
 
   test("correctly calculates sequence dictionary") {
-    val file = new File(testFile("hg19.chrM.2bit"))
-    val byteAccess = new LocalFileByteAccess(file)
-    val twoBitFile = new TwoBitFile(byteAccess)
-    val dict = twoBitFile.sequences
+    val dict = hg19.sequences
     dict.records.length should === (1)
     dict.records.head.length should === (16571)
   }

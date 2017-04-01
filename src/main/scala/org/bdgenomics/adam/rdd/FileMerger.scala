@@ -17,18 +17,13 @@
  */
 package org.bdgenomics.adam.rdd
 
-import java.nio.file.Files.{ newDirectoryStream, newInputStream, newOutputStream, delete }
-import java.nio.file.Path
-
 import htsjdk.samtools.cram.build.CramIO
 import htsjdk.samtools.cram.common.CramVersions
 import htsjdk.samtools.util.BlockCompressedStreamConstants
-import org.apache.commons.io.FileUtils.deleteDirectory
 import org.apache.commons.io.IOUtils.copyLarge
 import org.apache.hadoop.conf.Configuration
 import org.bdgenomics.utils.misc.Logging
-
-import scala.collection.JavaConverters._
+import org.hammerlab.paths.Path
 
 /**
  * Helper object to merge sharded files together.
@@ -68,7 +63,8 @@ object FileMerger extends Logging {
       outputPath, tailPath, optHeaderPath = optHeaderPath,
       writeEmptyGzipBlock = writeEmptyGzipBlock,
       writeCramEOF = writeCramEOF,
-      optBufferSize = optBufferSize)
+      optBufferSize = optBufferSize
+    )
   }
 
   /**
@@ -120,9 +116,8 @@ object FileMerger extends Logging {
 
     // get a list of all of the files in the tail file
     val tailFiles =
-      newDirectoryStream(tailPath, "part-*")
-        .iterator()
-        .asScala
+      tailPath
+        .list("part-*")
         .toArray
         .sortBy {
           _.getFileName.toString match {
@@ -134,32 +129,17 @@ object FileMerger extends Logging {
         }
 
     // open our output file
-    val os = newOutputStream(outputPath)
+    val os = outputPath.outputStream
 
     // here is a byte array for copying
     val buffer = new Array[Byte](bufferSize)
-//
-//    @tailrec def copy(is: InputStream,
-//                      los: OutputStream) {
-//
-//      // make a read
-//      val bytesRead = is.read(ba)
-//
-//      // did our read succeed? if so, write to output stream
-//      // and continue
-//      if (bytesRead >= 0) {
-//        los.write(ba, 0, bytesRead)
-//
-//        copy(is, los)
-//      }
-//    }
 
     // optionally copy the header
     optHeaderPath.foreach { p ⇒
       log.info(s"Copying header file ($p)")
 
       // open our input file
-      val is = newInputStream(p)
+      val is = p.inputStream
       copyLarge(is, os, buffer)
       is.close()
     }
@@ -173,7 +153,7 @@ object FileMerger extends Logging {
       log.info(s"Copying file $p, file $filesCopied of $numFiles.")
 
       // open our input file
-      val is = newInputStream(p)
+      val is = p.inputStream
       copyLarge(is, os, buffer)
       is.close()
 
@@ -193,7 +173,7 @@ object FileMerger extends Logging {
     os.close()
 
     // delete temp files
-    optHeaderPath.foreach(delete)
-    deleteDirectory(tailPath.toFile)
+    optHeaderPath.foreach(_.delete())
+    tailPath.delete(recursive = true)
   }
 }

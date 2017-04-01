@@ -47,10 +47,12 @@ class ADAMCRAMOutputFormat[K]
     readSAMHeaderFrom(path, conf)
 
     // now that we have the header set, we need to make a record reader
-    return new KeyIgnoringCRAMRecordWriter[K](getDefaultWorkFile(context, ""),
+    new KeyIgnoringCRAMRecordWriter[K](
+      getDefaultWorkFile(context, ""),
       header,
       true,
-      context)
+      context
+    )
   }
 }
 
@@ -59,9 +61,11 @@ class ADAMCRAMOutputFormat[K]
  *
  * @tparam K The key type. Keys are not written.
  */
-class InstrumentedADAMCRAMOutputFormat[K] extends InstrumentedOutputFormat[K, org.seqdoop.hadoop_bam.SAMRecordWritable] {
+class InstrumentedADAMCRAMOutputFormat[K]
+  extends InstrumentedOutputFormat[K, SAMRecordWritable] {
   override def timerName(): String = Timers.WriteCRAMRecord.timerName
-  override def outputFormatClass(): Class[_ <: OutputFormat[K, SAMRecordWritable]] = classOf[ADAMCRAMOutputFormat[K]]
+  override def outputFormatClass(): Class[_ <: OutputFormat[K, SAMRecordWritable]] =
+    classOf[ADAMCRAMOutputFormat[K]]
 }
 
 /**
@@ -84,10 +88,12 @@ class ADAMCRAMOutputFormatHeaderLess[K]
     readSAMHeaderFrom(path, conf)
 
     // now that we have the header set, we need to make a record reader
-    return new KeyIgnoringCRAMRecordWriter[K](getDefaultWorkFile(context, ""),
+    new KeyIgnoringCRAMRecordWriter[K](
+      getDefaultWorkFile(context, ""),
       header,
       false,
-      context)
+      context
+    )
   }
 }
 
@@ -96,7 +102,9 @@ class ADAMCRAMOutputFormatHeaderLess[K]
  *
  * @tparam K The key type. Keys are not written.
  */
-class InstrumentedADAMCRAMOutputFormatHeaderLess[K] extends InstrumentedOutputFormat[K, org.seqdoop.hadoop_bam.SAMRecordWritable] {
+class InstrumentedADAMCRAMOutputFormatHeaderLess[K]
+  extends InstrumentedOutputFormat[K, SAMRecordWritable] {
   override def timerName(): String = Timers.WriteCRAMRecord.timerName
-  override def outputFormatClass(): Class[_ <: OutputFormat[K, SAMRecordWritable]] = classOf[ADAMCRAMOutputFormatHeaderLess[K]]
+  override def outputFormatClass(): Class[_ <: OutputFormat[K, SAMRecordWritable]] =
+    classOf[ADAMCRAMOutputFormatHeaderLess[K]]
 }

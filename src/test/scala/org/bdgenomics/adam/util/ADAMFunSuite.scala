@@ -18,20 +18,18 @@
 package org.bdgenomics.adam.util
 
 import java.net.URL
-import java.nio.file.Path
 
 import htsjdk.samtools.util.Log
 import org.bdgenomics.adam.serialization.ADAMKryoRegistrator
 import org.hammerlab.genomics.reference.test.{ ClearContigNames, ContigNameCanEqualString, LocusCanEqualInt }
+import org.hammerlab.paths.Path
 import org.hammerlab.spark.test.suite.KryoSparkSuite
 import org.hammerlab.test.matchers.files.FileMatcher.fileMatch
 import org.hammerlab.test.resources.{ File, Url }
 import org.scalactic.TypeCheckedTripleEquals
-import org.hammerlab.paths
 
 abstract class ADAMFunSuite
   extends KryoSparkSuite(classOf[ADAMKryoRegistrator], referenceTracking = true)
-    with paths.Conversions
     with ContigNameCanEqualString
     with LocusCanEqualInt
     with ClearContigNames
@@ -42,7 +40,7 @@ abstract class ADAMFunSuite
 
   def resourceUrl(path: String): URL = Url(path)
 
-  def testFile(name: String): String = File(name)
+  def testFile(name: String): Path = File(name)
 
   def sparkTest(name: String)(body: ⇒ Unit): Unit =
     test(name) { body }
@@ -57,8 +55,6 @@ abstract class ADAMFunSuite
    * calls.
    */
   override def tmpFile(prefix: String, suffix: String): Path = tmpPath(prefix, suffix)
-
-  implicit val pathToString = paths.pathToString _
 
   def checkFiles(actualPath: Path, expectedPath: File): Unit = {
     actualPath should fileMatch(expectedPath)

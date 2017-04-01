@@ -17,7 +17,7 @@
  */
 package org.bdgenomics.adam.rdd.contig
 
-import java.nio.file.Path
+import org.hammerlab.paths.Path
 
 import com.google.common.base.Splitter
 import org.apache.spark.rdd.RDD
@@ -95,12 +95,13 @@ private[rdd] object NucleotideContigFragmentRDD extends Serializable {
  */
 case class NucleotideContigFragmentRDD(
     rdd: RDD[NucleotideContigFragment],
-    sequences: SequenceDictionary) extends AvroGenomicRDD[NucleotideContigFragment, NucleotideContigFragmentRDD] with ReferenceFile {
+    sequences: SequenceDictionary)
+  extends AvroGenomicRDD[NucleotideContigFragment, NucleotideContigFragmentRDD]
+    with ReferenceFile {
 
   protected def buildTree(rdd: RDD[(ReferenceRegion, NucleotideContigFragment)])(
-    implicit tTag: ClassTag[NucleotideContigFragment]): IntervalArray[ReferenceRegion, NucleotideContigFragment] = {
+    implicit tTag: ClassTag[NucleotideContigFragment]): IntervalArray[ReferenceRegion, NucleotideContigFragment] =
     IntervalArray(rdd, NucleotideContigFragmentArray(_, _))
-  }
 
   /**
    * Converts an RDD of nucleotide contig fragments into reads. Adjacent contig fragments are
@@ -108,9 +109,8 @@ case class NucleotideContigFragmentRDD(
    *
    * @return Returns an RDD of reads.
    */
-  def toReads: RDD[AlignmentRecord] = {
+  def toReads: RDD[AlignmentRecord] =
     FragmentConverter.convertRdd(rdd)
-  }
 
   /**
    * Replaces the underlying RDD with a new RDD.
@@ -119,9 +119,8 @@ case class NucleotideContigFragmentRDD(
    * @return Returns a new NucleotideContigFragmentRDD where the underlying RDD
    *   has been replaced.
    */
-  protected def replaceRdd(newRdd: RDD[NucleotideContigFragment]): NucleotideContigFragmentRDD = {
+  protected def replaceRdd(newRdd: RDD[NucleotideContigFragment]): NucleotideContigFragmentRDD =
     copy(rdd = newRdd)
-  }
 
   /**
    * @param elem Fragment to extract a region from.
@@ -129,23 +128,21 @@ case class NucleotideContigFragmentRDD(
    *   reference region. If the fragment start position and name is not defined,
    *   returns no regions.
    */
-  protected def getReferenceRegions(elem: NucleotideContigFragment): Seq[ReferenceRegion] = {
+  protected def getReferenceRegions(elem: NucleotideContigFragment): Seq[ReferenceRegion] =
     ReferenceRegion(elem).toSeq
-  }
 
   /**
    * Save nucleotide contig fragments as Parquet or FASTA.
    *
    * If filename ends in .fa or .fasta, saves as Fasta. If not, saves fragments
    * to Parquet. Defaults to 60 character line length, if saving to FASTA.
-   *
-   * @param fileName file name
    */
-  def save(fileName: Path) {
-    if (fileName.endsWith(".fa") || fileName.endsWith(".fasta")) {
-      saveAsFasta(fileName)
-    } else {
-      saveAsParquet(new JavaSaveArgs(fileName))
+  def save(path: Path) {
+    path.extension match {
+      case "fa" | "fasta" ⇒
+        saveAsFasta(path)
+      case _ ⇒
+        saveAsParquet(new JavaSaveArgs(path))
     }
   }
 

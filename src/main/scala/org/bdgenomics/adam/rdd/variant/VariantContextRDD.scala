@@ -17,8 +17,6 @@
  */
 package org.bdgenomics.adam.rdd.variant
 
-import java.nio.file.{ Files, Path, Paths }
-
 import htsjdk.samtools.ValidationStringency
 import htsjdk.samtools.ValidationStringency.LENIENT
 import htsjdk.variant.vcf.{ VCFHeader, VCFHeaderLine }
@@ -26,14 +24,17 @@ import org.apache.hadoop.io.LongWritable
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.converters.{ DefaultHeaderLines, VariantContextConverter }
 import org.bdgenomics.adam.models.{ ReferenceRegion, ReferenceRegionSerializer, SequenceDictionary, VariantContext, VariantContextSerializer }
+import org.bdgenomics.adam.rdd.variant.ADAMVCFOutputFormat.HEADER_PATH_KEY
 import org.bdgenomics.adam.rdd.{ FileMerger, MultisampleGenomicRDD, VCFHeaderUtils }
 import org.bdgenomics.formats.avro.Sample
 import org.bdgenomics.utils.cli.SaveArgs
 import org.bdgenomics.utils.interval.array.{ IntervalArray, IntervalArraySerializer }
 import org.bdgenomics.utils.misc.Logging
 import org.hammerlab.genomics.reference.ContigName.Factory
+import org.hammerlab.paths.Path
+import org.seqdoop.hadoop_bam.VCFFormat.{ VCF, inferFromFilePath }
+import org.seqdoop.hadoop_bam.VCFOutputFormat.OUTPUT_VCF_FORMAT_PROPERTY
 import org.seqdoop.hadoop_bam._
-import VCFFormat.VCF
 
 import scala.collection.JavaConversions._
 import scala.reflect.ClassTag
@@ -83,21 +84,23 @@ case class VariantContextRDD(rdd: RDD[VariantContext],
   /**
    * @return Returns a GenotypeRDD containing the Genotypes in this RDD.
    */
-  def toGenotypeRDD: GenotypeRDD = {
-    GenotypeRDD(rdd.flatMap(_.genotypes),
+  def toGenotypeRDD: GenotypeRDD =
+    GenotypeRDD(
+      rdd.flatMap(_.genotypes),
       sequences,
       samples,
-      headerLines)
-  }
+      headerLines
+    )
 
   /**
    * @return Returns the Variants in this RDD.
    */
-  def toVariantRDD: VariantRDD = {
-    VariantRDD(rdd.map(_.variant.variant),
+  def toVariantRDD: VariantRDD =
+    VariantRDD(
+      rdd.map(_.variant.variant),
       sequences,
-      headerLines)
-  }
+      headerLines
+    )
 
   /**
    * Converts an RDD of ADAM VariantContexts to HTSJDK VariantContexts
@@ -114,20 +117,20 @@ case class VariantContextRDD(rdd: RDD[VariantContext],
    * Converts an RDD of ADAM VariantContexts to HTSJDK VariantContexts
    * and saves to disk as VCF.
    *
-   * @param filePath The filepath to save to.
+   * @param path The path to save to.
    * @param asSingleFile If true, saves the output as a single file by merging
    *   the sharded output after completing the write to HDFS. If false, the
    *   output of this call will be written as shards, where each shard has a
    *   valid VCF header. Default is false.
    * @param stringency The validation stringency to use when writing the VCF.
    */
-  def saveAsVcf(filePath: Path,
+  def saveAsVcf(path: Path,
                 asSingleFile: Boolean = false,
                 stringency: ValidationStringency = LENIENT)(implicit factory: Factory) {
-    val vcfFormat = VCFFormat.inferFromFilePath(filePath.toString)
+    val vcfFormat = inferFromFilePath(path.toString)
     assert(vcfFormat == VCF, "BCF not yet supported")  // TODO: Add BCF support
 
-    log.info(s"Writing $vcfFormat file to $filePath")
+    log.info(s"Writing $vcfFormat file to $path")
 
     // map samples to sample ids
     val sampleIds = samples.map(_.getSampleId)
@@ -150,7 +153,7 @@ case class VariantContextRDD(rdd: RDD[VariantContext],
     header.setSequenceDictionary(sequences.toSAMSequenceDictionary)
 
     // write header
-    val headPath = Paths.get(s"${filePath}_head")
+    val headPath = path + "_head"
 
     // configure things for saving to disk
     val conf = rdd.context.hadoopConfiguration
@@ -163,13 +166,13 @@ case class VariantContextRDD(rdd: RDD[VariantContext],
     )
 
     // set path to header file and the vcf format
-    conf.set("org.bdgenomics.adam.rdd.variant.vcf_header_path", headPath.toString)
-    conf.set(VCFOutputFormat.OUTPUT_VCF_FORMAT_PROPERTY, vcfFormat.toString)
+    conf.set(HEADER_PATH_KEY, headPath.toString)
+    conf.set(OUTPUT_VCF_FORMAT_PROPERTY, vcfFormat.toString)
 
     if (asSingleFile) {
 
       // write shards to disk
-      val tailPath = Paths.get(s"${filePath}_tail")
+      val tailPath = path + "_tail"
       writableVCs.saveAsNewAPIHadoopFile(
         tailPath.toString,
         classOf[LongWritable],
@@ -181,7 +184,7 @@ case class VariantContextRDD(rdd: RDD[VariantContext],
       // merge shards
       FileMerger.mergeFiles(
         rdd.context.hadoopConfiguration,
-        filePath,
+        path,
         tailPath,
         Some(headPath)
       )
@@ -189,7 +192,7 @@ case class VariantContextRDD(rdd: RDD[VariantContext],
 
       // write shards
       writableVCs.saveAsNewAPIHadoopFile(
-        filePath.toString,
+        path.toString,
         classOf[LongWritable],
         classOf[VariantContextWritable],
         classOf[ADAMVCFOutputFormat[LongWritable]],
@@ -197,7 +200,7 @@ case class VariantContextRDD(rdd: RDD[VariantContext],
       )
 
       // remove header file
-      Files.delete(headPath)
+      headPath.delete()
     }
   }
 

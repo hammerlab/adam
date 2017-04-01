@@ -17,12 +17,9 @@
  */
 package org.bdgenomics.adam.rdd.read
 
-import java.io.File
 import java.nio.file.Files.exists
 
-import org.hammerlab.test.matchers.seqs.SeqMatcher.seqMatch
 import htsjdk.samtools.ValidationStringency.{ LENIENT, STRICT }
-import org.apache.hadoop.fs.Path
 import org.bdgenomics.adam.converters.DefaultHeaderLines
 import org.bdgenomics.adam.models.{ RecordGroupDictionary, ReferenceRegion, SequenceDictionary, SequenceRecord }
 import org.bdgenomics.adam.rdd.ADAMContext._
@@ -32,7 +29,7 @@ import org.bdgenomics.adam.rdd.variant.{ VCFOutFormatter, VariantContextRDD }
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro._
 import org.hammerlab.genomics.reference.test.LociConversions.intToLocus
-import org.hammerlab.paths._
+import org.hammerlab.test.matchers.seqs.SeqMatcher.seqMatch
 import org.seqdoop.hadoop_bam.CRAMInputFormat.REFERENCE_SOURCE_PATH_PROPERTY
 import org.seqdoop.hadoop_bam.SAMFormat.{ BAM, CRAM, SAM }
 
@@ -190,18 +187,18 @@ class AlignmentRecordRDDSuite
   }
 
   sparkTest("round trip from ADAM to SAM and back to ADAM produces equivalent Read values") {
-    val reads12Path = Thread.currentThread().getContextClassLoader.getResource("reads12.sam").getFile
+    val reads12Path = testFile("reads12.sam")
     val ardd = sc.loadBam(reads12Path)
     val rdd12A = ardd.rdd
 
     val dir = tmpDir("reads12")
-    val outputPath = dir.resolve("reads12.sam")
+    val outputPath = dir / "reads12.sam"
     ardd.saveAsSam(
       outputPath,
       asType = Some(SAM)
     )
 
-    val rdd12B = sc.loadBam(new Path(outputPath, "part-r-00000"))
+    val rdd12B = sc.loadBam(outputPath / "part-r-00000")
 
     assert(rdd12B.rdd.count() === rdd12A.rdd.count())
 
@@ -275,7 +272,7 @@ class AlignmentRecordRDDSuite
     val readsB = rddB.rdd.collect()
 
     readsA.indices.foreach {
-      case i: Int =>
+      i ⇒
         val (readA, readB) = (readsA(i), readsB(i))
         assert(readA.getSequence === readB.getSequence)
         assert(readA.getQual === readB.getQual)
@@ -284,14 +281,14 @@ class AlignmentRecordRDDSuite
   }
 
   sparkTest("SAM conversion sets read mapped flag properly") {
-    val filePath = getClass.getClassLoader.getResource("reads12.sam").getFile
+    val filePath = testFile("reads12.sam")
     val sam = sc.loadAlignments(filePath)
 
     sam.rdd.collect().foreach(r => assert(r.getReadMapped))
   }
 
   sparkTest("convert malformed FASTQ (no quality scores) => SAM => well-formed FASTQ => SAM") {
-    val noqualPath = Thread.currentThread().getContextClassLoader.getResource("fastq_noqual.fq").getFile
+    val noqualPath = testFile("fastq_noqual.fq")
 
     //read FASTQ (malformed)
     val rddA = sc.loadFastq(noqualPath, None, None, LENIENT)
@@ -357,8 +354,8 @@ class AlignmentRecordRDDSuite
     assert(rddA.rdd.count() == 6)
 
     val dir = tmpDir()
-    val tempPath1 = dir.resolve("reads1.fq")
-    val tempPath2 = dir.resolve("reads2.fq")
+    val tempPath1 = dir / "reads1.fq"
+    val tempPath2 = dir / "reads2.fq"
 
     rddA.saveAsPairedFastq(tempPath1, tempPath2, validationStringency = STRICT)
 
@@ -422,10 +419,10 @@ class AlignmentRecordRDDSuite
     checkFiles(actualSortedPath, "ordered.sam")
   }
 
-  def testBQSR(asSam: Boolean, filename: String) {
+  def testBQSR(asSam: Boolean, basename: String) {
     val inputPath = testFile("bqsr1.sam")
     val dir = tmpDir("bqsr1")
-    val path = dir.resolve(filename)
+    val path = dir / basename
     val rRdd = sc.loadAlignments(inputPath)
     rRdd.rdd.cache()
     rRdd.saveAsSam(
@@ -708,9 +705,16 @@ class AlignmentRecordRDDSuite
     implicit val tFormatter = SAMInFormatter
     implicit val uFormatter = new AnySAMOutFormatter
 
-    val pipedRdd: AlignmentRecordRDD = ardd.pipe("/bin/bash %s".format(scriptPath),
-      environment = Map(("INPUT_PATH" → smallSam),
-        ("OUTPUT_PATH" -> writePath)))
+    val pipedRdd: AlignmentRecordRDD =
+      ardd.pipe(
+        s"/bin/bash $scriptPath",
+        environment =
+          Map(
+            "INPUT_PATH" → smallSam.toString,
+            "OUTPUT_PATH" → writePath.toString
+          )
+      )
+
     val newRecords = pipedRdd.rdd.count
     assert(smallRecords === newRecords)
   }
@@ -727,7 +731,7 @@ class AlignmentRecordRDDSuite
     val pipedRdd: VariantContextRDD =
       ardd.pipe(
         "/bin/bash $0 %s $1".format(tempPath),
-        files = Seq(scriptPath, vcfPath)
+        files = Seq(scriptPath, vcfPath).map(_.toString)
       )
 
     val newRecords = pipedRdd.rdd.count

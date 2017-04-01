@@ -17,35 +17,13 @@
  */
 package org.bdgenomics.adam.converters
 
-import java.io.File
-
 import com.google.common.collect.{ ImmutableList, ImmutableMap }
 import htsjdk.samtools.ValidationStringency
 import htsjdk.variant.utils.SAMSequenceDictionaryExtractor
+import htsjdk.variant.utils.SAMSequenceDictionaryExtractor.extractDictionary
 import htsjdk.variant.variantcontext.{ Allele, GenotypeBuilder, GenotypeType, VariantContextBuilder, Genotype ⇒ HtsjdkGenotype, VariantContext ⇒ HtsjdkVariantContext }
 import htsjdk.variant.vcf.{ VCFFormatHeaderLine, VCFHeaderLineCount, VCFHeaderLineType, VCFInfoHeaderLine }
 import org.bdgenomics.adam.models.{ SequenceDictionary, VariantContext ⇒ ADAMVariantContext }
-import htsjdk.variant.variantcontext.{
-  Allele,
-  Genotype => HtsjdkGenotype,
-  GenotypeBuilder,
-  GenotypeType,
-  VariantContext => HtsjdkVariantContext,
-  VariantContextBuilder
-}
-import htsjdk.variant.vcf.{
-  VCFConstants,
-  VCFFormatHeaderLine,
-  VCFHeaderLineCount,
-  VCFHeaderLineType,
-  VCFInfoHeaderLine,
-  VCFStandardHeaderLines
-}
-import java.io.File
-import org.bdgenomics.adam.models.{
-  SequenceDictionary,
-  VariantContext => ADAMVariantContext
-}
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.util.{ ADAMFunSuite, PhredUtils }
 import org.bdgenomics.formats.avro._
@@ -59,7 +37,7 @@ class VariantContextConverterSuite
 
   lazy val dictionary = {
     val path = testFile("dict_with_accession.dict")
-    SequenceDictionary(SAMSequenceDictionaryExtractor.extractDictionary(new File(path)))
+    SequenceDictionary(extractDictionary(path.toFile))
   }
 
   val lenient = ValidationStringency.LENIENT

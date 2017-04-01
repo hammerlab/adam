@@ -17,8 +17,6 @@
  */
 package org.bdgenomics.adam.rdd.variant
 
-import java.nio.file.Path
-
 import htsjdk.samtools.ValidationStringency
 import htsjdk.variant.vcf.VCFHeaderLine
 import org.apache.spark.rdd.RDD
@@ -30,6 +28,7 @@ import org.bdgenomics.adam.serialization.AvroSerializer
 import org.bdgenomics.formats.avro.{ Genotype, Sample }
 import org.bdgenomics.utils.cli.SaveArgs
 import org.bdgenomics.utils.interval.array.{ IntervalArray, IntervalArraySerializer }
+import org.hammerlab.paths.Path
 
 import scala.reflect.ClassTag
 

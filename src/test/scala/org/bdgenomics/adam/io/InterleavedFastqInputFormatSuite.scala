@@ -23,21 +23,21 @@ import org.apache.hadoop.io.Text
 
 class InterleavedFastqInputFormatSuite extends ADAMFunSuite {
   (1 to 4) foreach { testNumber =>
-    val inputName = "interleaved_fastq_sample%d.ifq".format(testNumber)
+    val inputName = s"interleaved_fastq_sample$testNumber.ifq"
     val expectedOutputName = inputName + ".output"
     val expectedOutputPath = testFile(expectedOutputName)
-    val expectedOutputData = scala.io.Source.fromFile(expectedOutputPath).mkString
+    val expectedOutputData = expectedOutputPath.read
 
     sparkTest("interleaved FASTQ hadoop reader: %s->%s".format(inputName, expectedOutputName)) {
-      def ifq_reader: RDD[(Void, Text)] = {
-        val path = testFile(inputName)
-        sc.newAPIHadoopFile(path,
+
+      val ifq_reads =
+        sc.newAPIHadoopFile(
+          testFile(inputName).toString,
           classOf[InterleavedFastqInputFormat],
           classOf[Void],
-          classOf[Text])
-      }
-
-      val ifq_reads = ifq_reader.collect()
+          classOf[Text]
+        )
+        .collect()
 
       val testOutput = new StringBuilder()
 
@@ -47,7 +47,7 @@ class InterleavedFastqInputFormatSuite extends ADAMFunSuite {
         testOutput.append("<<<interleaved fastq record end<<<\n")
       })
 
-      assert(testOutput.toString() == expectedOutputData)
+      assert(testOutput.toString().trim == expectedOutputData)
     }
   }
 }

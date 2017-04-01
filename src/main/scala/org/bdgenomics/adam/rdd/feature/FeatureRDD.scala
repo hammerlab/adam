@@ -17,12 +17,9 @@
  */
 package org.bdgenomics.adam.rdd.feature
 
-import java.nio.file.{ Path, Paths }
 import java.util.Comparator
 
 import com.google.common.collect.ComparisonChain
-import org.apache.commons.io.{ FileUtils, FilenameUtils }
-//import org.apache.hadoop.fs.{ FileSystem, Path }
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models._
 import org.bdgenomics.adam.rdd.{ AvroGenomicRDD, FileMerger, JavaSaveArgs, SAMHeaderWriter }
@@ -31,6 +28,7 @@ import org.bdgenomics.formats.avro.{ Feature, Strand }
 import org.bdgenomics.utils.interval.array.{ IntervalArray, IntervalArraySerializer }
 import org.bdgenomics.utils.misc.Logging
 import org.hammerlab.genomics.reference.{ ContigName, NumLoci }
+import org.hammerlab.paths.Path
 
 import scala.collection.JavaConversions._
 import scala.math.max
@@ -249,28 +247,28 @@ case class FeatureRDD(rdd: RDD[Feature],
    * IntervalList. If none of these match, we fall back to Parquet.
    * These files are written as sharded text files.
    *
-   * @param filePath The location to write the output.
+   * @param path The location to write the output.
    * @param asSingleFile If false, writes file to disk as shards with
    *   one shard per partition. If true, we save the file to disk as a single
    *   file by merging the shards.
    */
-  def save(filePath: Path, asSingleFile: Boolean) {
-    FilenameUtils.getExtension(filePath.toString) match {
+  def save(path: Path, asSingleFile: Boolean) {
+    path.extension match {
       case "bed" ⇒
-        saveAsBed(filePath, asSingleFile = asSingleFile)
+        saveAsBed(path, asSingleFile = asSingleFile)
       case "gtf" | "gff" ⇒
-        saveAsGtf(filePath, asSingleFile = asSingleFile)
+        saveAsGtf(path, asSingleFile = asSingleFile)
       case "gff3" ⇒
-        saveAsGff3(filePath, asSingleFile = asSingleFile)
+        saveAsGff3(path, asSingleFile = asSingleFile)
       case "narrowPeak" | "narrowpeak" ⇒
-        saveAsNarrowPeak(filePath, asSingleFile = asSingleFile)
+        saveAsNarrowPeak(path, asSingleFile = asSingleFile)
       case "interval_list" ⇒
-        saveAsIntervalList(filePath, asSingleFile = asSingleFile)
+        saveAsIntervalList(path, asSingleFile = asSingleFile)
       case _ ⇒
         if (asSingleFile) {
           log.warn("asSingleFile = true ignored when saving as Parquet.")
         }
-        saveAsParquet(new JavaSaveArgs(filePath))
+        saveAsParquet(new JavaSaveArgs(path))
     }
   }
 
@@ -314,12 +312,8 @@ case class FeatureRDD(rdd: RDD[Feature],
     if (asSingleFile) {
 
       // write rdd to disk
-      val tailPathStr = s"${outputPath}_tail"
-      val tailPath = Paths.get(tailPathStr)
-      rdd.saveAsTextFile(tailPathStr)
-
-      // get the filesystem impl
-//      val fs = FileSystem.get(rdd.context.hadoopConfiguration)
+      val tailPath = outputPath + "_tail"
+      rdd.saveAsTextFile(tailPath.toString())
 
       // and then merge
       FileMerger.mergeFiles(
@@ -368,40 +362,36 @@ case class FeatureRDD(rdd: RDD[Feature],
   /**
    * Save this FeatureRDD in interval list format.
    *
-   * @param fileName The path to save interval list formatted text file(s) to.
+   * @param path The path to save interval list formatted text file(s) to.
    * @param asSingleFile By default (false), writes file to disk as shards with
    *   one shard per partition. If true, we save the file to disk as a single
    *   file by merging the shards.
    */
-  def saveAsIntervalList(fileName: Path, asSingleFile: Boolean = false) = {
+  def saveAsIntervalList(path: Path, asSingleFile: Boolean = false) = {
     val intervalEntities = rdd.map(FeatureRDD.toInterval)
 
     if (asSingleFile) {
 
-      // get fs
-//      val fs = FileSystem.get(rdd.context.hadoopConfiguration)
-
       // write sam file header
-      val headPath = Paths.get(s"${fileName}_head")
+      val headPath = path + "_head"
       SAMHeaderWriter.writeHeader(
         headPath,
         sequences
       )
 
       // write tail entries
-      val tailPathStr = s"${fileName}_tail"
-      val tailPath = Paths.get(tailPathStr)
-      intervalEntities.saveAsTextFile(tailPathStr)
+      val tailPath = path + "_tail"
+      intervalEntities.saveAsTextFile(tailPath.toString)
 
       // merge
       FileMerger.mergeFiles(
         rdd.context.hadoopConfiguration,
-        fileName,
+        path,
         tailPath,
         Some(headPath)
       )
     } else {
-      intervalEntities.saveAsTextFile(fileName.toString)
+      intervalEntities.saveAsTextFile(path.toString)
     }
   }
 

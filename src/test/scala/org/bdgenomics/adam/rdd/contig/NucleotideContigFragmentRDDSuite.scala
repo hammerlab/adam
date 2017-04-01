@@ -45,7 +45,7 @@ class NucleotideContigFragmentRDDSuite
     val outputFastaFile = tmpLocation(".fa")
     rdd.transform(_.coalesce(1)).saveAsFasta(outputFastaFile)
 
-    lines(outputFastaFile.resolve("part-00000"))
+    lines(outputFastaFile / "part-00000")
       .iterator
       .asScala
       .toSeq

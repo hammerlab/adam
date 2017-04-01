@@ -23,8 +23,8 @@ class FileMergerSuite extends ADAMFunSuite {
 
   // These paths won't actually get written to.
   lazy val dir = tmpDir()
-  lazy val outputPath = dir.resolve("output")
-  lazy val headPath = dir.resolve("head")
+  lazy val outputPath = dir / "output"
+  lazy val headPath = dir / "head"
 
   sparkTest("cannot write both empty gzip block and cram eof") {
     intercept[IllegalArgumentException] {

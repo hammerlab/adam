@@ -17,8 +17,6 @@
  */
 package org.bdgenomics.adam.rdd
 
-import java.nio.file.{ Files, Path }
-
 import org.apache.avro.Schema
 import org.apache.avro.file.DataFileWriter
 import org.apache.avro.generic.IndexedRecord
@@ -34,6 +32,7 @@ import org.apache.spark.rdd.{ InstrumentedOutputFormat, RDD }
 import org.bdgenomics.adam.instrumentation.Timers._
 import org.bdgenomics.utils.cli.SaveArgs
 import org.bdgenomics.utils.misc.{ HadoopUtil, Logging }
+import org.hammerlab.paths.Path
 
 import scala.reflect.ClassTag
 
@@ -98,7 +97,7 @@ private[rdd] abstract class ADAMRDDFunctions[T <% IndexedRecord: Manifest]
     // get our current file system
 
     // get an output stream
-    val os = Files.newOutputStream(path)
+    val os = path.outputStream
 
     // set up avro for writing
     val dw = new SpecificDatumWriter[U](schema)
