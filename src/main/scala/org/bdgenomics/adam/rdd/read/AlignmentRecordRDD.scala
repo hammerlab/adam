@@ -44,7 +44,7 @@ import org.bdgenomics.adam.util.ReferenceFile
 import org.bdgenomics.formats.avro._
 import org.bdgenomics.utils.interval.array.{ IntervalArray, IntervalArraySerializer }
 import org.hammerlab.paths.Path
-import org.seqdoop.hadoop_bam.SAMFormat.{ BAM, CRAM, SAM }
+import org.seqdoop.hadoop_bam.SAMFormat.{ BAM, CRAM, SAM, inferFromFilePath }
 import org.seqdoop.hadoop_bam.{ CRAMInputFormat, SAMFormat, SAMRecordWritable }
 
 import scala.collection.JavaConversions._
@@ -64,30 +64,31 @@ private[adam] case class AlignmentRecordArray(
     AlignmentRecordArray(arr, maxWidth)
 }
 
-private[adam] class AlignmentRecordArraySerializer extends IntervalArraySerializer[ReferenceRegion, AlignmentRecord, AlignmentRecordArray] {
+private[adam] class AlignmentRecordArraySerializer
+  extends IntervalArraySerializer[ReferenceRegion, AlignmentRecord, AlignmentRecordArray] {
 
   protected val kSerializer = new ReferenceRegionSerializer
   protected val tSerializer = new AvroSerializer[AlignmentRecord]
 
   protected def builder(arr: Array[(ReferenceRegion, AlignmentRecord)],
-                        maxIntervalWidth: Long): AlignmentRecordArray = {
+                        maxIntervalWidth: Long): AlignmentRecordArray =
     AlignmentRecordArray(arr, maxIntervalWidth)
-  }
 }
 
 object AlignmentRecordRDD {
-
-  def unaligned(rdd: RDD[AlignmentRecord]): AlignmentRecordRDD = {
-    AlignmentRecordRDD(rdd,
+  def unaligned(rdd: RDD[AlignmentRecord]): AlignmentRecordRDD =
+    AlignmentRecordRDD(
+      rdd,
       SequenceDictionary.empty,
-      RecordGroupDictionary.empty)
-  }
+      RecordGroupDictionary.empty
+    )
 }
 
 case class AlignmentRecordRDD(
     rdd: RDD[AlignmentRecord],
     sequences: SequenceDictionary,
-    recordGroups: RecordGroupDictionary) extends AvroReadGroupGenomicRDD[AlignmentRecord, AlignmentRecordRDD] {
+    recordGroups: RecordGroupDictionary)
+  extends AvroReadGroupGenomicRDD[AlignmentRecord, AlignmentRecordRDD] {
 
   /**
    * Replaces the underlying RDD and SequenceDictionary and emits a new object.
@@ -97,20 +98,20 @@ case class AlignmentRecordRDD(
    * @return Returns a new AlignmentRecordRDD.
    */
   protected def replaceRddAndSequences(newRdd: RDD[AlignmentRecord],
-                                       newSequences: SequenceDictionary): AlignmentRecordRDD = {
-    AlignmentRecordRDD(newRdd,
+                                       newSequences: SequenceDictionary): AlignmentRecordRDD =
+    AlignmentRecordRDD(
+      newRdd,
       newSequences,
-      recordGroups)
-  }
+      recordGroups
+    )
 
   protected def replaceRdd(newRdd: RDD[AlignmentRecord]): AlignmentRecordRDD = {
     copy(rdd = newRdd)
   }
 
   protected def buildTree(rdd: RDD[(ReferenceRegion, AlignmentRecord)])(
-    implicit tTag: ClassTag[AlignmentRecord]): IntervalArray[ReferenceRegion, AlignmentRecord] = {
+    implicit tTag: ClassTag[AlignmentRecord]): IntervalArray[ReferenceRegion, AlignmentRecord] =
     IntervalArray(rdd, AlignmentRecordArray(_, _))
-  }
 
   /**
    * Convert this set of reads into fragments.
@@ -118,20 +119,20 @@ case class AlignmentRecordRDD(
    * @return Returns a FragmentRDD where all reads have been grouped together by
    *   the original sequence fragment they come from.
    */
-  def toFragments: FragmentRDD = {
-    FragmentRDD(groupReadsByFragment().map(_.toFragment),
+  def toFragments: FragmentRDD =
+    FragmentRDD(
+      groupReadsByFragment().map(_.toFragment),
       sequences,
-      recordGroups)
-  }
+      recordGroups
+    )
 
   /**
    * Groups all reads by record group and read name.
    *
    * @return SingleReadBuckets with primary, secondary and unmapped reads
    */
-  private def locallyGroupReadsByFragment(): RDD[SingleReadBucket] = {
+  private def locallyGroupReadsByFragment(): RDD[SingleReadBucket] =
     SingleReadBucket.fromQuerynameSorted(rdd)
-  }
 
   /**
    * Convert this set of reads into fragments.
@@ -141,11 +142,12 @@ case class AlignmentRecordRDD(
    * @return Returns a FragmentRDD where all reads have been grouped together by
    *   the original sequence fragment they come from.
    */
-  private[rdd] def querynameSortedToFragments: FragmentRDD = {
-    FragmentRDD(locallyGroupReadsByFragment().map(_.toFragment),
+  private[rdd] def querynameSortedToFragments: FragmentRDD =
+    FragmentRDD(
+      locallyGroupReadsByFragment().map(_.toFragment),
       sequences,
-      recordGroups)
-  }
+      recordGroups
+    )
 
   /**
    * Converts this set of reads into a corresponding CoverageRDD.
@@ -359,7 +361,7 @@ case class AlignmentRecordRDD(
   /**
    * Saves an RDD of ADAM read data into the SAM/BAM format.
    *
-   * @param filePath Path to save files to.
+   * @param path Path to save files to.
    * @param asType Selects whether to save as SAM, BAM, or CRAM. The default
    *   value is None, which means the file type is inferred from the extension.
    * @param asSingleFile If true, saves output as a single file.
@@ -367,14 +369,13 @@ case class AlignmentRecordRDD(
    * @param deferMerging If true and asSingleFile is true, we will save the
    *   output shards as a headerless file, but we will not merge the shards.
    */
-  def saveAsSam(
-    filePath: Path,
-    asType: Option[SAMFormat] = None,
-    asSingleFile: Boolean = false,
-    isSorted: Boolean = false,
-    deferMerging: Boolean = false): Unit = SAMSave.time {
+  def saveAsSam(path: Path,
+                asType: Option[SAMFormat] = None,
+                asSingleFile: Boolean = false,
+                isSorted: Boolean = false,
+                deferMerging: Boolean = false): Unit = SAMSave.time {
 
-    val fileType = asType.getOrElse(SAMFormat.inferFromFilePath(filePath.toString))
+    val fileType = asType.getOrElse(inferFromFilePath(path.toString))
 
     // convert the records
     val (convertRecords: RDD[SAMRecordWritable], header: SAMFileHeader) =
@@ -386,11 +387,8 @@ case class AlignmentRecordRDD(
     // write file to disk
     val conf = rdd.context.hadoopConfiguration
 
-    // get file system
-    val headPath = filePath + "_head"
-    val tailPath = filePath + "_tail"
-    val outputPath = filePath
-    //val fs = headPath.getFileSystem(rdd.context.hadoopConfiguration)
+    val headPath = path + "_head"
+    val outputPath = path
 
     // TIL: sam and bam are written in completely different ways!
     if (fileType == SAM) {
@@ -459,7 +457,7 @@ case class AlignmentRecordRDD(
             )
           ),
           header,
-          filePath.toString  // write filepath as id
+          path.toString  // write filepath as id
         )
 
       // write the header
@@ -483,7 +481,7 @@ case class AlignmentRecordRDD(
         case CRAM => classOf[InstrumentedADAMCRAMOutputFormat[LongWritable]]
       }
       withKey.saveAsNewAPIHadoopFile(
-        filePath.toString,
+        path.toString,
         classOf[LongWritable],
         classOf[SAMRecordWritable],
         headeredOutputFormat,
@@ -495,8 +493,8 @@ case class AlignmentRecordRDD(
     } else {
       log.info(s"Writing single $fileType file (not Hadoop-style directory)")
 
-      val tailPath = filePath + "_tail"
-      val outputPath = filePath
+      val tailPath = path + "_tail"
+      val outputPath = path
 
       // set up output format
       val headerLessOutputFormat = fileType match {

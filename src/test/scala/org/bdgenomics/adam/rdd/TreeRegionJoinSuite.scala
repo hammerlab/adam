@@ -45,8 +45,11 @@ class TreeRegionJoinSuite extends ADAMFunSuite {
           .build)
       })
 
-    val tree = IntervalArray[ReferenceRegion, Variant](rightRdd,
-      VariantArray.apply(_, _))
+    val tree =
+      IntervalArray[ReferenceRegion, Variant](
+        rightRdd,
+        VariantArray(_, _)
+      )
 
     val leftRdd = sc.parallelize(Seq(
       (ReferenceRegion("chr1", 12L, 22L), 0),
@@ -69,12 +72,14 @@ class TreeRegionJoinSuite extends ADAMFunSuite {
         (k.map(_.getStart.toInt), v.getStart.toInt)
       }).collect
 
-    assert(joinData.size === 5)
+    assert(joinData.length === 5)
 
-    val joinMap = joinData.filter(_._1.nonEmpty)
-      .map(_.swap)
-      .toMap
-      .mapValues(_.toSet)
+    val joinMap =
+      joinData
+        .filter(_._1.nonEmpty)
+        .map(_.swap)
+        .toMap
+        .mapValues(_.toSet)
 
     assert(joinMap.size === 4)
     assert(joinMap(0).size === 2)
