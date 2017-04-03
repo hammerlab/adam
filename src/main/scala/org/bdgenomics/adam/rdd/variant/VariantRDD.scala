@@ -43,15 +43,15 @@ private[adam] case class VariantArray(
     VariantArray(arr, maxWidth)
 }
 
-private[adam] class VariantArraySerializer extends IntervalArraySerializer[ReferenceRegion, Variant, VariantArray] {
+private[adam] class VariantArraySerializer
+  extends IntervalArraySerializer[ReferenceRegion, Variant, VariantArray] {
 
   protected val kSerializer = new ReferenceRegionSerializer
   protected val tSerializer = new AvroSerializer[Variant]
 
   protected def builder(arr: Array[(ReferenceRegion, Variant)],
-                        maxIntervalWidth: Long): VariantArray = {
+                        maxIntervalWidth: Long): VariantArray =
     VariantArray(arr, maxIntervalWidth)
-  }
 }
 
 /**

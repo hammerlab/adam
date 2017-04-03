@@ -22,13 +22,18 @@ import htsjdk.samtools.cram.common.CramVersions
 import htsjdk.samtools.util.BlockCompressedStreamConstants
 import org.apache.commons.io.IOUtils.copyLarge
 import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.{ Path ⇒ HPath }
+import org.apache.spark.SparkContext
 import org.bdgenomics.utils.misc.Logging
 import org.hammerlab.paths.Path
 
 /**
  * Helper object to merge sharded files together.
+ *
+ * @see ParallelFileMerger
  */
-object FileMerger extends Logging {
+private[adam] object FileMerger
+  extends Logging {
 
   /**
    * The config entry for the buffer size in bytes.
@@ -37,6 +42,9 @@ object FileMerger extends Logging {
 
   /**
    * Merges together sharded files, while preserving partition ordering.
+   *
+   * Automatically checks to see if the filesystem is HDFS, and if so, uses the
+   * parallel file merging implementation to concatenate files.
    *
    * @param outputPath The location to write the merged file at.
    * @param tailPath The location where the sharded files have been written.
@@ -51,20 +59,35 @@ object FileMerger extends Logging {
    *
    * @see mergeFilesAcrossFilesystems
    */
-  private[adam] def mergeFiles(conf: Configuration,
-                               outputPath: Path,
-                               tailPath: Path,
-                               optHeaderPath: Option[Path] = None,
-                               writeEmptyGzipBlock: Boolean = false,
-                               writeCramEOF: Boolean = false,
-                               optBufferSize: Option[Int] = None) {
-    mergeFilesAcrossFilesystems(
-      conf,
-      outputPath, tailPath, optHeaderPath = optHeaderPath,
-      writeEmptyGzipBlock = writeEmptyGzipBlock,
-      writeCramEOF = writeCramEOF,
-      optBufferSize = optBufferSize
-    )
+  def mergeFiles(sc: SparkContext,
+                 outputPath: Path,
+                 tailPath: Path,
+                 optHeaderPath: Option[Path] = None,
+                 writeEmptyGzipBlock: Boolean = false,
+                 writeCramEOF: Boolean = false,
+                 optBufferSize: Option[Int] = None) {
+
+    // if our file system is an hdfs mount, we can use the parallel merger
+    if (outputPath.uri.getScheme == "hdfs")
+      ParallelFileMerger.mergeFiles(
+        sc,
+        new HPath(outputPath.uri),
+        new HPath(tailPath.uri),
+        optHeaderPath = optHeaderPath.map(path ⇒ new HPath(path.uri)),
+        writeEmptyGzipBlock = writeEmptyGzipBlock,
+        writeCramEOF = writeCramEOF,
+        optBufferSize = optBufferSize
+      )
+    else
+      mergeFilesAcrossFilesystems(
+        sc.hadoopConfiguration,
+        outputPath,
+        tailPath,
+        optHeaderPath = optHeaderPath,
+        writeEmptyGzipBlock = writeEmptyGzipBlock,
+        writeCramEOF = writeCramEOF,
+        optBufferSize = optBufferSize
+      )
   }
 
   /**
@@ -83,13 +106,13 @@ object FileMerger extends Logging {
    *   not set, we check the config for this value. If that is not set, we
    *   default to 4MB.
    */
-  private[adam] def mergeFilesAcrossFilesystems(conf: Configuration,
-                                                outputPath: Path,
-                                                tailPath: Path,
-                                                optHeaderPath: Option[Path] = None,
-                                                writeEmptyGzipBlock: Boolean = false,
-                                                writeCramEOF: Boolean = false,
-                                                optBufferSize: Option[Int] = None) {
+  def mergeFilesAcrossFilesystems(conf: Configuration,
+                                  outputPath: Path,
+                                  tailPath: Path,
+                                  optHeaderPath: Option[Path] = None,
+                                  writeEmptyGzipBlock: Boolean = false,
+                                  writeCramEOF: Boolean = false,
+                                  optBufferSize: Option[Int] = None) {
 
     // check for buffer size in option, if not in option, check hadoop conf,
     // if not in hadoop conf, fall back on 4MB
