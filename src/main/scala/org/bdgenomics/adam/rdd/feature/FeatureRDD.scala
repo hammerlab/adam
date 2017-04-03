@@ -21,7 +21,10 @@ import java.util.Comparator
 
 import com.google.common.collect.ComparisonChain
 import org.apache.spark.rdd.RDD
+import org.apache.spark.storage.StorageLevel
+import org.bdgenomics.adam.instrumentation.Timers._
 import org.bdgenomics.adam.models._
+import org.bdgenomics.adam.rdd.FileMerger.mergeFiles
 import org.bdgenomics.adam.rdd.{ AvroGenomicRDD, FileMerger, JavaSaveArgs, SAMHeaderWriter }
 import org.bdgenomics.adam.serialization.AvroSerializer
 import org.bdgenomics.formats.avro.{ Feature, Strand }
@@ -52,9 +55,8 @@ private[adam] class FeatureArraySerializer extends IntervalArraySerializer[Refer
   protected val tSerializer = new AvroSerializer[Feature]
 
   protected def builder(arr: Array[(ReferenceRegion, Feature)],
-                        maxIntervalWidth: Long): FeatureArray = {
+                        maxIntervalWidth: Long): FeatureArray =
     FeatureArray(arr, maxIntervalWidth)
-  }
 }
 
 private trait FeatureOrdering[T <: Feature] extends Ordering[T] {
@@ -104,25 +106,29 @@ object FeatureRDD {
    * aggregate to rebuild the SequenceDictionary.
    *
    * @param rdd The underlying Feature RDD to build from.
+   * @param optStorageLevel Optional storage level to use for cache before building the SequenceDictionary.
    * @return Returns a new FeatureRDD.
    */
-  def apply(rdd: RDD[Feature])(implicit cf: ContigName.Factory): FeatureRDD = {
+  def inferSequenceDictionary(
+    rdd: RDD[Feature],
+    optStorageLevel: Option[StorageLevel])(implicit cf: ContigName.Factory): FeatureRDD =
+    BuildSequenceDictionary.time {
 
-    // cache the rdd, since we're making multiple passes
-    rdd.cache()
+      // optionally cache the rdd, since we're making multiple passes
+      optStorageLevel.foreach(rdd.persist(_))
 
-    // create sequence records with length max(start, end) + 1L
-    val sequenceRecords =
-      rdd
+      // create sequence records with length max(start, end) + 1L
+      val sequenceRecords =
+        rdd
         .keyBy(_.getContigName)
-        .mapValues { feature => NumLoci(max(feature.getStart, feature.getEnd) + 1L) }
-        .reduceByKey(_ max _)
-        .map { case (contigName, size) => SequenceRecord(contigName, size) }
+          .mapValues { feature => NumLoci(max(feature.getStart, feature.getEnd) + 1L) }
+          .reduceByKey(_ max _)
+          .map { case (contigName, size) => SequenceRecord(contigName, size) }
 
-    val sd = new SequenceDictionary(sequenceRecords.collect.toVector)
+      val sd = new SequenceDictionary(sequenceRecords.collect.toVector)
 
-    FeatureRDD(rdd, sd)
-  }
+      FeatureRDD(rdd, sd)
+    }
 
   /**
    * @param feature Feature to convert to GTF format.
@@ -316,8 +322,8 @@ case class FeatureRDD(rdd: RDD[Feature],
       rdd.saveAsTextFile(tailPath.toString())
 
       // and then merge
-      FileMerger.mergeFiles(
-        rdd.context.hadoopConfiguration,
+      mergeFiles(
+        rdd.context,
         outputPath,
         tailPath
       )
@@ -384,8 +390,8 @@ case class FeatureRDD(rdd: RDD[Feature],
       intervalEntities.saveAsTextFile(tailPath.toString)
 
       // merge
-      FileMerger.mergeFiles(
-        rdd.context.hadoopConfiguration,
+      mergeFiles(
+        rdd.context,
         path,
         tailPath,
         Some(headPath)

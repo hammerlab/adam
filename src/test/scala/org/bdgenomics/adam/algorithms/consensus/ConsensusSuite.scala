@@ -32,7 +32,7 @@ class ConsensusSuite
 
     val cs = c.insertIntoReference(ref, ReferenceRegion("0", 5L, 16L))
 
-    assert(cs === "AAAAATCGAAAAAA")
+    assert(cs === "AAAAAATCGAAAAA")
   }
 
   test("test the insertion of a consensus deletion into a reference") {

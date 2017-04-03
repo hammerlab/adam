@@ -18,10 +18,9 @@
 package org.bdgenomics.adam.rdd.read.recalibration
 
 import org.apache.spark.rdd.RDD
+import org.apache.spark.storage.StorageLevel
 import org.bdgenomics.adam.models.SnpTable
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.rich.DecadentRead._
-import org.bdgenomics.adam.rich.RichVariant
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.AlignmentRecord
 import org.hammerlab.genomics.reference.test.ClearContigNames
@@ -30,23 +29,56 @@ class BaseQualityRecalibrationSuite
   extends ADAMFunSuite
     with ClearContigNames {
 
-  ignore("BQSR Test Input #1 w/ VCF Sites") {
+  def testBqsr(optSl: Option[StorageLevel]) {
     val readsFilepath = testFile("bqsr1.sam")
     val snpsFilepath = testFile("bqsr1.vcf")
     val obsFilepath = testFile("bqsr1-ref.observed")
 
-    val reads: RDD[AlignmentRecord] = sc.loadAlignments(readsFilepath).rdd
-    val variants: RDD[RichVariant] = sc.loadVariants(snpsFilepath).rdd.map(new RichVariant(_))
+    val rdd = sc.loadAlignments(readsFilepath)
+    val reads: RDD[AlignmentRecord] = rdd.rdd
+    val variants = sc.loadVariants(snpsFilepath)
     val snps = sc.broadcast(SnpTable(variants))
 
-    val bqsr = new BaseQualityRecalibration(cloy(reads), snps)
+    val bqsr =
+      new BaseQualityRecalibration(
+        reads,
+        snps,
+        rdd.recordGroups,
+        optStorageLevel = optSl
+      )
 
     // Sanity checks
     assert(bqsr.result.count == reads.count)
 
     // Compare the ObservationTables
-    val referenceObs: Seq[String] = obsFilepath.lines.filter(_.length > 0).toSeq.sorted
-    val testObs: Seq[String] = bqsr.observed.toCSV.split('\n').filter(_.length > 0).toSeq.sorted
+    val referenceObs: Seq[String] =
+      obsFilepath
+        .lines
+        .filter(_.length > 0)
+        .toSeq
+        .sorted
+
+    val testObs: Seq[String] =
+      bqsr
+        .observed
+        .toCSV(rdd.recordGroups)
+        .split('\n')
+        .filter(_.length > 0)
+        .toSeq
+        .sorted
+
     referenceObs.zip(testObs).foreach(p => assert(p._1 === p._2))
+  }
+
+  sparkTest("BQSR Test Input #1 w/ VCF Sites without caching") {
+    testBqsr(None)
+  }
+
+  sparkTest("BQSR Test Input #1 w/ VCF Sites with caching") {
+    testBqsr(Some(StorageLevel.MEMORY_ONLY))
+  }
+
+  sparkTest("BQSR Test Input #1 w/ VCF Sites with serialized caching") {
+    testBqsr(Some(StorageLevel.MEMORY_ONLY))
   }
 }

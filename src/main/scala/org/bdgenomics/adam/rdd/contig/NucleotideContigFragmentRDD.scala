@@ -45,15 +45,15 @@ private[adam] case class NucleotideContigFragmentArray(
     NucleotideContigFragmentArray(arr, maxWidth)
 }
 
-private[adam] class NucleotideContigFragmentArraySerializer extends IntervalArraySerializer[ReferenceRegion, NucleotideContigFragment, NucleotideContigFragmentArray] {
+private[adam] class NucleotideContigFragmentArraySerializer
+  extends IntervalArraySerializer[ReferenceRegion, NucleotideContigFragment, NucleotideContigFragmentArray] {
 
   protected val kSerializer = new ReferenceRegionSerializer
   protected val tSerializer = new AvroSerializer[NucleotideContigFragment]
 
   protected def builder(arr: Array[(ReferenceRegion, NucleotideContigFragment)],
-                        maxIntervalWidth: Long): NucleotideContigFragmentArray = {
+                        maxIntervalWidth: Long): NucleotideContigFragmentArray =
     NucleotideContigFragmentArray(arr, maxIntervalWidth)
-  }
 }
 
 private[rdd] object NucleotideContigFragmentRDD extends Serializable {

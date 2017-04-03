@@ -29,16 +29,18 @@ import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.MetricsContext._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
+import org.apache.spark.storage.StorageLevel.MEMORY_ONLY
 import org.bdgenomics.adam.algorithms.consensus.{ ConsensusGenerator, ConsensusGeneratorFromReads }
 import org.bdgenomics.adam.converters.AlignmentRecordConverter
 import org.bdgenomics.adam.instrumentation.Timers._
 import org.bdgenomics.adam.models._
 import org.bdgenomics.adam.rdd.ADAMContext._
+import org.bdgenomics.adam.rdd.FileMerger.mergeFiles
 import org.bdgenomics.adam.rdd.feature.CoverageRDD
 import org.bdgenomics.adam.rdd.fragment.FragmentRDD
 import org.bdgenomics.adam.rdd.read.realignment.RealignIndels
 import org.bdgenomics.adam.rdd.read.recalibration.BaseQualityRecalibration
-import org.bdgenomics.adam.rdd.{ ADAMSaveAnyArgs, AvroReadGroupGenomicRDD, FileMerger, JavaSaveArgs, SAMHeaderWriter }
+import org.bdgenomics.adam.rdd.{ ADAMSaveAnyArgs, AvroReadGroupGenomicRDD, JavaSaveArgs, SAMHeaderWriter }
 import org.bdgenomics.adam.serialization.AvroSerializer
 import org.bdgenomics.adam.util.ReferenceFile
 import org.bdgenomics.formats.avro._
@@ -513,12 +515,14 @@ case class AlignmentRecordRDD(
       )
 
       if (!deferMerging) {
-        FileMerger.mergeFiles(rdd.context.hadoopConfiguration,
+        mergeFiles(
+          rdd.context,
           outputPath,
           tailPath,
           optHeaderPath = Some(headPath),
-          writeEmptyGzipBlock = (fileType == BAM),
-          writeCramEOF = (fileType == CRAM))
+          writeEmptyGzipBlock = fileType == BAM,
+          writeCramEOF = (fileType == CRAM)
+        )
       }
     }
   }
@@ -535,8 +539,8 @@ case class AlignmentRecordRDD(
   def saveAsSam(
     filePath: Path,
     asType: SAMFormat,
-    asSingleFile: java.lang.Boolean,
-    isSorted: java.lang.Boolean) {
+    asSingleFile: Boolean,
+    isSorted: Boolean) {
     saveAsSam(
       filePath,
       asType = Option(asType),
@@ -624,16 +628,26 @@ case class AlignmentRecordRDD(
    * known SNPs to mask true variation during the recalibration process.
    *
    * @param knownSnps A table of known SNPs to mask valid variants.
-   * @param observationDumpFile An optional local path to dump recalibration
-   *                            observations to.
+   * @param minAcceptableQuality The minimum quality score to recalibrate.
+   * @param optStorageLevel An optional storage level to set for the output
+   *   of the first stage of BQSR. Defaults to StorageLevel.MEMORY_ONLY.
    * @return Returns an RDD of recalibrated reads.
    */
-  def recalibateBaseQualities(
+  def recalibrateBaseQualities(
     knownSnps: Broadcast[SnpTable],
-    observationDumpFile: Option[String] = None,
-    validationStringency: ValidationStringency = LENIENT): AlignmentRecordRDD = BQSRInDriver.time {
-    replaceRdd(BaseQualityRecalibration(rdd, knownSnps, observationDumpFile, validationStringency))
-  }
+    minAcceptableQuality: Int = 5,
+    optStorageLevel: Option[StorageLevel] = Some(MEMORY_ONLY)): AlignmentRecordRDD =
+    BQSRInDriver.time {
+      replaceRdd(
+        BaseQualityRecalibration(
+          rdd,
+          knownSnps,
+          recordGroups,
+          (minAcceptableQuality + 33).toChar,
+          optStorageLevel
+        )
+      )
+    }
 
   /**
    * Realigns indels using a concensus-based heuristic.
@@ -649,6 +663,10 @@ case class AlignmentRecordRDD(
    *   are only finalized if the log-odds threshold is exceeded.
    * @param maxTargetSize The maximum width of a single target region for
    *   realignment.
+   * @param optReferenceFile An optional reference. If not provided, reference
+   *   will be inferred from MD tags.
+   * @param unclipReads If true, unclips reads prior to realignment. Else, omits
+   *   clipped bases during realignment.
    * @return Returns an RDD of mapped reads which have been realigned.
    */
   def realignIndels(
@@ -657,8 +675,20 @@ case class AlignmentRecordRDD(
     maxIndelSize: Int = 500,
     maxConsensusNumber: Int = 30,
     lodThreshold: Double = 5.0,
-    maxTargetSize: Int = 3000): AlignmentRecordRDD = RealignIndelsInDriver.time {
-    replaceRdd(RealignIndels(rdd, consensusModel, isSorted, maxIndelSize, maxConsensusNumber, lodThreshold))
+    maxTargetSize: Int = 3000,
+    maxReadsPerTarget: Int = 20000,
+    optReferenceFile: Option[ReferenceFile] = None,
+    unclipReads: Boolean = false): AlignmentRecordRDD = RealignIndelsInDriver.time {
+    replaceRdd(RealignIndels(rdd,
+      consensusModel = consensusModel,
+      dataIsSorted = isSorted,
+      maxIndelSize = maxIndelSize,
+      maxConsensusNumber = maxConsensusNumber,
+      lodThreshold = lodThreshold,
+      maxTargetSize = maxTargetSize,
+      maxReadsPerTarget = maxReadsPerTarget,
+      optReferenceFile = optReferenceFile,
+      unclipReads = unclipReads))
   }
 
   /**

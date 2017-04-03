@@ -23,6 +23,7 @@ import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.parquet.hadoop.metadata.CompressionCodecName
 import org.apache.spark.rdd.RDD
+import org.apache.spark.storage.StorageLevel
 import org.bdgenomics.adam.models._
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.util.ADAMFunSuite
@@ -132,6 +133,12 @@ class ADAMContextSuite
     val path = testFile("gencode.v7.annotation.trunc10.bed")
     val features: RDD[Feature] = sc.loadFeatures(path).rdd
     features.count should === (10)
+  }
+
+  sparkTest("Can read a .bed file without cache") {
+    val path = testFile("gencode.v7.annotation.trunc10.bed")
+    val features: RDD[Feature] = sc.loadFeatures(path, optStorageLevel = Some(StorageLevel.NONE)).rdd
+    assert(features.count === 10)
   }
 
   sparkTest("Can read a .narrowPeak file") {
@@ -497,5 +504,16 @@ class ADAMContextSuite
       case _ ⇒
         fail("unexpected variant start " + v.getStart)
     })
+  }
+
+  sparkTest("loadAlignments should not fail on single-end and paired-end fastq reads") {
+    val readsFilepath1 = testFile("bqsr1-r1.fq")
+    val readsFilepath2 = testFile("bqsr1-r2.fq")
+    val fastqReads1: RDD[AlignmentRecord] = sc.loadAlignments(readsFilepath1).rdd
+    val fastqReads2: RDD[AlignmentRecord] = sc.loadAlignments(readsFilepath2).rdd
+    val pairedReads: RDD[AlignmentRecord] = sc.loadAlignments(readsFilepath1, path2Opt = Option(readsFilepath2)).rdd
+    assert(fastqReads1.rdd.count === 488)
+    assert(fastqReads2.rdd.count === 488)
+    assert(pairedReads.rdd.count === 976)
   }
 }

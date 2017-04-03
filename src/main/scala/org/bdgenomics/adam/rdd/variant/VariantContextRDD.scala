@@ -24,8 +24,9 @@ import org.apache.hadoop.io.LongWritable
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.converters.{ DefaultHeaderLines, VariantContextConverter }
 import org.bdgenomics.adam.models.{ ReferenceRegion, ReferenceRegionSerializer, SequenceDictionary, VariantContext, VariantContextSerializer }
+import org.bdgenomics.adam.rdd.FileMerger.mergeFiles
 import org.bdgenomics.adam.rdd.variant.ADAMVCFOutputFormat.HEADER_PATH_KEY
-import org.bdgenomics.adam.rdd.{ FileMerger, MultisampleGenomicRDD, VCFHeaderUtils }
+import org.bdgenomics.adam.rdd.{ MultisampleGenomicRDD, VCFHeaderUtils }
 import org.bdgenomics.formats.avro.Sample
 import org.bdgenomics.utils.cli.SaveArgs
 import org.bdgenomics.utils.interval.array.{ IntervalArray, IntervalArraySerializer }
@@ -137,14 +138,18 @@ case class VariantContextRDD(rdd: RDD[VariantContext],
 
     // convert the variants to htsjdk VCs
     val converter = new VariantContextConverter(headerLines, stringency)
-    val writableVCs: RDD[(LongWritable, VariantContextWritable)] = rdd.flatMap(vc => {
-      converter.convert(vc)
-        .map(htsjdkVc => {
-          val vcw = new VariantContextWritable
-          vcw.set(htsjdkVc)
-          (new LongWritable(vc.position.pos), vcw)
-        })
-    })
+    val writableVCs: RDD[(LongWritable, VariantContextWritable)] =
+      rdd.flatMap {
+        vc ⇒
+          converter
+            .convert(vc)
+            .map {
+              htsjdkVc ⇒
+                val vcw = new VariantContextWritable
+                vcw.set(htsjdkVc)
+                (new LongWritable(vc.position.pos), vcw)
+            }
+      }
 
     // make header
     val header = new VCFHeader(
@@ -182,8 +187,8 @@ case class VariantContextRDD(rdd: RDD[VariantContext],
       )
 
       // merge shards
-      FileMerger.mergeFiles(
-        rdd.context.hadoopConfiguration,
+      mergeFiles(
+        rdd.context,
         path,
         tailPath,
         Some(headPath)

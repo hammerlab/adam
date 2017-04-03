@@ -422,7 +422,7 @@ class FeatureRDDSuite
     val f6 = fb.setContigName("1").setStart(10L).setEnd(110L).clearStrand().build() // null strand last
     val f7 = fb.setContigName("2").build()
 
-    val features = FeatureRDD(sc.parallelize(Seq(f7, f6, f5, f4, f3, f2, f1)))
+    val features = FeatureRDD.inferSequenceDictionary(sc.parallelize(Seq(f7, f6, f5, f4, f3, f2, f1)), optStorageLevel = None)
     val sorted = features.sortByReference().rdd.collect()
 
     assert(f1 == sorted(0))
@@ -444,7 +444,7 @@ class FeatureRDDSuite
     val f6 = fb.setScore(0.9).build() // Double defaults to increasing sort order
     val f7 = fb.clearScore().build() // nulls last
 
-    val features = FeatureRDD(sc.parallelize(Seq(f7, f6, f5, f4, f3, f2, f1)))
+    val features = FeatureRDD.inferSequenceDictionary(sc.parallelize(Seq(f7, f6, f5, f4, f3, f2, f1)), optStorageLevel = None)
     val sorted = features.sortByReference().rdd.collect()
 
     assert(f1 == sorted(0))
@@ -462,7 +462,7 @@ class FeatureRDDSuite
     val f2 = fb.setGeneId("gene2").build()
     val f3 = fb.clearGeneId().build() // nulls last
 
-    val features = FeatureRDD(sc.parallelize(Seq(f3, f2, f1)))
+    val features = FeatureRDD.inferSequenceDictionary(sc.parallelize(Seq(f3, f2, f1)), optStorageLevel = None)
     val sorted = features.sortByReference().rdd.collect()
 
     assert(f1 == sorted(0))
@@ -478,7 +478,7 @@ class FeatureRDDSuite
     val f4 = fb.setGeneId("gene2").setTranscriptId("transcript2").build()
     val f5 = fb.setGeneId("gene2").clearTranscriptId().build() // nulls last
 
-    val features = FeatureRDD(sc.parallelize(Seq(f5, f4, f3, f2, f1)))
+    val features = FeatureRDD.inferSequenceDictionary(sc.parallelize(Seq(f5, f4, f3, f2, f1)), optStorageLevel = None)
     val sorted = features.sortByReference().rdd.collect()
 
     assert(f1 == sorted(0))
@@ -500,7 +500,7 @@ class FeatureRDDSuite
     val f8 = fb.setGeneId("gene2").setTranscriptId("transcript1").setAttributes(ImmutableMap.of("rank", "2")).build()
     val f9 = fb.setGeneId("gene2").setTranscriptId("transcript1").clearAttributes().build() // nulls last
 
-    val features = FeatureRDD(sc.parallelize(Seq(f9, f8, f7, f6, f5, f4, f3, f2, f1)))
+    val features = FeatureRDD.inferSequenceDictionary(sc.parallelize(Seq(f9, f8, f7, f6, f5, f4, f3, f2, f1)), optStorageLevel = None)
     val sorted = features.sortByReference().rdd.collect()
 
     assert(f1 == sorted(0))
@@ -522,7 +522,7 @@ class FeatureRDDSuite
     val f4 = fb.setAttributes(ImmutableMap.of("rank", "2")).build()
     val f5 = fb.clearAttributes().build() // nulls last
 
-    val features = FeatureRDD(sc.parallelize(Seq(f5, f4, f3, f2, f1)))
+    val features = FeatureRDD.inferSequenceDictionary(sc.parallelize(Seq(f5, f4, f3, f2, f1)), optStorageLevel = None)
     val sorted = features.sortByReference().rdd.collect()
 
     assert(f1 == sorted(0))
@@ -537,7 +537,7 @@ class FeatureRDDSuite
     val f2 = Feature.newBuilder().setContigName("chr1").setStart(15).setEnd(20).setScore(2.0).build()
     val f3 = Feature.newBuilder().setContigName("chr2").setStart(15).setEnd(20).setScore(2.0).build()
 
-    val featureRDD: FeatureRDD = FeatureRDD(sc.parallelize(Seq(f1, f2, f3)))
+    val featureRDD: FeatureRDD = FeatureRDD.inferSequenceDictionary(sc.parallelize(Seq(f1, f2, f3)), optStorageLevel = None)
     val coverageRDD: CoverageRDD = featureRDD.toCoverage
     val coverage = coverageRDD.flatten
 
@@ -788,5 +788,53 @@ class FeatureRDDSuite
     assert(features.sequences.containsRefName("chr1"))
     assert(features.sequences.apply("chr1").isDefined)
     assert(features.sequences.apply("chr1").get.length >= 794336L)
+  }
+
+  sparkTest("don't lose any features when piping as BED format") {
+    val inputPath = testFile("dvl1.200.bed")
+    val frdd = sc.loadBed(inputPath)
+
+    implicit val tFormatter = BEDInFormatter
+    implicit val uFormatter = new BEDOutFormatter
+
+    val pipedRdd: FeatureRDD = frdd.pipe("tee /dev/null")
+    assert(pipedRdd.rdd.count >= frdd.rdd.count)
+    assert(pipedRdd.rdd.distinct.count === frdd.rdd.distinct.count)
+  }
+
+  sparkTest("don't lose any features when piping as GTF format") {
+    val inputPath = testFile("Homo_sapiens.GRCh37.75.trun100.gtf")
+    val frdd = sc.loadGtf(inputPath)
+
+    implicit val tFormatter = GTFInFormatter
+    implicit val uFormatter = new GTFOutFormatter
+
+    val pipedRdd: FeatureRDD = frdd.pipe("tee /dev/null")
+    assert(pipedRdd.rdd.count >= frdd.rdd.count)
+    assert(pipedRdd.rdd.distinct.count === frdd.rdd.distinct.count)
+  }
+
+  sparkTest("don't lose any features when piping as GFF3 format") {
+    val inputPath = testFile("dvl1.200.gff3")
+    val frdd = sc.loadGff3(inputPath)
+
+    implicit val tFormatter = GFF3InFormatter
+    implicit val uFormatter = new GFF3OutFormatter
+
+    val pipedRdd: FeatureRDD = frdd.pipe("tee /dev/null")
+    assert(pipedRdd.rdd.count >= frdd.rdd.count)
+    assert(pipedRdd.rdd.distinct.count === frdd.rdd.distinct.count)
+  }
+
+  sparkTest("don't lose any features when piping as NarrowPeak format") {
+    val inputPath = testFile("wgEncodeOpenChromDnaseGm19238Pk.trunc10.narrowPeak")
+    val frdd = sc.loadNarrowPeak(inputPath)
+
+    implicit val tFormatter = NarrowPeakInFormatter
+    implicit val uFormatter = new NarrowPeakOutFormatter
+
+    val pipedRdd: FeatureRDD = frdd.pipe("tee /dev/null")
+    assert(pipedRdd.rdd.count >= frdd.rdd.count)
+    assert(pipedRdd.rdd.distinct.count === frdd.rdd.distinct.count)
   }
 }

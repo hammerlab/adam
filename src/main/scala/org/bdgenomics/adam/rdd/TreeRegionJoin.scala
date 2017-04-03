@@ -34,27 +34,29 @@ trait TreeRegionJoin[T, U] {
   private[rdd] def runJoinAndGroupByRightWithTree(
     tree: IntervalArray[ReferenceRegion, T],
     rightRdd: RDD[(ReferenceRegion, U)])(
-      implicit tTag: ClassTag[T]): RDD[(Iterable[T], U)] = {
+      implicit tTag: ClassTag[T]): RDD[(Iterable[T], U)] =
     RunningMapSideJoin.time {
       // broadcast this tree
       val broadcastTree = rightRdd.context.broadcast(tree)
 
       // map and join
-      rightRdd.map {
-        kv ⇒
-          val (rr, u) = kv
+      rightRdd
+        .mapPartitions {
+          iter ⇒
+            val tree = broadcastTree.value.duplicate()
 
-          // what values keys does this overlap in the tree?
-          val overlappingValues =
-            broadcast
-              .value
-              .get(rr)
-              .map(_._2)
+            iter.map {
+              case (rr, u) ⇒
+                // what values keys does this overlap in the tree?
+                val overlappingValues =
+                  tree
+                    .get(rr)
+                    .map(_._2)
 
-          (overlappingValues, u)
+                (overlappingValues, u)
+            }
       }
     }
-  }
 
   /**
    * Performs an inner region join between two RDDs, and groups by the

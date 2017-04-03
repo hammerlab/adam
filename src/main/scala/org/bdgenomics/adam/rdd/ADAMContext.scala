@@ -37,12 +37,15 @@ import org.apache.parquet.hadoop.util.ContextUtil.getConfiguration
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.MetricsContext._
 import org.apache.spark.rdd.RDD
+import org.apache.spark.storage.StorageLevel
+import org.apache.spark.storage.StorageLevel.MEMORY_ONLY
 import org.bdgenomics.adam.converters._
 import org.bdgenomics.adam.instrumentation.Timers._
 import org.bdgenomics.adam.io._
 import org.bdgenomics.adam.models._
 import org.bdgenomics.adam.projections.{ FeatureField, Projection }
 import org.bdgenomics.adam.rdd.contig.NucleotideContigFragmentRDD
+import org.bdgenomics.adam.rdd.feature.FeatureRDD.inferSequenceDictionary
 import org.bdgenomics.adam.rdd.feature._
 import org.bdgenomics.adam.rdd.fragment.FragmentRDD
 import org.bdgenomics.adam.rdd.read.AlignmentRecordRDD
@@ -1240,13 +1243,16 @@ class ADAMContext(@transient val sc: SparkContext)
       path,
       predicate = predicate,
       projection = Some(proj)
-    ).toCoverage
+    )
+    .toCoverage
   }
 
   /**
    * Loads features stored in GFF3 format.
    *
    * @param path The path to the file to load.
+   * @param optStorageLevel Optional storage level to use for cache before building the SequenceDictionary.
+   *   Defaults to StorageLevel.MEMORY_ONLY.
    * @param minPartitions An optional minimum number of partitions to load. If
    *   not set, falls back to the configured Spark default parallelism.
    * @param stringency Optional stringency to pass. LENIENT stringency will warn
@@ -1255,6 +1261,7 @@ class ADAMContext(@transient val sc: SparkContext)
    * @return Returns a FeatureRDD.
    */
   def loadGff3(path: Path,
+               optStorageLevel: Option[StorageLevel] = Some(MEMORY_ONLY),
                minPartitions: Option[Int] = None,
                stringency: ValidationStringency = LENIENT): FeatureRDD = {
     val records =
@@ -1264,13 +1271,15 @@ class ADAMContext(@transient val sc: SparkContext)
     if (Metrics.isRecording)
       records.instrument()
 
-    FeatureRDD(records)
+    inferSequenceDictionary(records, optStorageLevel = optStorageLevel)
   }
 
   /**
    * Loads features stored in GFF2/GTF format.
    *
    * @param path The path to the file to load.
+   * @param optStorageLevel Optional storage level to use for cache before building the SequenceDictionary.
+   *   Defaults to StorageLevel.MEMORY_ONLY.
    * @param minPartitions An optional minimum number of partitions to load. If
    *   not set, falls back to the configured Spark default parallelism.
    * @param stringency Optional stringency to pass. LENIENT stringency will warn
@@ -1279,6 +1288,7 @@ class ADAMContext(@transient val sc: SparkContext)
    * @return Returns a FeatureRDD.
    */
   def loadGtf(path: Path,
+              optStorageLevel: Option[StorageLevel] = Some(MEMORY_ONLY),
               minPartitions: Option[Int] = None,
               stringency: ValidationStringency = LENIENT): FeatureRDD = {
     val records =
@@ -1288,7 +1298,7 @@ class ADAMContext(@transient val sc: SparkContext)
     if (Metrics.isRecording)
       records.instrument()
 
-    FeatureRDD(records)
+    inferSequenceDictionary(records, optStorageLevel = optStorageLevel)
   }
 
   def textFile(path: Path, minPartitionsOpt: Option[Int]): RDD[String] =
@@ -1298,6 +1308,8 @@ class ADAMContext(@transient val sc: SparkContext)
    * Loads features stored in BED6/12 format.
    *
    * @param path The path to the file to load.
+   * @param optStorageLevel Optional storage level to use for cache before building the SequenceDictionary.
+   *   Defaults to StorageLevel.MEMORY_ONLY.
    * @param minPartitions An optional minimum number of partitions to load. If
    *   not set, falls back to the configured Spark default parallelism.
    * @param stringency Optional stringency to pass. LENIENT stringency will warn
@@ -1306,6 +1318,7 @@ class ADAMContext(@transient val sc: SparkContext)
    * @return Returns a FeatureRDD.
    */
   def loadBed(path: Path,
+              optStorageLevel: Option[StorageLevel] = Some(MEMORY_ONLY),
               minPartitions: Option[Int] = None,
               stringency: ValidationStringency = LENIENT): FeatureRDD = {
     val records =
@@ -1315,13 +1328,15 @@ class ADAMContext(@transient val sc: SparkContext)
     if (Metrics.isRecording)
       records.instrument()
 
-    FeatureRDD(records)
+    inferSequenceDictionary(records, optStorageLevel = optStorageLevel)
   }
 
   /**
    * Loads features stored in NarrowPeak format.
    *
    * @param path The path to the file to load.
+   * @param optStorageLevel Optional storage level to use for cache before building the SequenceDictionary.
+   *   Defaults to StorageLevel.MEMORY_ONLY.
    * @param minPartitions An optional minimum number of partitions to load. If
    *   not set, falls back to the configured Spark default parallelism.
    * @param stringency Optional stringency to pass. LENIENT stringency will warn
@@ -1330,6 +1345,7 @@ class ADAMContext(@transient val sc: SparkContext)
    * @return Returns a FeatureRDD.
    */
   def loadNarrowPeak(path: Path,
+                     optStorageLevel: Option[StorageLevel] = Some(MEMORY_ONLY),
                      minPartitions: Option[Int] = None,
                      stringency: ValidationStringency = LENIENT): FeatureRDD = {
     val records =
@@ -1339,7 +1355,7 @@ class ADAMContext(@transient val sc: SparkContext)
     if (Metrics.isRecording)
       records.instrument()
 
-    FeatureRDD(records)
+    inferSequenceDictionary(records, optStorageLevel = optStorageLevel)
   }
 
   /**
@@ -1435,6 +1451,8 @@ class ADAMContext(@transient val sc: SparkContext)
    * IntervalList. If none of these match, we fall back to Parquet.
    *
    * @param path The path to the file to load.
+   * @param optStorageLevel Optional storage level to use for cache before building the SequenceDictionary.
+   *   Defaults to StorageLevel.MEMORY_ONLY.
    * @param projection An optional projection to push down.
    * @param minPartitions An optional minimum number of partitions to use. For
    *   textual formats, if this is None, we fall back to the Spark default
@@ -1449,27 +1467,28 @@ class ADAMContext(@transient val sc: SparkContext)
    * @see loadParquetFeatures
    */
   def loadFeatures(path: Path,
+                   optStorageLevel: Option[StorageLevel] = Some(MEMORY_ONLY),
                    projection: Option[Schema] = None,
                    minPartitions: Option[Int] = None): FeatureRDD =
     path.extension match {
       case "bed" ⇒
         log.info(s"Loading $path as BED and converting to features. Projection is ignored.")
-        loadBed(path, minPartitions)
+        loadBed(path, optStorageLevel = optStorageLevel, minPartitions = minPartitions)
       case "gff3" ⇒
         log.info(s"Loading $path as GFF3 and converting to features. Projection is ignored.")
-        loadGff3(path, minPartitions)
+        loadGff3(path, optStorageLevel = optStorageLevel, minPartitions = minPartitions)
       case "gtf" ⇒
         log.info(s"Loading $path as GTF/GFF2 and converting to features. Projection is ignored.")
-        loadGtf(path, minPartitions)
+        loadGtf(path, optStorageLevel = optStorageLevel, minPartitions = minPartitions)
       case "narrowPeak" | "narrowpeak" ⇒
         log.info(s"Loading $path as NarrowPeak and converting to features. Projection is ignored.")
-        loadNarrowPeak(path, minPartitions)
+        loadNarrowPeak(path, optStorageLevel = optStorageLevel, minPartitions = minPartitions)
       case "interval_list" ⇒
         log.info(s"Loading $path as IntervalList and converting to features. Projection is ignored.")
-        loadIntervalList(path, minPartitions)
+        loadIntervalList(path, minPartitions = minPartitions)
       case _ ⇒
         log.info(s"Loading $path as Parquet containing Features.")
-        loadParquetFeatures(path, None, projection)
+        loadParquetFeatures(path, predicate = None, projection = projection)
     }
 
   /**
@@ -1548,7 +1567,7 @@ class ADAMContext(@transient val sc: SparkContext)
    */
   def loadGenotypes(path: Path,
                     projection: Option[Schema] = None,
-                    stringency: ValidationStringency = STRICT): GenotypeRDD = {
+                    stringency: ValidationStringency = STRICT): GenotypeRDD =
     if (isVcfExt(path)) {
       log.info(s"Loading $path as VCF, and converting to Genotypes. Projection is ignored.")
       loadVcf(path, stringency).toGenotypeRDD
@@ -1556,7 +1575,6 @@ class ADAMContext(@transient val sc: SparkContext)
       log.info(s"Loading $path as Parquet containing Genotypes. Sequence dictionary for translation is ignored.")
       loadParquetGenotypes(path, None, projection)
     }
-  }
 
   /**
    * Auto-detects the file type and loads a VariantRDD.
@@ -1574,7 +1592,7 @@ class ADAMContext(@transient val sc: SparkContext)
    */
   def loadVariants(path: Path,
                    projection: Option[Schema] = None,
-                   stringency: ValidationStringency = STRICT): VariantRDD = {
+                   stringency: ValidationStringency = STRICT): VariantRDD =
     if (isVcfExt(path)) {
       log.info(s"Loading $path as VCF, and converting to Variants. Projection is ignored.")
       loadVcf(path, stringency).toVariantRDD
@@ -1582,7 +1600,6 @@ class ADAMContext(@transient val sc: SparkContext)
       log.info(s"Loading $path as Parquet containing Variants. Sequence dictionary for translation is ignored.")
       loadParquetVariants(path, None, projection)
     }
-  }
 
   /**
    * Loads alignments from a given path, and infers the input type.
@@ -1617,32 +1634,31 @@ class ADAMContext(@transient val sc: SparkContext)
                      projection: Option[Schema] = None,
                      path2Opt: Option[Path] = None,
                      recordGroupOpt: Option[String] = None,
-                     stringency: ValidationStringency = STRICT): AlignmentRecordRDD = LoadAlignmentRecords.time {
-
-    if (path.endsWith(".sam") ||
-      path.endsWith(".bam") ||
-      path.endsWith(".cram")) {
-      log.info(s"Loading $path as SAM/BAM/CRAM and converting to AlignmentRecords. Projection is ignored.")
-      loadBam(path, stringency)
-    } else if (path.endsWith(".ifq")) {
-      log.info(s"Loading $path as interleaved FASTQ and converting to AlignmentRecords. Projection is ignored.")
-      loadInterleavedFastq(path)
-    } else if (path.endsWith(".fq") ||
-      path.endsWith(".fastq")) {
-      log.info(s"Loading $path as unpaired FASTQ and converting to AlignmentRecords. Projection is ignored.")
-      loadFastq(path, path2Opt, recordGroupOpt, stringency)
-    } else if (path.endsWith(".fa") ||
-      path.endsWith(".fasta")) {
-      log.info(s"Loading $path as FASTA and converting to AlignmentRecords. Projection is ignored.")
-      AlignmentRecordRDD.unaligned(loadFasta(path, fragmentLength = 10000).toReads)
-    } else if (path.endsWith("contig.adam")) {
-      log.info(s"Loading $path as Parquet of NucleotideContigFragment and converting to AlignmentRecords. Projection is ignored.")
-      AlignmentRecordRDD.unaligned(loadParquetContigFragments(path).toReads)
-    } else {
-      log.info(s"Loading $path as Parquet of AlignmentRecords.")
-      loadParquetAlignments(path, None, projection)
+                     stringency: ValidationStringency = STRICT): AlignmentRecordRDD =
+    LoadAlignmentRecords.time {
+      path.extension match {
+        case "sam" | "bam" | "cram" ⇒
+          log.info(s"Loading $path as SAM/BAM/CRAM and converting to AlignmentRecords. Projection is ignored.")
+          loadBam(path, stringency)
+        case "ifq" ⇒
+          log.info(s"Loading $path as interleaved FASTQ and converting to AlignmentRecords. Projection is ignored.")
+          loadInterleavedFastq(path)
+        case "fq" | "fastq" ⇒
+          log.info(s"Loading $path as unpaired FASTQ and converting to AlignmentRecords. Projection is ignored.")
+          loadFastq(path, path2Opt, recordGroupOpt, stringency)
+        case "fa" | "fasta" ⇒
+          log.info(s"Loading $path as FASTA and converting to AlignmentRecords. Projection is ignored.")
+          AlignmentRecordRDD.unaligned(loadFasta(path, fragmentLength = 10000).toReads)
+        case _ ⇒
+          if (path.endsWith("contig.adam")) {
+            log.info(s"Loading $path as Parquet of NucleotideContigFragment and converting to AlignmentRecords. Projection is ignored.")
+            AlignmentRecordRDD.unaligned(loadParquetContigFragments(path).toReads)
+          } else {
+            log.info(s"Loading $path as Parquet of AlignmentRecords.")
+            loadParquetAlignments(path, None, projection)
+          }
+      }
     }
-  }
 
   /**
    * Auto-detects the file type and loads a FragmentRDD.
@@ -1657,21 +1673,22 @@ class ADAMContext(@transient val sc: SparkContext)
    * @param path Path to load data from.
    * @return Returns the loaded data as a FragmentRDD.
    */
-  def loadFragments(path: Path): FragmentRDD = LoadFragments.time {
-    val extension = path.extension
-    if (extension == "sam" ||
-      extension == "bam" ||
-      extension == "cram") {
-      log.info(s"Loading $path as SAM/BAM and converting to Fragments.")
-      loadBam(path).toFragments
-    } else if (path.endsWith(".reads.adam")) {
-      log.info(s"Loading $path as ADAM AlignmentRecords and converting to Fragments.")
-      loadAlignments(path).toFragments
-    } else if (extension == "ifq") {
-      log.info("Loading interleaved FASTQ " + path + " and converting to Fragments.")
-      loadInterleavedFastqAsFragments(path)
-    } else {
-      loadParquetFragments(path)
+  def loadFragments(path: Path): FragmentRDD =
+    LoadFragments.time {
+      val extension = path.extension
+      if (extension == "sam" ||
+        extension == "bam" ||
+        extension == "cram") {
+        log.info(s"Loading $path as SAM/BAM and converting to Fragments.")
+        loadBam(path).toFragments
+      } else if (path.endsWith(".reads.adam")) {
+        log.info(s"Loading $path as ADAM AlignmentRecords and converting to Fragments.")
+        loadAlignments(path).toFragments
+      } else if (extension == "ifq") {
+        log.info("Loading interleaved FASTQ " + path + " and converting to Fragments.")
+        loadInterleavedFastqAsFragments(path)
+      } else {
+        loadParquetFragments(path)
+      }
     }
-  }
 }
