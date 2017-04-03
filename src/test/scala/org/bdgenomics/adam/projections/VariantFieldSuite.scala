@@ -27,7 +27,7 @@ import org.bdgenomics.formats.avro.Variant
 
 class VariantFieldSuite extends ADAMFunSuite {
 
-  sparkTest("Use projection when reading parquet variants") {
+  test("Use projection when reading parquet variants") {
     val path = tmpFile("variants.parquet")
     val rdd = sc.parallelize(Seq(Variant.newBuilder()
       .setContigName("6")

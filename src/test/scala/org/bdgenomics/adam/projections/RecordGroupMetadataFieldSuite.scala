@@ -26,7 +26,7 @@ import org.bdgenomics.formats.avro.RecordGroupMetadata
 
 class RecordGroupMetadataFieldSuite extends ADAMFunSuite {
 
-  sparkTest("Use projection when reading parquet record group metadata") {
+  test("Use projection when reading parquet record group metadata") {
     val path = tmpFile("recordGroupMetadata.parquet")
     val rdd = sc.parallelize(Seq(RecordGroupMetadata.newBuilder()
       .setName("name")

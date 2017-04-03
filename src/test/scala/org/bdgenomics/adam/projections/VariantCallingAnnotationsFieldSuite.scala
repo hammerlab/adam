@@ -26,7 +26,7 @@ import org.bdgenomics.formats.avro.VariantCallingAnnotations
 
 class VariantCallingAnnotationsFieldSuite extends ADAMFunSuite {
 
-  sparkTest("Use projection when reading parquet variant calling annotations") {
+  test("Use projection when reading parquet variant calling annotations") {
     val path = tmpFile("variantCallingAnnotations.parquet")
     val rdd = sc.parallelize(Seq(VariantCallingAnnotations.newBuilder()
       .setDownsampled(true)

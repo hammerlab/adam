@@ -28,7 +28,7 @@ class FlagStatSuite
   extends ADAMFunSuite
     with ClearContigNames {
 
-  sparkTest("Standard FlagStat test") {
+  test("Standard FlagStat test") {
 
     val inputPath = testFile("NA12878.sam")
     val projection = Projection(

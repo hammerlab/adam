@@ -28,7 +28,7 @@ class ParallelFileMergerSuite
 
   implicit def pathToString(path: org.hammerlab.paths.Path): String = path.toString
 
-  sparkTest("cannot write both empty gzip block and cram eof") {
+  test("cannot write both empty gzip block and cram eof") {
     intercept[IllegalArgumentException] {
       // we don't need to pass real paths here
       mergeFiles(
@@ -41,7 +41,7 @@ class ParallelFileMergerSuite
     }
   }
 
-  sparkTest("buffer size must be non-negative") {
+  test("buffer size must be non-negative") {
     intercept[IllegalArgumentException] {
       // we don't need to pass real paths here
       mergeFiles(
@@ -53,7 +53,7 @@ class ParallelFileMergerSuite
     }
   }
 
-  sparkTest("get the size of several files") {
+  test("get the size of several files") {
     val files = Seq(testFile("unmapped.sam"),
       testFile("small.sam"))
       .map(new Path(_))
@@ -68,19 +68,19 @@ class ParallelFileMergerSuite
       .foreach(p => assert(p._1 === p._2))
   }
 
-  sparkTest("block size must be positive and non-zero when trying to merge files") {
+  test("block size must be positive and non-zero when trying to merge files") {
     intercept[AssertionError] {
       generateMerges(0, Seq((new Path(testFile("small.sam")), 3093)))
     }
   }
 
-  sparkTest("must provide files to merge") {
+  test("must provide files to merge") {
     intercept[AssertionError] {
       generateMerges(1024, Seq.empty)
     }
   }
 
-  sparkTest("if two files are both below the block size, they should merge into one shard") {
+  test("if two files are both below the block size, they should merge into one shard") {
     val files = Seq(testFile("unmapped.sam"),
       testFile("small.sam"))
       .map(new Path(_))
@@ -106,7 +106,7 @@ class ParallelFileMergerSuite
     })
   }
 
-  sparkTest("merge two files where one is greater than the block size") {
+  test("merge two files where one is greater than the block size") {
 
     // unmapped.sam -> slightly under 29k
     // small.sam -> 3k
@@ -153,7 +153,7 @@ class ParallelFileMergerSuite
     })
   }
 
-  sparkTest("merge a sharded sam file") {
+  test("merge a sharded sam file") {
     val reads = sc.loadAlignments(testFile("unmapped.sam"))
     val outPath = tmpFile("out.sam")
 
@@ -179,7 +179,7 @@ class ParallelFileMergerSuite
     assert(mergedReads.rdd.count === reads.rdd.count)
   }
 
-  sparkTest("merge a sharded bam file") {
+  test("merge a sharded bam file") {
     val reads = sc.loadAlignments(testFile("unmapped.sam"))
     val outPath = tmpFile("out.bam")
 
@@ -205,7 +205,7 @@ class ParallelFileMergerSuite
     assert(mergedReads.rdd.count === reads.rdd.count)
   }
 
-  sparkTest("merge a sharded cram file") {
+  test("merge a sharded cram file") {
     val referencePath = resourceUrl("artificial.fa").toString
     sc.hadoopConfiguration.set(CRAMInputFormat.REFERENCE_SOURCE_PATH_PROPERTY,
       referencePath)

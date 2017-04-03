@@ -28,7 +28,7 @@ class FileMergerSuite
   lazy val outputPath = dir / "output"
   lazy val headPath = dir / "head"
 
-  sparkTest("cannot write both empty gzip block and cram eof") {
+  test("cannot write both empty gzip block and cram eof") {
     intercept[IllegalArgumentException] {
       mergeFiles(
         sc,
@@ -40,7 +40,7 @@ class FileMergerSuite
     }
   }
 
-  sparkTest("buffer size must be non-negative") {
+  test("buffer size must be non-negative") {
     intercept[IllegalArgumentException] {
       // we don't need to pass real paths here
       mergeFiles(

@@ -42,9 +42,6 @@ abstract class ADAMFunSuite
 
   def testFile(name: String): Path = File(name)
 
-  def sparkTest(name: String)(body: ⇒ Unit): Unit =
-    test(name) { body }
-
   def tmpLocation(extension: String = ".adam"): Path = tmpFile(suffix = extension)
 
   /**

@@ -25,19 +25,19 @@ class IndexedFastaFileSuite extends ADAMFunSuite {
 
   val filePath = testFile("HLA_DQB1_05_01_01_02.fa")
 
-  sparkTest("correctly generates sequence dictionary from .dict file") {
+  test("correctly generates sequence dictionary from .dict file") {
     val indexedFasta = IndexedFastaFile(sc, filePath)
     assert(indexedFasta.sequences.records.length == 1)
   }
 
-  sparkTest("correctly gets sequence") {
+  test("correctly gets sequence") {
     val indexedFasta = IndexedFastaFile(sc, filePath)
     val region = ReferenceRegion("HLA-DQB1*05:01:01:02", 1, 50)
     val sequence = indexedFasta.extract(region)
     assert(sequence == "TTCTAAGACCTTTGCTCTTCTCCCCAGGACTTAAGGCTCTTCAGCGTGTC")
   }
 
-  sparkTest("fails when fai index is not provided") {
+  test("fails when fai index is not provided") {
     val pathWithoutIndex = testFile("hs38DH_chr1_10.fa")
 
     try {
@@ -49,7 +49,7 @@ class IndexedFastaFileSuite extends ADAMFunSuite {
     }
   }
 
-  sparkTest("passes when dict is not provided and ValidationStringency = LENIENT") {
+  test("passes when dict is not provided and ValidationStringency = LENIENT") {
     val pathWithoutDict = testFile("artificial.fa")
 
     try {

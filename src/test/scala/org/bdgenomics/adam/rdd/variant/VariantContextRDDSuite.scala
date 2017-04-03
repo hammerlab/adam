@@ -74,7 +74,7 @@ class VariantContextRDDSuite
     )
   }
 
-  sparkTest("can write, then read in .vcf file") {
+  test("can write, then read in .vcf file") {
     val path = tmpLocation(".vcf")
     variants.saveAsVcf(TestSaveArgs(path), sortOnSave = false)
     assert(exists(path))
@@ -98,7 +98,7 @@ class VariantContextRDDSuite
     vcRdd.sequences.records(0).name should === ("11")
   }
 
-  sparkTest("can write as a single file, then read in .vcf file") {
+  test("can write as a single file, then read in .vcf file") {
     val path = tmpLocation(".vcf")
     variants.saveAsVcf(path, asSingleFile = true)
     assert(exists(path))
@@ -109,7 +109,7 @@ class VariantContextRDDSuite
     vcRdd.sequences.records(0).name should === ("11")
   }
 
-  sparkTest("don't lose any variants when piping as VCF") {
+  test("don't lose any variants when piping as VCF") {
     val smallVcf = testFile("small.vcf")
     val rdd: VariantContextRDD = sc.loadVcf(smallVcf)
     val records = rdd.rdd.count
@@ -124,7 +124,7 @@ class VariantContextRDDSuite
     pipedRdd.rdd.flatMap(_.genotypes).count should === (18)
   }
 
-  sparkTest("save a file sorted by contig index") {
+  test("save a file sorted by contig index") {
     val inputPath = testFile("random.vcf")
     val variants = sc.loadVcf(inputPath)
     val outputPath = tmpFile("sorted.vcf")
@@ -139,7 +139,7 @@ class VariantContextRDDSuite
     checkFiles(outputPath, "sorted.vcf")
   }
 
-  sparkTest("save a lexicographically sorted file") {
+  test("save a lexicographically sorted file") {
     val inputPath = testFile("random.vcf")
     val variants = sc.loadVcf(inputPath)
     val outputPath = tmpFile("sorted.lex.vcf")

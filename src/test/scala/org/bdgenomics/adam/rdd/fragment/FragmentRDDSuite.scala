@@ -23,7 +23,7 @@ import org.bdgenomics.adam.util.ADAMFunSuite
 
 class FragmentRDDSuite extends ADAMFunSuite {
 
-  sparkTest("don't lose any reads when piping interleaved fastq to sam") {
+  test("don't lose any reads when piping interleaved fastq to sam") {
     // write suffixes at end of reads
     sc.hadoopConfiguration.setBoolean(InterleavedFASTQInFormatter.WRITE_SUFFIXES, true)
 
@@ -48,7 +48,7 @@ class FragmentRDDSuite extends ADAMFunSuite {
     assert(2 * records === newRecords)
   }
 
-  sparkTest("use broadcast join to pull down fragments mapped to targets") {
+  test("use broadcast join to pull down fragments mapped to targets") {
     val fragmentsPath = testFile("small.1.sam")
     val targetsPath = testFile("small.1.bed")
 
@@ -60,7 +60,7 @@ class FragmentRDDSuite extends ADAMFunSuite {
     assert(jRdd.rdd.count === 5)
   }
 
-  sparkTest("use right outer broadcast join to pull down fragments mapped to targets") {
+  test("use right outer broadcast join to pull down fragments mapped to targets") {
     val fragmentsPath = testFile("small.1.sam")
     val targetsPath = testFile("small.1.bed")
 
@@ -74,7 +74,7 @@ class FragmentRDDSuite extends ADAMFunSuite {
     assert(c.count(_._1.isDefined) === 5)
   }
 
-  sparkTest("use shuffle join to pull down fragments mapped to targets") {
+  test("use shuffle join to pull down fragments mapped to targets") {
     val fragmentsPath = testFile("small.1.sam")
     val targetsPath = testFile("small.1.bed")
 
@@ -95,7 +95,7 @@ class FragmentRDDSuite extends ADAMFunSuite {
     assert(jRdd0.rdd.count === 5)
   }
 
-  sparkTest("use right outer shuffle join to pull down fragments mapped to targets") {
+  test("use right outer shuffle join to pull down fragments mapped to targets") {
     val fragmentsPath = testFile("small.1.sam")
     val targetsPath = testFile("small.1.bed")
 
@@ -120,7 +120,7 @@ class FragmentRDDSuite extends ADAMFunSuite {
     assert(c0.count(_._1.isDefined) === 5)
   }
 
-  sparkTest("use left outer shuffle join to pull down fragments mapped to targets") {
+  test("use left outer shuffle join to pull down fragments mapped to targets") {
     val fragmentsPath = testFile("small.1.sam")
     val targetsPath = testFile("small.1.bed")
 
@@ -145,7 +145,7 @@ class FragmentRDDSuite extends ADAMFunSuite {
     assert(c0.count(_._2.isDefined) === 5)
   }
 
-  sparkTest("use full outer shuffle join to pull down fragments mapped to targets") {
+  test("use full outer shuffle join to pull down fragments mapped to targets") {
     val fragmentsPath = testFile("small.1.sam")
     val targetsPath = testFile("small.1.bed")
 
@@ -174,7 +174,7 @@ class FragmentRDDSuite extends ADAMFunSuite {
     assert(c0.count(t => t._1.isDefined && t._2.isDefined) === 5)
   }
 
-  sparkTest("use shuffle join with group by to pull down fragments mapped to targets") {
+  test("use shuffle join with group by to pull down fragments mapped to targets") {
     val fragmentsPath = testFile("small.1.sam")
     val targetsPath = testFile("small.1.bed")
 
@@ -199,7 +199,7 @@ class FragmentRDDSuite extends ADAMFunSuite {
     assert(c0.forall(_._2.size == 1))
   }
 
-  sparkTest("use right outer shuffle join with group by to pull down fragments mapped to targets") {
+  test("use right outer shuffle join with group by to pull down fragments mapped to targets") {
     val fragmentsPath = testFile("small.1.sam")
     val targetsPath = testFile("small.1.bed")
 

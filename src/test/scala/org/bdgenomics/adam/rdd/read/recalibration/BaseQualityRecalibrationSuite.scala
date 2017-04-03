@@ -70,15 +70,15 @@ class BaseQualityRecalibrationSuite
     referenceObs.zip(testObs).foreach(p => assert(p._1 === p._2))
   }
 
-  sparkTest("BQSR Test Input #1 w/ VCF Sites without caching") {
+  test("BQSR Test Input #1 w/ VCF Sites without caching") {
     testBqsr(None)
   }
 
-  sparkTest("BQSR Test Input #1 w/ VCF Sites with caching") {
+  test("BQSR Test Input #1 w/ VCF Sites with caching") {
     testBqsr(Some(StorageLevel.MEMORY_ONLY))
   }
 
-  sparkTest("BQSR Test Input #1 w/ VCF Sites with serialized caching") {
+  test("BQSR Test Input #1 w/ VCF Sites with serialized caching") {
     testBqsr(Some(StorageLevel.MEMORY_ONLY))
   }
 }

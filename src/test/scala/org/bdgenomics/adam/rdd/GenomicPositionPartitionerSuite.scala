@@ -86,7 +86,7 @@ class GenomicPositionPartitionerSuite
     parter.getPartition(ReferencePosition("bar", 0)) should === (0)
   }
 
-  sparkTest("test that we can range partition ADAMRecords") {
+  test("test that we can range partition ADAMRecords") {
     val rand = new Random(1000L)
     val count = 1000
     val pos = sc.parallelize((1 to count).map(i => adamRecord("1", "read_%d".format(i), rand.nextInt(100), readMapped = true)), 1)
@@ -102,7 +102,7 @@ class GenomicPositionPartitionerSuite
     assert(partitioned.partitions.length > 1)
   }
 
-  sparkTest("test that we can range partition ADAMRecords indexed by sample") {
+  test("test that we can range partition ADAMRecords indexed by sample") {
     val rand = new Random(1000L)
     val count = 1000
     val pos = sc.parallelize((1 to count).map(i => adamRecord("1", s"read_$i", rand.nextInt(100), readMapped = true)), 1)
@@ -115,7 +115,7 @@ class GenomicPositionPartitionerSuite
     assert(partitioned.partitions.length > 1)
   }
 
-  sparkTest("test that simple partitioning works okay on a reasonable set of ADAMRecords") {
+  test("test that simple partitioning works okay on a reasonable set of ADAMRecords") {
     val filename = testFile("reads12.sam")
     val parts = 1
 
@@ -147,7 +147,7 @@ class GenomicPositionPartitionerSuite
     partSizes.count() should === (parts + 1)
   }
 
-  sparkTest("test indexed ReferencePosition partitioning works on a set of indexed ADAMRecords") {
+  test("test indexed ReferencePosition partitioning works on a set of indexed ADAMRecords") {
     val filename = testFile("reads12.sam")
     val parts = 10
 

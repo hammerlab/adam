@@ -27,7 +27,7 @@ import org.bdgenomics.formats.avro.Sample
 class SampleFieldSuite
   extends ADAMFunSuite {
 
-  sparkTest("Use projection when reading parquet samples") {
+  test("Use projection when reading parquet samples") {
     val path = tmpFile("samples.parquet")
     val rdd = sc.parallelize(Seq(Sample.newBuilder()
       .setSampleId("sample_id")

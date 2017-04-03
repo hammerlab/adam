@@ -27,7 +27,7 @@ class FastaConverterSuite
 
   val converter = new FastaConverter(1000)
 
-  sparkTest("find contig index") {
+  test("find contig index") {
     val headerLines = sc.parallelize(Seq(
       (0L, ">1 dna:chromosome chromosome:GRCh37:1:1:249250621:1"),
       (252366306L, ">2 dna:chromosome chromosome:GRCh37:2:1:243199373:1"),
@@ -61,7 +61,7 @@ class FastaConverterSuite
     assert(contig.head.getDescription === "hg19")
   }
 
-  sparkTest("convert single fasta sequence") {
+  test("convert single fasta sequence") {
     val fasta = List((0L, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGGGGGGGGGGAAAAAAAAAAGGGGGGGGGGAAAAAA"),
       (1L, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
       (2L, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
@@ -93,7 +93,7 @@ class FastaConverterSuite
     assert(fastaElement.getDescription === null)
   }
 
-  sparkTest("convert fasta with multiple sequences") {
+  test("convert fasta with multiple sequences") {
     val fasta1 = List((0L, ">chr1"),
       (1L, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGGGGGGGGGGAAAAAAAAAAGGGGGGGGGGAAAAAA"),
       (2L, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
@@ -153,7 +153,7 @@ class FastaConverterSuite
     assert(fastaElement2.getDescription === null)
   }
 
-  sparkTest("convert fasta with multiple sequences; short fragment") {
+  test("convert fasta with multiple sequences; short fragment") {
     val fasta1 = List((0L, ">chr1"),
       (1L, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGGGGGGGGGGAAAAAAAAAAGGGGGGGGGGAAAAAA"),
       (2L, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
@@ -210,7 +210,7 @@ class FastaConverterSuite
 
   val chr1File = testFile("human_g1k_v37_chr1_59kb.fasta")
 
-  sparkTest("convert reference fasta file") {
+  test("convert reference fasta file") {
     //Loading "human_g1k_v37_chr1_59kb.fasta"
     val referenceSequences = sc.loadSequences(chr1File, fragmentLength = 10).rdd.collect()
     assert(referenceSequences.forall(_.getContig.getContigName == "1"))

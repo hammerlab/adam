@@ -27,7 +27,7 @@ import org.bdgenomics.formats.avro.Contig
 class ContigFieldSuite
   extends ADAMFunSuite {
 
-  sparkTest("Use projection when reading parquet contigs") {
+  test("Use projection when reading parquet contigs") {
     val path = tmpFile("contigs.parquet")
     val rdd = sc.parallelize(Seq(Contig.newBuilder()
       .setContigName("6")

@@ -44,7 +44,7 @@ class CoverageRDDSuite
     coverage.toSeq
   }
 
-  sparkTest("correctly saves coverage") {
+  test("correctly saves coverage") {
     val f1 = Feature.newBuilder().setContigName("chr1").setStart(1).setEnd(10).setScore(3.0).build()
     val f2 = Feature.newBuilder().setContigName("chr1").setStart(15).setEnd(20).setScore(2.0).build()
     val f3 = Feature.newBuilder().setContigName("chr2").setStart(15).setEnd(20).setScore(2.0).build()
@@ -59,13 +59,13 @@ class CoverageRDDSuite
     assert(coverage.rdd.count == 3)
   }
 
-  sparkTest("can read a bed file to coverage") {
+  test("can read a bed file to coverage") {
     val inputPath = testFile("sample_coverage.bed")
     val coverage = sc.loadCoverage(inputPath)
     assert(coverage.rdd.count() == 3)
   }
 
-  sparkTest("correctly filters coverage with predicate") {
+  test("correctly filters coverage with predicate") {
     val f1 = Feature.newBuilder().setContigName("chr1").setStart(1).setEnd(10).setScore(3.0).build()
     val f2 = Feature.newBuilder().setContigName("chr1").setStart(15).setEnd(20).setScore(2.0).build()
     val f3 = Feature.newBuilder().setContigName("chr2").setStart(15).setEnd(20).setScore(2.0).build()
@@ -82,7 +82,7 @@ class CoverageRDDSuite
     assert(coverage.rdd.count == 1)
   }
 
-  sparkTest("correctly flatmaps coverage without aggregated bins") {
+  test("correctly flatmaps coverage without aggregated bins") {
     val f1 = Feature.newBuilder().setContigName("chr1").setStart(1).setEnd(5).setScore(1.0).build()
     val f2 = Feature.newBuilder().setContigName("chr1").setStart(5).setEnd(7).setScore(3.0).build()
     val f3 = Feature.newBuilder().setContigName("chr1").setStart(7).setEnd(20).setScore(4.0).build()
@@ -94,7 +94,7 @@ class CoverageRDDSuite
     assert(coverage.rdd.count == 4)
   }
 
-  sparkTest("correctly flatmaps coverage with aggregated bins") {
+  test("correctly flatmaps coverage with aggregated bins") {
     val f1 = Feature.newBuilder().setContigName("chr1").setStart(1).setEnd(5).setScore(1.0).build()
     val f2 = Feature.newBuilder().setContigName("chr1").setStart(5).setEnd(7).setScore(3.0).build()
     val f3 = Feature.newBuilder().setContigName("chr1").setStart(7).setEnd(20).setScore(4.0).build()
@@ -110,7 +110,7 @@ class CoverageRDDSuite
     assert(coverage.rdd.filter(_.start == 8).first.count == 4.0)
   }
 
-  sparkTest("collapses coverage records in one partition") {
+  test("collapses coverage records in one partition") {
     val cov = generateCoverage(20)
     val coverage = CoverageRDD(sc.parallelize(cov.toSeq).repartition(1), sd)
     val collapsed = coverage.collapse
@@ -119,7 +119,7 @@ class CoverageRDDSuite
     assert(collapsed.rdd.count == 5)
   }
 
-  sparkTest("approximately collapses coverage records in multiple partitions") {
+  test("approximately collapses coverage records in multiple partitions") {
     val cov = generateCoverage(20)
     val coverage = CoverageRDD(sc.parallelize(cov), sd)
     val collapsed = coverage.collapse

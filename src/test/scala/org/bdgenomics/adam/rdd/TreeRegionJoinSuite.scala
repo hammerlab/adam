@@ -29,7 +29,7 @@ private case class ConcreteTreeRegionJoin[T: ClassTag, U]() extends TreeRegionJo
 
 class TreeRegionJoinSuite extends ADAMFunSuite {
 
-  sparkTest("run a join between data on a single contig") {
+  test("run a join between data on a single contig") {
 
     val rightRdd = sc.parallelize(Seq(
       (ReferenceRegion("chr1", 10L, 20L), 0),

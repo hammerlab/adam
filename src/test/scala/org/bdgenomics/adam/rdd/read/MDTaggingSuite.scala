@@ -90,7 +90,7 @@ class MDTaggingSuite extends ADAMFunSuite {
     check(MDTagging(reads, ReferenceContigMap(makeFrags(fs: _*))))
   }
 
-  sparkTest("test adding MDTags over boundary") {
+  test("test adding MDTags over boundary") {
     testReads(
       (chr1, 0, "TTTTTTTTTT"),
       (chr1, 10, "A")
@@ -106,7 +106,7 @@ class MDTaggingSuite extends ADAMFunSuite {
         )
   }
 
-  sparkTest("test adding MDTags; reads span full contig") {
+  test("test adding MDTags; reads span full contig") {
     testReads(
       (chr1, 0, "AAAAAAAAAA"),
       (chr1, 10, "CCCCCCCCCC"),
@@ -120,7 +120,7 @@ class MDTaggingSuite extends ADAMFunSuite {
       )((5, 0, 0, 0))
   }
 
-  sparkTest("test adding MDTags; reads start inside first fragment") {
+  test("test adding MDTags; reads start inside first fragment") {
     testReads(
       (chr1, 0, "AAAAAAAAAA"),
       (chr1, 10, "CCCCCCCCCC"),
@@ -134,7 +134,7 @@ class MDTaggingSuite extends ADAMFunSuite {
       )(5, 0, 0, 0)
   }
 
-  sparkTest("test adding MDTags; reads end inside last fragment") {
+  test("test adding MDTags; reads end inside last fragment") {
     testReads(
       (chr1, 0, "AAAAAAAAAA"),
       (chr1, 10, "CCCCCCCCCC"),
@@ -148,7 +148,7 @@ class MDTaggingSuite extends ADAMFunSuite {
       )(5, 0, 0, 0)
   }
 
-  sparkTest("test adding MDTags; reads start inside first fragment and end inside last fragment") {
+  test("test adding MDTags; reads start inside first fragment and end inside last fragment") {
     testReads(
       (chr1, 0, "AAAAAAAAAA"),
       (chr1, 10, "CCCCCCCCCC"),
@@ -162,7 +162,7 @@ class MDTaggingSuite extends ADAMFunSuite {
       )(5, 0, 0, 0)
   }
 
-  sparkTest("test adding MDTags; reads start and end in middle fragements") {
+  test("test adding MDTags; reads start and end in middle fragements") {
     testReads(
       (chr1, 0, "TTTTTTTTTT"),
       (chr1, 10, "AAAAAAAAAA"),
@@ -178,7 +178,7 @@ class MDTaggingSuite extends ADAMFunSuite {
       )(5, 0, 0, 0)
   }
 
-  sparkTest("try realigning a read on a missing contig, stringency == STRICT") {
+  test("try realigning a read on a missing contig, stringency == STRICT") {
     val read = (chr2, 15, 35, "AAAAACCCCCCCCCCGGGGG", "20M") → "20"
     val tagger = MDTagging(makeReads(read)._2,
       ReferenceContigMap(makeFrags((chr1, 0, "TTTTTTTTTT"))))
@@ -187,7 +187,7 @@ class MDTaggingSuite extends ADAMFunSuite {
     }
   }
 
-  sparkTest("try realigning a read on a missing contig, stringency == LENIENT") {
+  test("try realigning a read on a missing contig, stringency == LENIENT") {
     val read = (chr2, 15, 35, "AAAAACCCCCCCCCCGGGGG", "20M") → "20"
     val tagger = MDTagging(makeReads(read)._2,
       ReferenceContigMap(makeFrags((chr1, 0, "TTTTTTTTTT"))),

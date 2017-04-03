@@ -102,14 +102,14 @@ class MarkDuplicatesSuite
       .collect()
   }
 
-  sparkTest("single read") {
+  test("single read") {
     val read = createMappedRead("0", 100, 200)
     val marked = markDuplicates(read)
     // Can't have duplicates with a single read, should return the read unchanged.
     assert(marked(0) == read)
   }
 
-  sparkTest("reads at different positions") {
+  test("reads at different positions") {
     val read1 = createMappedRead("0", 42, 142)
     val read2 = createMappedRead("0", 43, 143)
     val marked = markDuplicates(read1, read2)
@@ -117,7 +117,7 @@ class MarkDuplicatesSuite
     assert(marked.contains(read1) && marked.contains(read2))
   }
 
-  sparkTest("reads at the same position") {
+  test("reads at the same position") {
     val poorReads = for (i <- 0 until 10) yield {
       createMappedRead("1", 42, 142, avgPhredScore = 20, readName = "poor%d".format(i))
     }
@@ -128,7 +128,7 @@ class MarkDuplicatesSuite
     assert(dups.forall(p => p.getReadName.startsWith("poor")))
   }
 
-  sparkTest("reads at the same position with clipping") {
+  test("reads at the same position with clipping") {
     val poorClippedReads = for (i <- 0 until 5) yield {
       createMappedRead("1", 44, 142, numClippedBases = 2, avgPhredScore = 20, readName = "poorClipped%d".format(i))
     }
@@ -142,7 +142,7 @@ class MarkDuplicatesSuite
     assert(dups.forall(p => p.getReadName.startsWith("poor")))
   }
 
-  sparkTest("reads on reverse strand") {
+  test("reads on reverse strand") {
     val poorReads = for (i <- 0 until 7) yield {
       createMappedRead("10", 42, 142, isNegativeStrand = true, avgPhredScore = 20, readName = "poor%d".format(i))
     }
@@ -153,7 +153,7 @@ class MarkDuplicatesSuite
     assert(dups.forall(p => p.getReadName.startsWith("poor")))
   }
 
-  sparkTest("unmapped reads") {
+  test("unmapped reads") {
     val unmappedReads = for (i <- 0 until 10) yield createUnmappedRead()
     val marked = markDuplicates(unmappedReads: _*)
     assert(marked.size == unmappedReads.size)
@@ -161,7 +161,7 @@ class MarkDuplicatesSuite
     assert(marked.forall(p => !p.getDuplicateRead))
   }
 
-  sparkTest("read pairs") {
+  test("read pairs") {
     val poorPairs = for (
       i <- 0 until 10;
       read <- createPair("0", 10, 110, "0", 110, 210, avgPhredScore = 20, readName = "poor%d".format(i))
@@ -173,7 +173,7 @@ class MarkDuplicatesSuite
     assert(dups.forall(p => p.getReadName.startsWith("poor")))
   }
 
-  sparkTest("read pairs with fragments") {
+  test("read pairs with fragments") {
     val fragments = for (i <- 0 until 10) yield {
       createMappedRead("2", 33, 133, avgPhredScore = 40, readName = "fragment%d".format(i))
     }
@@ -192,7 +192,7 @@ class MarkDuplicatesSuite
     assert(MarkDuplicates.score(record) == 2000)
   }
 
-  sparkTest("read pairs that cross chromosomes") {
+  test("read pairs that cross chromosomes") {
     val poorPairs = for (
       i <- 0 until 10;
       read <- createPair("ref0", 10, 110, "ref1", 110, 210, avgPhredScore = 20, readName = "poor%d".format(i))
@@ -213,14 +213,14 @@ class MarkDuplicatesSuite
       .collect()
   }
 
-  sparkTest("single fragment") {
+  test("single fragment") {
     val read = createMappedRead("0", 100, 200)
     val marked = markDuplicateFragments(read)
     // Can't have duplicates with a single read, should return the read unchanged.
     assert(marked(0) == read)
   }
 
-  sparkTest("fragments at different positions") {
+  test("fragments at different positions") {
     val read1 = createMappedRead("0", 42, 142)
     val read2 = createMappedRead("0", 43, 143)
     val marked = markDuplicateFragments(read1, read2)
@@ -228,7 +228,7 @@ class MarkDuplicatesSuite
     assert(marked.contains(read1) && marked.contains(read2))
   }
 
-  sparkTest("fragments at the same position") {
+  test("fragments at the same position") {
     val poorReads = for (i <- 0 until 10) yield {
       createMappedRead("1", 42, 142, avgPhredScore = 20, readName = "poor%d".format(i))
     }
@@ -239,7 +239,7 @@ class MarkDuplicatesSuite
     assert(dups.forall(p => p.getReadName.startsWith("poor")))
   }
 
-  sparkTest("fragments at the same position with clipping") {
+  test("fragments at the same position with clipping") {
     val poorClippedReads = for (i <- 0 until 5) yield {
       createMappedRead("1", 44, 142, numClippedBases = 2, avgPhredScore = 20, readName = "poorClipped%d".format(i))
     }
@@ -253,7 +253,7 @@ class MarkDuplicatesSuite
     assert(dups.forall(p => p.getReadName.startsWith("poor")))
   }
 
-  sparkTest("fragments on reverse strand") {
+  test("fragments on reverse strand") {
     val poorReads = for (i <- 0 until 7) yield {
       createMappedRead("10", 42, 142, isNegativeStrand = true, avgPhredScore = 20, readName = "poor%d".format(i))
     }
@@ -264,7 +264,7 @@ class MarkDuplicatesSuite
     assert(dups.forall(p => p.getReadName.startsWith("poor")))
   }
 
-  sparkTest("unmapped fragments") {
+  test("unmapped fragments") {
     val unmappedReads = for (i <- 0 until 10) yield createUnmappedRead()
     val marked = markDuplicateFragments(unmappedReads: _*)
     assert(marked.size == unmappedReads.size)
@@ -272,7 +272,7 @@ class MarkDuplicatesSuite
     assert(marked.forall(p => !p.getDuplicateRead))
   }
 
-  sparkTest("read pairs as fragments") {
+  test("read pairs as fragments") {
     val poorPairs = for (
       i <- 0 until 10;
       read <- createPair("0", 10, 110, "0", 110, 210, avgPhredScore = 20, readName = "poor%d".format(i))
@@ -284,7 +284,7 @@ class MarkDuplicatesSuite
     assert(dups.forall(p => p.getReadName.startsWith("poor")))
   }
 
-  sparkTest("read pairs with fragments as fragments") {
+  test("read pairs with fragments as fragments") {
     val fragments = for (i <- 0 until 10) yield {
       createMappedRead("2", 33, 133, avgPhredScore = 40, readName = "fragment%d".format(i))
     }
@@ -296,7 +296,7 @@ class MarkDuplicatesSuite
     assert(dups.size == 10 && dups.forall(p => p.getReadName.startsWith("fragment")))
   }
 
-  sparkTest("chimeric fragments") {
+  test("chimeric fragments") {
     val poorPairs = for (
       i <- 0 until 10;
       read <- createPair("ref0", 10, 110, "ref1", 110, 210, avgPhredScore = 20, readName = "poor%d".format(i))

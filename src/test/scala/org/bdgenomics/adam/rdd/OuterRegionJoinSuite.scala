@@ -30,7 +30,7 @@ trait OuterRegionJoinSuite
   def runJoin(leftRdd: RDD[(ReferenceRegion, AlignmentRecord)],
               rightRdd: RDD[(ReferenceRegion, AlignmentRecord)]): RDD[(Option[AlignmentRecord], AlignmentRecord)]
 
-  sparkTest("Ensure same reference regions get passed together") {
+  test("Ensure same reference regions get passed together") {
     val contig = Contig.newBuilder
       .setContigName("chr1")
       .setContigLength(15L)
@@ -68,7 +68,7 @@ trait OuterRegionJoinSuite
     assert(jrdd.filter(_._1.isEmpty).first._2.getReadName() === "4")
   }
 
-  sparkTest("Overlapping reference regions") {
+  test("Overlapping reference regions") {
     val contig = Contig.newBuilder
       .setContigName("chr1")
       .setContigLength(15L)

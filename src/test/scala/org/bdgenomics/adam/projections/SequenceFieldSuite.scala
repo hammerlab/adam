@@ -26,7 +26,7 @@ import org.bdgenomics.formats.avro.{ Alphabet, Sequence }
 
 class SequenceFieldSuite extends ADAMFunSuite {
 
-  sparkTest("Use projection when reading parquet sequences") {
+  test("Use projection when reading parquet sequences") {
     val path = tmpFile("sequences.parquet")
     val rdd = sc.parallelize(Seq(Sequence.newBuilder()
       .setName("6")

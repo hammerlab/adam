@@ -166,7 +166,7 @@ class RepairPartitionsSuite extends ADAMFunSuite {
     assert(unrolledArray(2).isEmpty)
   }
 
-  sparkTest("move pairs around an rdd") {
+  test("move pairs around an rdd") {
     val rdd = sc.parallelize(Seq((0, makeRead("read1")),
       (1, makeRead("read1")),
       (1, makeRead("read2")),
