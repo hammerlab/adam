@@ -20,41 +20,28 @@ package org.bdgenomics.adam.util
 
 import htsjdk.samtools.ValidationStringency
 import htsjdk.samtools.reference.{ FastaSequenceIndex, IndexedFastaSequenceFile }
-import java.net.URI
-import java.nio.file.Paths
-import org.apache.hadoop.fs.Path
 import org.apache.spark.SparkContext
-import org.bdgenomics.adam.models.{ SequenceDictionary, ReferenceRegion }
+import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.utils.misc.Logging
+import org.hammerlab.paths.Path
 
 /**
  * Loads and extracts sequences directly from indexed fasta or fa files. filePath requires fai index in the
  * same directory with same naming convention.
  *
- * @param filePath path to fasta or fa index
+ * @param path path to fasta or fa index
  */
 case class IndexedFastaFile(sc: SparkContext,
-                            filePath: String,
+                            path: Path,
                             stringency: ValidationStringency = ValidationStringency.STRICT)
     extends ReferenceFile with Logging {
 
   // Generate IndexedFastaSequenceFile from path and fai index
-  private val ref: IndexedFastaSequenceFile = {
-
-    // get absolute path and scheme to create URI
-    val path = new Path(filePath).toString
-    val scheme = new Path(path).getFileSystem(sc.hadoopConfiguration).getScheme
-    val pathWithScheme = s"${scheme}://${path}"
-
-    val uri = new URI(pathWithScheme)
-
-    val file = Paths.get(uri).toFile
-    val uriIdx = new URI(pathWithScheme + ".fai")
-    val pathIdx = Paths.get(uriIdx)
-
-    val idx = new FastaSequenceIndex(pathIdx.toFile)
-    new IndexedFastaSequenceFile(file, idx)
-  }
+  private val ref: IndexedFastaSequenceFile =
+    new IndexedFastaSequenceFile(
+      path,
+      new FastaSequenceIndex(path + ".fai")
+    )
 
   // Get sequence dictionary. If sequence dictionary is not defined,
   // generate sequence dictionary from file

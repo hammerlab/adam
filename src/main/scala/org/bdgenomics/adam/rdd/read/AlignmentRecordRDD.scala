@@ -17,46 +17,38 @@
  */
 package org.bdgenomics.adam.rdd.read
 
-import htsjdk.samtools._
-import htsjdk.samtools.cram.ref.ReferenceSource
-import htsjdk.samtools.util.{ BinaryCodec, BlockCompressedOutputStream }
 import java.io.{ OutputStream, StringWriter, Writer }
 import java.net.URI
-import java.nio.file.Paths
-import org.apache.hadoop.fs.Path
+
+import htsjdk.samtools.ValidationStringency.{ LENIENT, SILENT, STRICT }
+import htsjdk.samtools.cram.ref.ReferenceSource
+import htsjdk.samtools.util.{ BinaryCodec, BlockCompressedOutputStream }
+import htsjdk.samtools.{ CRAMContainerStreamWriter, SAMFileHeader, SAMTextHeaderCodec, SAMTextWriter, ValidationStringency }
 import org.apache.hadoop.io.LongWritable
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.MetricsContext._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
-import org.bdgenomics.adam.algorithms.consensus.{
-  ConsensusGenerator,
-  ConsensusGeneratorFromReads
-}
+import org.apache.spark.storage.StorageLevel.MEMORY_ONLY
+import org.bdgenomics.adam.algorithms.consensus.{ ConsensusGenerator, ConsensusGeneratorFromReads }
 import org.bdgenomics.adam.converters.AlignmentRecordConverter
 import org.bdgenomics.adam.instrumentation.Timers._
 import org.bdgenomics.adam.models._
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.rdd.{
-  AvroReadGroupGenomicRDD,
-  ADAMSaveAnyArgs,
-  FileMerger,
-  JavaSaveArgs,
-  SAMHeaderWriter,
-  Unaligned
-}
+import org.bdgenomics.adam.rdd.FileMerger.mergeFiles
 import org.bdgenomics.adam.rdd.feature.CoverageRDD
+import org.bdgenomics.adam.rdd.fragment.FragmentRDD
 import org.bdgenomics.adam.rdd.read.realignment.RealignIndels
 import org.bdgenomics.adam.rdd.read.recalibration.BaseQualityRecalibration
-import org.bdgenomics.adam.rdd.fragment.FragmentRDD
+import org.bdgenomics.adam.rdd.{ ADAMSaveAnyArgs, AvroReadGroupGenomicRDD, JavaSaveArgs, SAMHeaderWriter }
 import org.bdgenomics.adam.serialization.AvroSerializer
 import org.bdgenomics.adam.util.ReferenceFile
 import org.bdgenomics.formats.avro._
-import org.bdgenomics.utils.interval.array.{
-  IntervalArray,
-  IntervalArraySerializer
-}
-import org.seqdoop.hadoop_bam._
+import org.bdgenomics.utils.interval.array.{ IntervalArray, IntervalArraySerializer }
+import org.hammerlab.paths.Path
+import org.seqdoop.hadoop_bam.SAMFormat.{ BAM, CRAM, SAM, inferFromFilePath }
+import org.seqdoop.hadoop_bam.{ CRAMInputFormat, SAMFormat, SAMRecordWritable }
+
 import scala.collection.JavaConversions._
 import scala.language.implicitConversions
 import scala.math.{ abs, min }
@@ -64,38 +56,41 @@ import scala.reflect.ClassTag
 
 private[adam] case class AlignmentRecordArray(
     array: Array[(ReferenceRegion, AlignmentRecord)],
-    maxIntervalWidth: Long) extends IntervalArray[ReferenceRegion, AlignmentRecord] {
+    maxIntervalWidth: Long)
+  extends IntervalArray[ReferenceRegion, AlignmentRecord] {
+
+  override def duplicate(): IntervalArray[ReferenceRegion, AlignmentRecord] = copy()
 
   protected def replace(arr: Array[(ReferenceRegion, AlignmentRecord)],
-                        maxWidth: Long): IntervalArray[ReferenceRegion, AlignmentRecord] = {
+                        maxWidth: Long): IntervalArray[ReferenceRegion, AlignmentRecord] =
     AlignmentRecordArray(arr, maxWidth)
-  }
 }
 
-private[adam] class AlignmentRecordArraySerializer extends IntervalArraySerializer[ReferenceRegion, AlignmentRecord, AlignmentRecordArray] {
+private[adam] class AlignmentRecordArraySerializer
+  extends IntervalArraySerializer[ReferenceRegion, AlignmentRecord, AlignmentRecordArray] {
 
   protected val kSerializer = new ReferenceRegionSerializer
   protected val tSerializer = new AvroSerializer[AlignmentRecord]
 
   protected def builder(arr: Array[(ReferenceRegion, AlignmentRecord)],
-                        maxIntervalWidth: Long): AlignmentRecordArray = {
+                        maxIntervalWidth: Long): AlignmentRecordArray =
     AlignmentRecordArray(arr, maxIntervalWidth)
-  }
 }
 
 object AlignmentRecordRDD {
-
-  def unaligned(rdd: RDD[AlignmentRecord]): AlignmentRecordRDD = {
-    AlignmentRecordRDD(rdd,
+  def unaligned(rdd: RDD[AlignmentRecord]): AlignmentRecordRDD =
+    AlignmentRecordRDD(
+      rdd,
       SequenceDictionary.empty,
-      RecordGroupDictionary.empty)
-  }
+      RecordGroupDictionary.empty
+    )
 }
 
 case class AlignmentRecordRDD(
     rdd: RDD[AlignmentRecord],
     sequences: SequenceDictionary,
-    recordGroups: RecordGroupDictionary) extends AvroReadGroupGenomicRDD[AlignmentRecord, AlignmentRecordRDD] {
+    recordGroups: RecordGroupDictionary)
+  extends AvroReadGroupGenomicRDD[AlignmentRecord, AlignmentRecordRDD] {
 
   /**
    * Replaces the underlying RDD and SequenceDictionary and emits a new object.
@@ -105,20 +100,20 @@ case class AlignmentRecordRDD(
    * @return Returns a new AlignmentRecordRDD.
    */
   protected def replaceRddAndSequences(newRdd: RDD[AlignmentRecord],
-                                       newSequences: SequenceDictionary): AlignmentRecordRDD = {
-    AlignmentRecordRDD(newRdd,
+                                       newSequences: SequenceDictionary): AlignmentRecordRDD =
+    AlignmentRecordRDD(
+      newRdd,
       newSequences,
-      recordGroups)
-  }
+      recordGroups
+    )
 
   protected def replaceRdd(newRdd: RDD[AlignmentRecord]): AlignmentRecordRDD = {
     copy(rdd = newRdd)
   }
 
   protected def buildTree(rdd: RDD[(ReferenceRegion, AlignmentRecord)])(
-    implicit tTag: ClassTag[AlignmentRecord]): IntervalArray[ReferenceRegion, AlignmentRecord] = {
-    IntervalArray(rdd, AlignmentRecordArray.apply(_, _))
-  }
+    implicit tTag: ClassTag[AlignmentRecord]): IntervalArray[ReferenceRegion, AlignmentRecord] =
+    IntervalArray(rdd, AlignmentRecordArray(_, _))
 
   /**
    * Convert this set of reads into fragments.
@@ -126,20 +121,20 @@ case class AlignmentRecordRDD(
    * @return Returns a FragmentRDD where all reads have been grouped together by
    *   the original sequence fragment they come from.
    */
-  def toFragments: FragmentRDD = {
-    FragmentRDD(groupReadsByFragment().map(_.toFragment),
+  def toFragments: FragmentRDD =
+    FragmentRDD(
+      groupReadsByFragment().map(_.toFragment),
       sequences,
-      recordGroups)
-  }
+      recordGroups
+    )
 
   /**
    * Groups all reads by record group and read name.
    *
    * @return SingleReadBuckets with primary, secondary and unmapped reads
    */
-  private def locallyGroupReadsByFragment(): RDD[SingleReadBucket] = {
+  private def locallyGroupReadsByFragment(): RDD[SingleReadBucket] =
     SingleReadBucket.fromQuerynameSorted(rdd)
-  }
 
   /**
    * Convert this set of reads into fragments.
@@ -149,11 +144,12 @@ case class AlignmentRecordRDD(
    * @return Returns a FragmentRDD where all reads have been grouped together by
    *   the original sequence fragment they come from.
    */
-  private[rdd] def querynameSortedToFragments: FragmentRDD = {
-    FragmentRDD(locallyGroupReadsByFragment().map(_.toFragment),
+  private[rdd] def querynameSortedToFragments: FragmentRDD =
+    FragmentRDD(
+      locallyGroupReadsByFragment().map(_.toFragment),
       sequences,
-      recordGroups)
-  }
+      recordGroups
+    )
 
   /**
    * Converts this set of reads into a corresponding CoverageRDD.
@@ -220,23 +216,20 @@ case class AlignmentRecordRDD(
    *   file was saved.
    */
   private[rdd] def maybeSaveBam(args: ADAMSaveAnyArgs,
-                                isSorted: Boolean = false): Boolean = {
-
-    if (args.outputPath.endsWith(".sam") ||
-      args.outputPath.endsWith(".bam") ||
-      args.outputPath.endsWith(".cram")) {
-      log.info("Saving data in SAM/BAM/CRAM format")
-      saveAsSam(
-        args.outputPath,
-        isSorted = isSorted,
-        asSingleFile = args.asSingleFile,
-        deferMerging = args.deferMerging
-      )
-      true
-    } else {
-      false
+                                isSorted: Boolean = false): Boolean =
+    args.outputPath.extension match {
+      case "sam" | "bam" | "cram" ⇒
+        log.info("Saving data in SAM/BAM/CRAM format")
+        saveAsSam(
+          args.outputPath,
+          isSorted = isSorted,
+          asSingleFile = args.asSingleFile,
+          deferMerging = args.deferMerging
+        )
+        true
+      case _ ⇒
+        false
     }
-  }
 
   /**
    * Saves the RDD as FASTQ if the file has the proper extension.
@@ -246,14 +239,14 @@ case class AlignmentRecordRDD(
    *   was saved as FASTQ, or if the file extension ended in ".ifq" and the file
    *   was saved as interleaved FASTQ.
    */
-  private[rdd] def maybeSaveFastq(args: ADAMSaveAnyArgs): Boolean = {
-    if (args.outputPath.endsWith(".fq") || args.outputPath.endsWith(".fastq") ||
-      args.outputPath.endsWith(".ifq")) {
-      saveAsFastq(args.outputPath, sort = args.sortFastqOutput)
-      true
-    } else
-      false
-  }
+  private[rdd] def maybeSaveFastq(args: ADAMSaveAnyArgs): Boolean =
+    args.outputPath.extension match {
+      case "fq" | "fastq" | "ifq" ⇒
+        saveAsFastq(args.outputPath, sort = args.sortFastqOutput)
+        true
+      case _ ⇒
+        false
+    }
 
   /**
    * Saves AlignmentRecords as a directory of Parquet files or as SAM/BAM.
@@ -267,12 +260,10 @@ case class AlignmentRecordRDD(
    * @return Returns true if saving succeeded.
    */
   def save(args: ADAMSaveAnyArgs,
-           isSorted: Boolean = false): Boolean = {
-
+           isSorted: Boolean = false): Boolean =
     (maybeSaveBam(args, isSorted) ||
       maybeSaveFastq(args) ||
       { saveAsParquet(args); true })
-  }
 
   /**
    * Saves this RDD to disk, with the type identified by the extension.
@@ -281,10 +272,9 @@ case class AlignmentRecordRDD(
    * @param isSorted Whether the file is sorted or not.
    * @return Returns true if saving succeeded.
    */
-  def save(filePath: java.lang.String,
-           isSorted: java.lang.Boolean): java.lang.Boolean = {
+  def save(filePath: Path,
+           isSorted: Boolean): Boolean =
     save(new JavaSaveArgs(filePath), isSorted)
-  }
 
   /**
    * Converts an RDD into the SAM spec string it represents.
@@ -305,7 +295,7 @@ case class AlignmentRecordRDD(
 
     // get a header writing codec
     val samHeaderCodec = new SAMTextHeaderCodec
-    samHeaderCodec.setValidationStringency(ValidationStringency.SILENT)
+    samHeaderCodec.setValidationStringency(SILENT)
 
     // create a stringwriter and write the header to it
     val samStringWriter = new StringWriter()
@@ -359,19 +349,21 @@ case class AlignmentRecordRDD(
    * @param kmerLength The value of _k_ to use for cutting _k_-mers.
    * @return Returns an RDD containing k-mer/count pairs.
    */
-  def countKmers(kmerLength: Int): RDD[(String, Long)] = {
-    rdd.flatMap(r => {
-      // cut each read into k-mers, and attach a count of 1L
-      r.getSequence
-        .sliding(kmerLength)
-        .map(k => (k, 1L))
-    }).reduceByKey((k1: Long, k2: Long) => k1 + k2)
-  }
+  def countKmers(kmerLength: Int): RDD[(String, Long)] =
+    rdd
+      .flatMap {
+        // cut each read into k-mers, and attach a count of 1L
+        _
+          .getSequence
+          .sliding(kmerLength)
+          .map(k ⇒ k → 1L)
+      }
+      .reduceByKey(_ + _)
 
   /**
    * Saves an RDD of ADAM read data into the SAM/BAM format.
    *
-   * @param filePath Path to save files to.
+   * @param path Path to save files to.
    * @param asType Selects whether to save as SAM, BAM, or CRAM. The default
    *   value is None, which means the file type is inferred from the extension.
    * @param asSingleFile If true, saves output as a single file.
@@ -379,14 +371,13 @@ case class AlignmentRecordRDD(
    * @param deferMerging If true and asSingleFile is true, we will save the
    *   output shards as a headerless file, but we will not merge the shards.
    */
-  def saveAsSam(
-    filePath: String,
-    asType: Option[SAMFormat] = None,
-    asSingleFile: Boolean = false,
-    isSorted: Boolean = false,
-    deferMerging: Boolean = false): Unit = SAMSave.time {
+  def saveAsSam(path: Path,
+                asType: Option[SAMFormat] = None,
+                asSingleFile: Boolean = false,
+                isSorted: Boolean = false,
+                deferMerging: Boolean = false): Unit = SAMSave.time {
 
-    val fileType = asType.getOrElse(SAMFormat.inferFromFilePath(filePath))
+    val fileType = asType.getOrElse(inferFromFilePath(path.toString))
 
     // convert the records
     val (convertRecords: RDD[SAMRecordWritable], header: SAMFileHeader) =
@@ -398,24 +389,20 @@ case class AlignmentRecordRDD(
     // write file to disk
     val conf = rdd.context.hadoopConfiguration
 
-    // get file system
-    val headPath = new Path(filePath + "_head")
-    val tailPath = new Path(filePath + "_tail")
-    val outputPath = new Path(filePath)
-    val fs = headPath.getFileSystem(rdd.context.hadoopConfiguration)
+    val headPath = path + "_head"
+    val outputPath = path
 
     // TIL: sam and bam are written in completely different ways!
-    if (fileType == SAMFormat.SAM) {
-      SAMHeaderWriter.writeHeader(fs, headPath, header)
-    } else if (fileType == SAMFormat.BAM) {
+    if (fileType == SAM) {
+      SAMHeaderWriter.writeHeader(headPath, header)
+    } else if (fileType == BAM) {
 
       // get an output stream
-      val os = fs.create(headPath)
-        .asInstanceOf[OutputStream]
+      val os = headPath.outputStream
 
       // create htsjdk specific streams for writing the bam header
       val compressedOut: OutputStream = new BlockCompressedOutputStream(os, null)
-      val binaryCodec = new BinaryCodec(compressedOut);
+      val binaryCodec = new BinaryCodec(compressedOut)
 
       // write a bam header - cribbed from Hadoop-BAM
       binaryCodec.writeBytes("BAM\001".getBytes())
@@ -428,10 +415,10 @@ case class AlignmentRecordRDD(
       binaryCodec.writeInt(ssd.size())
       ssd.getSequences
         .toList
-        .foreach(r => {
+        .foreach { r ⇒
           binaryCodec.writeString(r.getSequenceName(), true, true)
           binaryCodec.writeInt(r.getSequenceLength())
-        })
+        }
 
       // flush and close all the streams
       compressedOut.flush()
@@ -459,14 +446,21 @@ case class AlignmentRecordRDD(
           CRAMInputFormat.REFERENCE_SOURCE_PATH_PROPERTY))
 
       // get an output stream
-      val os = fs.create(headPath)
-        .asInstanceOf[OutputStream]
+      val os = headPath.outputStream
 
       // create a cram container writer
-      val csw = new CRAMContainerStreamWriter(os, null, // null -> do not write index
-        new ReferenceSource(Paths.get(URI.create(refSource))),
-        header,
-        filePath) // write filepath as id
+      val csw =
+        new CRAMContainerStreamWriter(
+          os,
+          null,  // null -> do not write index
+          new ReferenceSource(
+            Path(
+              URI.create(refSource)
+            )
+          ),
+          header,
+          path.toString  // write filepath as id
+        )
 
       // write the header
       csw.writeHeader(header)
@@ -484,12 +478,12 @@ case class AlignmentRecordRDD(
 
     if (!asSingleFile) {
       val headeredOutputFormat = fileType match {
-        case SAMFormat.SAM  => classOf[InstrumentedADAMSAMOutputFormat[LongWritable]]
-        case SAMFormat.BAM  => classOf[InstrumentedADAMBAMOutputFormat[LongWritable]]
-        case SAMFormat.CRAM => classOf[InstrumentedADAMCRAMOutputFormat[LongWritable]]
+        case SAM  => classOf[InstrumentedADAMSAMOutputFormat[LongWritable]]
+        case BAM  => classOf[InstrumentedADAMBAMOutputFormat[LongWritable]]
+        case CRAM => classOf[InstrumentedADAMCRAMOutputFormat[LongWritable]]
       }
       withKey.saveAsNewAPIHadoopFile(
-        filePath,
+        path.toString,
         classOf[LongWritable],
         classOf[SAMRecordWritable],
         headeredOutputFormat,
@@ -497,23 +491,23 @@ case class AlignmentRecordRDD(
       )
 
       // clean up the header after writing
-      fs.delete(headPath, true)
+      headPath.delete()
     } else {
-      log.info(s"Writing single ${fileType} file (not Hadoop-style directory)")
+      log.info(s"Writing single $fileType file (not Hadoop-style directory)")
 
-      val tailPath = new Path(filePath + "_tail")
-      val outputPath = new Path(filePath)
+      val tailPath = path + "_tail"
+      val outputPath = path
 
       // set up output format
       val headerLessOutputFormat = fileType match {
-        case SAMFormat.SAM  => classOf[InstrumentedADAMSAMOutputFormatHeaderLess[LongWritable]]
-        case SAMFormat.BAM  => classOf[InstrumentedADAMBAMOutputFormatHeaderLess[LongWritable]]
-        case SAMFormat.CRAM => classOf[InstrumentedADAMCRAMOutputFormatHeaderLess[LongWritable]]
+        case SAM  => classOf[InstrumentedADAMSAMOutputFormatHeaderLess[LongWritable]]
+        case BAM  => classOf[InstrumentedADAMBAMOutputFormatHeaderLess[LongWritable]]
+        case CRAM => classOf[InstrumentedADAMCRAMOutputFormatHeaderLess[LongWritable]]
       }
 
       // save rdd
       withKey.saveAsNewAPIHadoopFile(
-        tailPath.toString,
+        tailPath.toString(),
         classOf[LongWritable],
         classOf[SAMRecordWritable],
         headerLessOutputFormat,
@@ -521,13 +515,14 @@ case class AlignmentRecordRDD(
       )
 
       if (!deferMerging) {
-        FileMerger.mergeFiles(rdd.context.hadoopConfiguration,
-          fs,
+        mergeFiles(
+          rdd.context,
           outputPath,
           tailPath,
           optHeaderPath = Some(headPath),
-          writeEmptyGzipBlock = (fileType == SAMFormat.BAM),
-          writeCramEOF = (fileType == SAMFormat.CRAM))
+          writeEmptyGzipBlock = fileType == BAM,
+          writeCramEOF = (fileType == CRAM)
+        )
       }
     }
   }
@@ -542,14 +537,16 @@ case class AlignmentRecordRDD(
    * @param isSorted If the output is sorted, this will modify the header.
    */
   def saveAsSam(
-    filePath: java.lang.String,
+    filePath: Path,
     asType: SAMFormat,
-    asSingleFile: java.lang.Boolean,
-    isSorted: java.lang.Boolean) {
-    saveAsSam(filePath,
+    asSingleFile: Boolean,
+    isSorted: Boolean) {
+    saveAsSam(
+      filePath,
       asType = Option(asType),
       asSingleFile = asSingleFile,
-      isSorted = isSorted)
+      isSorted = isSorted
+    )
   }
 
   /**
@@ -595,7 +592,7 @@ case class AlignmentRecordRDD(
   def sortReadsByReferencePositionAndIndex(): AlignmentRecordRDD = SortByIndex.time {
     log.info("Sorting reads by reference index, using %s.".format(sequences))
 
-    import scala.math.Ordering.{ Int => ImplicitIntOrdering, _ }
+    import scala.math.Ordering.{ Int ⇒ ImplicitIntOrdering, _ }
 
     // NOTE: In order to keep unmapped reads from swamping a single partition
     // we sort the unmapped reads by read name. To do this, we hash the sequence name
@@ -631,16 +628,26 @@ case class AlignmentRecordRDD(
    * known SNPs to mask true variation during the recalibration process.
    *
    * @param knownSnps A table of known SNPs to mask valid variants.
-   * @param observationDumpFile An optional local path to dump recalibration
-   *                            observations to.
+   * @param minAcceptableQuality The minimum quality score to recalibrate.
+   * @param optStorageLevel An optional storage level to set for the output
+   *   of the first stage of BQSR. Defaults to StorageLevel.MEMORY_ONLY.
    * @return Returns an RDD of recalibrated reads.
    */
-  def recalibateBaseQualities(
+  def recalibrateBaseQualities(
     knownSnps: Broadcast[SnpTable],
-    observationDumpFile: Option[String] = None,
-    validationStringency: ValidationStringency = ValidationStringency.LENIENT): AlignmentRecordRDD = BQSRInDriver.time {
-    replaceRdd(BaseQualityRecalibration(rdd, knownSnps, observationDumpFile, validationStringency))
-  }
+    minAcceptableQuality: Int = 5,
+    optStorageLevel: Option[StorageLevel] = Some(MEMORY_ONLY)): AlignmentRecordRDD =
+    BQSRInDriver.time {
+      replaceRdd(
+        BaseQualityRecalibration(
+          rdd,
+          knownSnps,
+          recordGroups,
+          (minAcceptableQuality + 33).toChar,
+          optStorageLevel
+        )
+      )
+    }
 
   /**
    * Realigns indels using a concensus-based heuristic.
@@ -656,6 +663,10 @@ case class AlignmentRecordRDD(
    *   are only finalized if the log-odds threshold is exceeded.
    * @param maxTargetSize The maximum width of a single target region for
    *   realignment.
+   * @param optReferenceFile An optional reference. If not provided, reference
+   *   will be inferred from MD tags.
+   * @param unclipReads If true, unclips reads prior to realignment. Else, omits
+   *   clipped bases during realignment.
    * @return Returns an RDD of mapped reads which have been realigned.
    */
   def realignIndels(
@@ -664,8 +675,20 @@ case class AlignmentRecordRDD(
     maxIndelSize: Int = 500,
     maxConsensusNumber: Int = 30,
     lodThreshold: Double = 5.0,
-    maxTargetSize: Int = 3000): AlignmentRecordRDD = RealignIndelsInDriver.time {
-    replaceRdd(RealignIndels(rdd, consensusModel, isSorted, maxIndelSize, maxConsensusNumber, lodThreshold))
+    maxTargetSize: Int = 3000,
+    maxReadsPerTarget: Int = 20000,
+    optReferenceFile: Option[ReferenceFile] = None,
+    unclipReads: Boolean = false): AlignmentRecordRDD = RealignIndelsInDriver.time {
+    replaceRdd(RealignIndels(rdd,
+      consensusModel = consensusModel,
+      dataIsSorted = isSorted,
+      maxIndelSize = maxIndelSize,
+      maxConsensusNumber = maxConsensusNumber,
+      lodThreshold = lodThreshold,
+      maxTargetSize = maxTargetSize,
+      maxReadsPerTarget = maxReadsPerTarget,
+      optReferenceFile = optReferenceFile,
+      unclipReads = unclipReads))
   }
 
   /**
@@ -685,7 +708,7 @@ case class AlignmentRecordRDD(
   def computeMismatchingPositions(
     referenceFile: ReferenceFile,
     overwriteExistingTags: Boolean = false,
-    validationStringency: ValidationStringency = ValidationStringency.LENIENT): AlignmentRecordRDD = {
+    validationStringency: ValidationStringency = LENIENT): AlignmentRecordRDD = {
     replaceRdd(MDTagging(rdd,
       referenceFile,
       overwriteExistingTags = overwriteExistingTags,
@@ -730,15 +753,16 @@ case class AlignmentRecordRDD(
    *   passes.
    */
   def saveAsPairedFastq(
-    fileName1: String,
-    fileName2: String,
+    fileName1: Path,
+    fileName2: Path,
     outputOriginalBaseQualities: Boolean = false,
-    validationStringency: ValidationStringency = ValidationStringency.LENIENT,
+    validationStringency: ValidationStringency = LENIENT,
     persistLevel: Option[StorageLevel] = None) {
 
     def maybePersist[T](r: RDD[T]): Unit = {
       persistLevel.foreach(r.persist(_))
     }
+
     def maybeUnpersist[T](r: RDD[T]): Unit = {
       persistLevel.foreach(_ => r.unpersist())
     }
@@ -755,7 +779,7 @@ case class AlignmentRecordRDD(
       })
 
     validationStringency match {
-      case ValidationStringency.STRICT | ValidationStringency.LENIENT =>
+      case STRICT | LENIENT =>
         val readIDsWithCounts: RDD[(String, Int)] = readsByID.mapValues(_.size)
         val unpairedReadIDsWithCounts: RDD[(String, Int)] = readIDsWithCounts.filter(_._2 != 2)
         maybePersist(unpairedReadIDsWithCounts)
@@ -780,12 +804,12 @@ case class AlignmentRecordRDD(
                 .mkString("\t", "\n\t", if (numUnpairedReadIDsWithCounts > 100) "\n\t…" else "")
             ).mkString("\n")
 
-          if (validationStringency == ValidationStringency.STRICT)
+          if (validationStringency == STRICT)
             throw new IllegalArgumentException(msg)
-          else if (validationStringency == ValidationStringency.LENIENT)
+          else if (validationStringency == LENIENT)
             logError(msg)
         }
-      case ValidationStringency.SILENT =>
+      case SILENT =>
     }
 
     val pairedRecords: RDD[AlignmentRecord] = readsByID.filter(_._2.size == 2).map(_._2).flatMap(x => x)
@@ -820,18 +844,25 @@ case class AlignmentRecordRDD(
 
     val arc = new AlignmentRecordConverter
 
-    firstInPairRecords
-      .sortBy(_.getReadName)
-      .map(record => arc.convertToFastq(record, maybeAddSuffix = true, outputOriginalBaseQualities = outputOriginalBaseQualities))
-      .saveAsTextFile(fileName1)
+    def sortConvertSave(rdd: RDD[AlignmentRecord], path: Path): Unit = {
+      rdd
+        .sortBy(_.getReadName)
+        .map(
+          record ⇒
+            arc
+            .convertToFastq(
+              record,
+              maybeAddSuffix = true,
+              outputOriginalBaseQualities = outputOriginalBaseQualities
+            )
+        )
+        .saveAsTextFile(path.toString)
 
-    secondInPairRecords
-      .sortBy(_.getReadName)
-      .map(record => arc.convertToFastq(record, maybeAddSuffix = true, outputOriginalBaseQualities = outputOriginalBaseQualities))
-      .saveAsTextFile(fileName2)
+      maybePersist(rdd)
+    }
 
-    maybeUnpersist(firstInPairRecords)
-    maybeUnpersist(secondInPairRecords)
+    sortConvertSave(firstInPairRecords, fileName1)
+    sortConvertSave(secondInPairRecords, fileName2)
   }
 
   /**
@@ -852,15 +883,15 @@ case class AlignmentRecordRDD(
    *   passes.
    */
   def saveAsFastq(
-    fileName: String,
-    fileName2Opt: Option[String] = None,
+    fileName: Path,
+    fileName2Opt: Option[Path] = None,
     outputOriginalBaseQualities: Boolean = false,
     sort: Boolean = false,
-    validationStringency: ValidationStringency = ValidationStringency.LENIENT,
+    validationStringency: ValidationStringency = LENIENT,
     persistLevel: Option[StorageLevel] = None) {
     log.info("Saving data in FASTQ format.")
     fileName2Opt match {
-      case Some(fileName2) =>
+      case Some(fileName2) ⇒
         saveAsPairedFastq(
           fileName,
           fileName2,
@@ -868,20 +899,27 @@ case class AlignmentRecordRDD(
           validationStringency = validationStringency,
           persistLevel = persistLevel
         )
-      case _ =>
+      case _ ⇒
         val arc = new AlignmentRecordConverter
 
         // sort the rdd if desired
-        val outputRdd = if (sort || fileName2Opt.isDefined) {
-          rdd.sortBy(_.getReadName)
-        } else {
-          rdd
-        }
+        val outputRdd =
+          if (sort || fileName2Opt.isDefined)
+            rdd.sortBy(_.getReadName)
+          else
+            rdd
 
         // convert the rdd and save as a text file
         outputRdd
-          .map(record => arc.convertToFastq(record, outputOriginalBaseQualities = outputOriginalBaseQualities))
-          .saveAsTextFile(fileName)
+          .map(
+            record ⇒
+              arc
+                .convertToFastq(
+                  record,
+                  outputOriginalBaseQualities = outputOriginalBaseQualities
+                )
+          )
+          .saveAsTextFile(fileName.toString)
     }
   }
 
@@ -896,7 +934,7 @@ case class AlignmentRecordRDD(
    */
   def reassembleReadPairs(
     secondPairRdd: RDD[AlignmentRecord],
-    validationStringency: ValidationStringency = ValidationStringency.LENIENT): AlignmentRecordRDD = {
+    validationStringency: ValidationStringency = LENIENT): AlignmentRecordRDD = {
     // cache rdds
     val firstPairRdd = rdd.cache()
     secondPairRdd.cache()
@@ -907,7 +945,7 @@ case class AlignmentRecordRDD(
     // all paired end reads should have the same name, except for the last two
     // characters, which will be _1/_2
     val joinedRDD: RDD[(String, (AlignmentRecord, AlignmentRecord))] =
-      if (validationStringency == ValidationStringency.STRICT) {
+      if (validationStringency == STRICT) {
         firstRDDKeyedByReadName.cogroup(secondRDDKeyedByReadName).map {
           case (readName, (firstReads, secondReads)) =>
             (firstReads.toList, secondReads.toList) match {

@@ -23,7 +23,7 @@ import org.bdgenomics.adam.models.ReferenceRegion
 
 class IndexedFastaFileSuite extends ADAMFunSuite {
 
-  val filePath = resourceUrl("HLA_DQB1_05_01_01_02.fa").getPath
+  val filePath = testFile("HLA_DQB1_05_01_01_02.fa")
 
   sparkTest("correctly generates sequence dictionary from .dict file") {
     val indexedFasta = IndexedFastaFile(sc, filePath)
@@ -38,7 +38,7 @@ class IndexedFastaFileSuite extends ADAMFunSuite {
   }
 
   sparkTest("fails when fai index is not provided") {
-    val pathWithoutIndex = resourceUrl("hs38DH_chr1_10.fa").getPath
+    val pathWithoutIndex = testFile("hs38DH_chr1_10.fa")
 
     try {
       IndexedFastaFile(sc, pathWithoutIndex)
@@ -50,7 +50,7 @@ class IndexedFastaFileSuite extends ADAMFunSuite {
   }
 
   sparkTest("passes when dict is not provided and ValidationStringency = LENIENT") {
-    val pathWithoutDict = resourceUrl("artificial.fa").getPath
+    val pathWithoutDict = testFile("artificial.fa")
 
     try {
       IndexedFastaFile(sc, pathWithoutDict, ValidationStringency.LENIENT)

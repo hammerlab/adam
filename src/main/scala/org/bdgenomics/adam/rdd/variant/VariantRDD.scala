@@ -19,53 +19,39 @@ package org.bdgenomics.adam.rdd.variant
 
 import htsjdk.samtools.ValidationStringency
 import htsjdk.variant.vcf.{ VCFHeader, VCFHeaderLine }
-import org.apache.hadoop.fs.Path
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.converters.DefaultHeaderLines
-import org.bdgenomics.adam.models.{
-  ReferenceRegion,
-  ReferenceRegionSerializer,
-  SequenceDictionary,
-  VariantContext
-}
-import org.bdgenomics.adam.rdd.{
-  AvroGenomicRDD,
-  JavaSaveArgs,
-  VCFHeaderUtils
-}
+import org.bdgenomics.adam.models.{ ReferenceRegion, ReferenceRegionSerializer, SequenceDictionary, VariantContext }
+import org.bdgenomics.adam.rdd.{ AvroGenomicRDD, JavaSaveArgs, VCFHeaderUtils }
 import org.bdgenomics.adam.serialization.AvroSerializer
-import org.bdgenomics.formats.avro.{
-  Contig,
-  Sample,
-  Variant
-}
-import org.bdgenomics.formats.avro.{ Contig, Variant }
-import org.bdgenomics.utils.interval.array.{
-  IntervalArray,
-  IntervalArraySerializer
-}
+import org.bdgenomics.formats.avro.{ Contig, Sample, Variant }
+import org.bdgenomics.utils.interval.array.{ IntervalArray, IntervalArraySerializer }
+import org.hammerlab.paths.Path
+
 import scala.collection.JavaConversions._
 import scala.reflect.ClassTag
 
 private[adam] case class VariantArray(
     array: Array[(ReferenceRegion, Variant)],
-    maxIntervalWidth: Long) extends IntervalArray[ReferenceRegion, Variant] {
+    maxIntervalWidth: Long)
+  extends IntervalArray[ReferenceRegion, Variant] {
+
+  override def duplicate(): IntervalArray[ReferenceRegion, Variant] = copy()
 
   protected def replace(arr: Array[(ReferenceRegion, Variant)],
-                        maxWidth: Long): IntervalArray[ReferenceRegion, Variant] = {
+                        maxWidth: Long): IntervalArray[ReferenceRegion, Variant] =
     VariantArray(arr, maxWidth)
-  }
 }
 
-private[adam] class VariantArraySerializer extends IntervalArraySerializer[ReferenceRegion, Variant, VariantArray] {
+private[adam] class VariantArraySerializer
+  extends IntervalArraySerializer[ReferenceRegion, Variant, VariantArray] {
 
   protected val kSerializer = new ReferenceRegionSerializer
   protected val tSerializer = new AvroSerializer[Variant]
 
   protected def builder(arr: Array[(ReferenceRegion, Variant)],
-                        maxIntervalWidth: Long): VariantArray = {
+                        maxIntervalWidth: Long): VariantArray =
     VariantArray(arr, maxIntervalWidth)
-  }
 }
 
 /**
@@ -82,22 +68,25 @@ case class VariantRDD(rdd: RDD[Variant],
 
   protected def buildTree(rdd: RDD[(ReferenceRegion, Variant)])(
     implicit tTag: ClassTag[Variant]): IntervalArray[ReferenceRegion, Variant] = {
-    IntervalArray(rdd, VariantArray.apply(_, _))
+    IntervalArray(rdd, VariantArray(_, _))
   }
 
-  override protected def saveMetadata(filePath: String) {
+  override protected def saveMetadata(filePath: Path) {
 
     // write vcf headers to file
-    VCFHeaderUtils.write(new VCFHeader(headerLines.toSet),
-      new Path("%s/_header".format(filePath)),
-      rdd.context.hadoopConfiguration)
+    VCFHeaderUtils.write(
+      new VCFHeader(headerLines.toSet),
+      filePath / "_header"
+    )
 
     // convert sequence dictionary to avro form and save
     val contigs = sequences.toAvro
-    saveAvro("%s/_seqdict.avro".format(filePath),
+    saveAvro(
+      filePath / "_seqdict.avro",
       rdd.context,
       Contig.SCHEMA$,
-      contigs)
+      contigs
+    )
   }
 
   /**
@@ -105,7 +94,7 @@ case class VariantRDD(rdd: RDD[Variant],
    *
    * @param filePath Path to save to.
    */
-  def save(filePath: java.lang.String) {
+  def save(filePath: Path) {
     saveAsParquet(new JavaSaveArgs(filePath))
   }
 
@@ -119,7 +108,7 @@ case class VariantRDD(rdd: RDD[Variant],
    *   valid VCF header.
    * @param stringency The validation stringency to use when writing the VCF.
    */
-  def saveAsVcf(filePath: String,
+  def saveAsVcf(filePath: Path,
                 asSingleFile: Boolean,
                 stringency: ValidationStringency) {
     toVariantContextRDD.saveAsVcf(filePath, asSingleFile, stringency)

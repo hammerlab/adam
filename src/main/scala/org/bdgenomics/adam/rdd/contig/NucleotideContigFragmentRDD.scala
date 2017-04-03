@@ -17,46 +17,43 @@
  */
 package org.bdgenomics.adam.rdd.contig
 
+import org.hammerlab.paths.Path
+
 import com.google.common.base.Splitter
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.converters.FragmentConverter
-import org.bdgenomics.adam.models.{
-  ReferenceRegion,
-  ReferenceRegionSerializer,
-  SequenceRecord,
-  SequenceDictionary
-}
+import org.bdgenomics.adam.models.{ ReferenceRegion, ReferenceRegionSerializer, SequenceDictionary, SequenceRecord }
 import org.bdgenomics.adam.rdd.{ AvroGenomicRDD, JavaSaveArgs }
 import org.bdgenomics.adam.serialization.AvroSerializer
 import org.bdgenomics.adam.util.ReferenceFile
 import org.bdgenomics.formats.avro.{ AlignmentRecord, NucleotideContigFragment }
-import org.bdgenomics.utils.interval.array.{
-  IntervalArray,
-  IntervalArraySerializer
-}
+import org.bdgenomics.utils.interval.array.{ IntervalArray, IntervalArraySerializer }
+
 import scala.collection.JavaConversions._
 import scala.math.max
 import scala.reflect.ClassTag
 
 private[adam] case class NucleotideContigFragmentArray(
     array: Array[(ReferenceRegion, NucleotideContigFragment)],
-    maxIntervalWidth: Long) extends IntervalArray[ReferenceRegion, NucleotideContigFragment] {
+    maxIntervalWidth: Long)
+  extends IntervalArray[ReferenceRegion, NucleotideContigFragment] {
+
+  def duplicate(): IntervalArray[ReferenceRegion, NucleotideContigFragment] = copy()
 
   protected def replace(arr: Array[(ReferenceRegion, NucleotideContigFragment)],
-                        maxWidth: Long): IntervalArray[ReferenceRegion, NucleotideContigFragment] = {
+                        maxWidth: Long): IntervalArray[ReferenceRegion, NucleotideContigFragment] =
     NucleotideContigFragmentArray(arr, maxWidth)
-  }
 }
 
-private[adam] class NucleotideContigFragmentArraySerializer extends IntervalArraySerializer[ReferenceRegion, NucleotideContigFragment, NucleotideContigFragmentArray] {
+private[adam] class NucleotideContigFragmentArraySerializer
+  extends IntervalArraySerializer[ReferenceRegion, NucleotideContigFragment, NucleotideContigFragmentArray] {
 
   protected val kSerializer = new ReferenceRegionSerializer
   protected val tSerializer = new AvroSerializer[NucleotideContigFragment]
 
   protected def builder(arr: Array[(ReferenceRegion, NucleotideContigFragment)],
-                        maxIntervalWidth: Long): NucleotideContigFragmentArray = {
+                        maxIntervalWidth: Long): NucleotideContigFragmentArray =
     NucleotideContigFragmentArray(arr, maxIntervalWidth)
-  }
 }
 
 private[rdd] object NucleotideContigFragmentRDD extends Serializable {
@@ -98,12 +95,13 @@ private[rdd] object NucleotideContigFragmentRDD extends Serializable {
  */
 case class NucleotideContigFragmentRDD(
     rdd: RDD[NucleotideContigFragment],
-    sequences: SequenceDictionary) extends AvroGenomicRDD[NucleotideContigFragment, NucleotideContigFragmentRDD] with ReferenceFile {
+    sequences: SequenceDictionary)
+  extends AvroGenomicRDD[NucleotideContigFragment, NucleotideContigFragmentRDD]
+    with ReferenceFile {
 
   protected def buildTree(rdd: RDD[(ReferenceRegion, NucleotideContigFragment)])(
-    implicit tTag: ClassTag[NucleotideContigFragment]): IntervalArray[ReferenceRegion, NucleotideContigFragment] = {
-    IntervalArray(rdd, NucleotideContigFragmentArray.apply(_, _))
-  }
+    implicit tTag: ClassTag[NucleotideContigFragment]): IntervalArray[ReferenceRegion, NucleotideContigFragment] =
+    IntervalArray(rdd, NucleotideContigFragmentArray(_, _))
 
   /**
    * Converts an RDD of nucleotide contig fragments into reads. Adjacent contig fragments are
@@ -111,9 +109,8 @@ case class NucleotideContigFragmentRDD(
    *
    * @return Returns an RDD of reads.
    */
-  def toReads: RDD[AlignmentRecord] = {
+  def toReads: RDD[AlignmentRecord] =
     FragmentConverter.convertRdd(rdd)
-  }
 
   /**
    * Replaces the underlying RDD with a new RDD.
@@ -122,9 +119,8 @@ case class NucleotideContigFragmentRDD(
    * @return Returns a new NucleotideContigFragmentRDD where the underlying RDD
    *   has been replaced.
    */
-  protected def replaceRdd(newRdd: RDD[NucleotideContigFragment]): NucleotideContigFragmentRDD = {
+  protected def replaceRdd(newRdd: RDD[NucleotideContigFragment]): NucleotideContigFragmentRDD =
     copy(rdd = newRdd)
-  }
 
   /**
    * @param elem Fragment to extract a region from.
@@ -132,23 +128,21 @@ case class NucleotideContigFragmentRDD(
    *   reference region. If the fragment start position and name is not defined,
    *   returns no regions.
    */
-  protected def getReferenceRegions(elem: NucleotideContigFragment): Seq[ReferenceRegion] = {
+  protected def getReferenceRegions(elem: NucleotideContigFragment): Seq[ReferenceRegion] =
     ReferenceRegion(elem).toSeq
-  }
 
   /**
    * Save nucleotide contig fragments as Parquet or FASTA.
    *
    * If filename ends in .fa or .fasta, saves as Fasta. If not, saves fragments
    * to Parquet. Defaults to 60 character line length, if saving to FASTA.
-   *
-   * @param fileName file name
    */
-  def save(fileName: java.lang.String) {
-    if (fileName.endsWith(".fa") || fileName.endsWith(".fasta")) {
-      saveAsFasta(fileName)
-    } else {
-      saveAsParquet(new JavaSaveArgs(fileName))
+  def save(path: Path) {
+    path.extension match {
+      case "fa" | "fasta" ⇒
+        saveAsFasta(path)
+      case _ ⇒
+        saveAsParquet(new JavaSaveArgs(path))
     }
   }
 
@@ -158,11 +152,13 @@ case class NucleotideContigFragmentRDD(
    * @param fileName file name
    * @param lineWidth hard wrap FASTA formatted sequence at line width, default 60
    */
-  def saveAsFasta(fileName: String, lineWidth: Int = 60) {
+  def saveAsFasta(fileName: Path, lineWidth: Int = 60) {
 
-    def isFragment(record: NucleotideContigFragment): Boolean = {
-      Option(record.getFragmentNumber).isDefined && Option(record.getNumberOfFragmentsInContig).fold(false)(_ > 1)
-    }
+    def isFragment(record: NucleotideContigFragment): Boolean =
+      Option(record.getFragmentNumber)
+        .isDefined &&
+        Option(record.getNumberOfFragmentsInContig)
+          .fold(false)(_ > 1)
 
     def toFasta(record: NucleotideContigFragment): String = {
       val sb = new StringBuilder()
@@ -179,7 +175,7 @@ case class NucleotideContigFragmentRDD(
       sb.toString
     }
 
-    rdd.map(toFasta).saveAsTextFile(fileName)
+    rdd.map(toFasta).saveAsTextFile(fileName.toString)
   }
 
   /**

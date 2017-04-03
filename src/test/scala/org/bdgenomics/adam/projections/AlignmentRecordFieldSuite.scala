@@ -24,7 +24,8 @@ import org.bdgenomics.adam.rdd.TestSaveArgs
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.AlignmentRecord
 
-class AlignmentRecordFieldSuite extends ADAMFunSuite {
+class AlignmentRecordFieldSuite
+  extends ADAMFunSuite {
 
   sparkTest("Use projection when reading parquet alignment records") {
     val path = tmpFile("alignmentRecords.parquet")
@@ -32,6 +33,7 @@ class AlignmentRecordFieldSuite extends ADAMFunSuite {
       .setContigName("6")
       .setStart(29941260L)
       .build()))
+
     rdd.saveAsParquet(TestSaveArgs(path))
 
     val projection = Projection(

@@ -20,15 +20,18 @@ package org.bdgenomics.adam.rdd.feature
 import java.util.Comparator
 
 import com.google.common.collect.ComparisonChain
-import org.apache.hadoop.fs.{ FileSystem, Path }
 import org.apache.spark.rdd.RDD
+import org.apache.spark.storage.StorageLevel
+import org.bdgenomics.adam.instrumentation.Timers._
 import org.bdgenomics.adam.models._
+import org.bdgenomics.adam.rdd.FileMerger.mergeFiles
 import org.bdgenomics.adam.rdd.{ AvroGenomicRDD, FileMerger, JavaSaveArgs, SAMHeaderWriter }
 import org.bdgenomics.adam.serialization.AvroSerializer
 import org.bdgenomics.formats.avro.{ Feature, Strand }
 import org.bdgenomics.utils.interval.array.{ IntervalArray, IntervalArraySerializer }
 import org.bdgenomics.utils.misc.Logging
 import org.hammerlab.genomics.reference.{ ContigName, NumLoci }
+import org.hammerlab.paths.Path
 
 import scala.collection.JavaConversions._
 import scala.math.max
@@ -36,12 +39,14 @@ import scala.reflect.ClassTag
 
 private[adam] case class FeatureArray(
     array: Array[(ReferenceRegion, Feature)],
-    maxIntervalWidth: Long) extends IntervalArray[ReferenceRegion, Feature] {
+    maxIntervalWidth: Long)
+  extends IntervalArray[ReferenceRegion, Feature] {
+
+  override def duplicate(): IntervalArray[ReferenceRegion, Feature] = copy()
 
   protected def replace(arr: Array[(ReferenceRegion, Feature)],
-                        maxWidth: Long): IntervalArray[ReferenceRegion, Feature] = {
+                        maxWidth: Long): IntervalArray[ReferenceRegion, Feature] =
     FeatureArray(arr, maxWidth)
-  }
 }
 
 private[adam] class FeatureArraySerializer extends IntervalArraySerializer[ReferenceRegion, Feature, FeatureArray] {
@@ -50,9 +55,8 @@ private[adam] class FeatureArraySerializer extends IntervalArraySerializer[Refer
   protected val tSerializer = new AvroSerializer[Feature]
 
   protected def builder(arr: Array[(ReferenceRegion, Feature)],
-                        maxIntervalWidth: Long): FeatureArray = {
+                        maxIntervalWidth: Long): FeatureArray =
     FeatureArray(arr, maxIntervalWidth)
-  }
 }
 
 private trait FeatureOrdering[T <: Feature] extends Ordering[T] {
@@ -71,7 +75,7 @@ private trait FeatureOrdering[T <: Feature] extends Ordering[T] {
     // use ComparisonChain to safely handle nulls, as Feature is a java object
     ComparisonChain.start()
       // consider reference region first
-      .compare(x.getContigName, y.getContigName)
+      .compare(x.getContigName: ContigName, y.getContigName: ContigName)
       .compare(x.getStart, y.getStart)
       .compare(x.getEnd, y.getEnd)
       .compare(x.getStrand, y.getStrand, strandNullsLast)
@@ -102,25 +106,32 @@ object FeatureRDD {
    * aggregate to rebuild the SequenceDictionary.
    *
    * @param rdd The underlying Feature RDD to build from.
+   * @param optStorageLevel Optional storage level to use for cache before building the SequenceDictionary.
    * @return Returns a new FeatureRDD.
    */
-  def apply(rdd: RDD[Feature])(implicit cf: ContigName.Factory): FeatureRDD = {
+  def inferSequenceDictionary(
+    rdd: RDD[Feature],
+    optStorageLevel: Option[StorageLevel])(implicit cf: ContigName.Factory): FeatureRDD =
+    BuildSequenceDictionary.time {
 
-    // cache the rdd, since we're making multiple passes
-    rdd.cache()
+      // optionally cache the rdd, since we're making multiple passes
+      optStorageLevel.foreach(rdd.persist(_))
 
-    // create sequence records with length max(start, end) + 1L
-    val sequenceRecords =
-      rdd
-        .keyBy(_.getContigName)
-        .mapValues { feature => NumLoci(max(feature.getStart, feature.getEnd) + 1L) }
-        .reduceByKey(_ max _)
-        .map { case (contigName, size) => SequenceRecord(contigName, size) }
+      // create sequence records with length max(start, end) + 1L
+      val sequenceRecords =
+        rdd
+          .map {
+            feature ⇒
+              (feature.getContigName: ContigName) →
+                NumLoci(max(feature.getStart, feature.getEnd) + 1L)
+          }
+          .reduceByKey(_ max _)
+          .map { case (contigName, size) ⇒ SequenceRecord(contigName, size) }
 
-    val sd = new SequenceDictionary(sequenceRecords.collect.toVector)
+      val sd = new SequenceDictionary(sequenceRecords.collect.toVector)
 
-    FeatureRDD(rdd, sd)
-  }
+      FeatureRDD(rdd, sd)
+    }
 
   /**
    * @param feature Feature to convert to GTF format.
@@ -234,7 +245,7 @@ case class FeatureRDD(rdd: RDD[Feature],
 
   protected def buildTree(rdd: RDD[(ReferenceRegion, Feature)])(
     implicit tTag: ClassTag[Feature]): IntervalArray[ReferenceRegion, Feature] = {
-    IntervalArray(rdd, FeatureArray.apply(_, _))
+    IntervalArray(rdd, FeatureArray(_, _))
   }
 
   /**
@@ -245,29 +256,28 @@ case class FeatureRDD(rdd: RDD[Feature],
    * IntervalList. If none of these match, we fall back to Parquet.
    * These files are written as sharded text files.
    *
-   * @param filePath The location to write the output.
+   * @param path The location to write the output.
    * @param asSingleFile If false, writes file to disk as shards with
    *   one shard per partition. If true, we save the file to disk as a single
    *   file by merging the shards.
    */
-  def save(filePath: java.lang.String, asSingleFile: java.lang.Boolean) {
-    if (filePath.endsWith(".bed")) {
-      saveAsBed(filePath, asSingleFile = asSingleFile)
-    } else if (filePath.endsWith(".gtf") ||
-      filePath.endsWith(".gff")) {
-      saveAsGtf(filePath, asSingleFile = asSingleFile)
-    } else if (filePath.endsWith(".gff3")) {
-      saveAsGff3(filePath, asSingleFile = asSingleFile)
-    } else if (filePath.endsWith(".narrowPeak") ||
-      filePath.endsWith(".narrowpeak")) {
-      saveAsNarrowPeak(filePath, asSingleFile = asSingleFile)
-    } else if (filePath.endsWith(".interval_list")) {
-      saveAsIntervalList(filePath, asSingleFile = asSingleFile)
-    } else {
-      if (asSingleFile) {
-        log.warn("asSingleFile = true ignored when saving as Parquet.")
-      }
-      saveAsParquet(new JavaSaveArgs(filePath))
+  def save(path: Path, asSingleFile: Boolean) {
+    path.extension match {
+      case "bed" ⇒
+        saveAsBed(path, asSingleFile = asSingleFile)
+      case "gtf" | "gff" ⇒
+        saveAsGtf(path, asSingleFile = asSingleFile)
+      case "gff3" ⇒
+        saveAsGff3(path, asSingleFile = asSingleFile)
+      case "narrowPeak" | "narrowpeak" ⇒
+        saveAsNarrowPeak(path, asSingleFile = asSingleFile)
+      case "interval_list" ⇒
+        saveAsIntervalList(path, asSingleFile = asSingleFile)
+      case _ ⇒
+        if (asSingleFile) {
+          log.warn("asSingleFile = true ignored when saving as Parquet.")
+        }
+        saveAsParquet(new JavaSaveArgs(path))
     }
   }
 
@@ -306,24 +316,22 @@ case class FeatureRDD(rdd: RDD[Feature],
    * @param asSingleFile If true, combines all partition shards.
    */
   private def writeTextRdd[T](rdd: RDD[T],
-                              outputPath: String,
+                              outputPath: Path,
                               asSingleFile: Boolean) {
     if (asSingleFile) {
 
       // write rdd to disk
-      val tailPath = "%s_tail".format(outputPath)
-      rdd.saveAsTextFile(tailPath)
-
-      // get the filesystem impl
-      val fs = FileSystem.get(rdd.context.hadoopConfiguration)
+      val tailPath = outputPath + "_tail"
+      rdd.saveAsTextFile(tailPath.toString())
 
       // and then merge
-      FileMerger.mergeFiles(rdd.context.hadoopConfiguration,
-        fs,
-        new Path(outputPath),
-        new Path(tailPath))
+      mergeFiles(
+        rdd.context,
+        outputPath,
+        tailPath
+      )
     } else {
-      rdd.saveAsTextFile(outputPath)
+      rdd.saveAsTextFile(outputPath.toString)
     }
   }
 
@@ -335,9 +343,8 @@ case class FeatureRDD(rdd: RDD[Feature],
    *   one shard per partition. If true, we save the file to disk as a single
    *   file by merging the shards.
    */
-  def saveAsGtf(fileName: String, asSingleFile: Boolean = false) = {
+  def saveAsGtf(fileName: Path, asSingleFile: Boolean = false) =
     writeTextRdd(rdd.map(FeatureRDD.toGtf), fileName, asSingleFile)
-  }
 
   /**
    * Save this FeatureRDD in GFF3 format.
@@ -347,9 +354,8 @@ case class FeatureRDD(rdd: RDD[Feature],
    *   one shard per partition. If true, we save the file to disk as a single
    *   file by merging the shards.
    */
-  def saveAsGff3(fileName: String, asSingleFile: Boolean = false) = {
+  def saveAsGff3(fileName: Path, asSingleFile: Boolean = false) =
     writeTextRdd(rdd.map(FeatureRDD.toGff3), fileName, asSingleFile)
-  }
 
   /**
    * Save this FeatureRDD in BED format.
@@ -359,44 +365,42 @@ case class FeatureRDD(rdd: RDD[Feature],
    *   one shard per partition. If true, we save the file to disk as a single
    *   file by merging the shards.
    */
-  def saveAsBed(fileName: String, asSingleFile: Boolean = false) = {
+  def saveAsBed(fileName: Path, asSingleFile: Boolean = false) =
     writeTextRdd(rdd.map(FeatureRDD.toBed), fileName, asSingleFile)
-  }
 
   /**
    * Save this FeatureRDD in interval list format.
    *
-   * @param fileName The path to save interval list formatted text file(s) to.
+   * @param path The path to save interval list formatted text file(s) to.
    * @param asSingleFile By default (false), writes file to disk as shards with
    *   one shard per partition. If true, we save the file to disk as a single
    *   file by merging the shards.
    */
-  def saveAsIntervalList(fileName: String, asSingleFile: Boolean = false) = {
+  def saveAsIntervalList(path: Path, asSingleFile: Boolean = false) = {
     val intervalEntities = rdd.map(FeatureRDD.toInterval)
 
     if (asSingleFile) {
 
-      // get fs
-      val fs = FileSystem.get(rdd.context.hadoopConfiguration)
-
       // write sam file header
-      val headPath = new Path("%s_head".format(fileName))
-      SAMHeaderWriter.writeHeader(fs,
+      val headPath = path + "_head"
+      SAMHeaderWriter.writeHeader(
         headPath,
-        sequences)
+        sequences
+      )
 
       // write tail entries
-      val tailPath = new Path("%s_tail".format(fileName))
+      val tailPath = path + "_tail"
       intervalEntities.saveAsTextFile(tailPath.toString)
 
       // merge
-      FileMerger.mergeFiles(rdd.context.hadoopConfiguration,
-        fs,
-        new Path(fileName),
+      mergeFiles(
+        rdd.context,
+        path,
         tailPath,
-        Some(headPath))
+        Some(headPath)
+      )
     } else {
-      intervalEntities.saveAsTextFile(fileName)
+      intervalEntities.saveAsTextFile(path.toString)
     }
   }
 
@@ -408,7 +412,7 @@ case class FeatureRDD(rdd: RDD[Feature],
    *   one shard per partition. If true, we save the file to disk as a single
    *   file by merging the shards.
    */
-  def saveAsNarrowPeak(fileName: String, asSingleFile: Boolean = false) {
+  def saveAsNarrowPeak(fileName: Path, asSingleFile: Boolean = false) {
     writeTextRdd(rdd.map(FeatureRDD.toNarrowPeak), fileName, asSingleFile)
   }
 

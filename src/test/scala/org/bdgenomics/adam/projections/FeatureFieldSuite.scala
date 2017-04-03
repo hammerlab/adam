@@ -30,7 +30,8 @@ import org.bdgenomics.formats.avro.{
   Strand
 }
 
-class FeatureFieldSuite extends ADAMFunSuite {
+class FeatureFieldSuite
+  extends ADAMFunSuite {
 
   sparkTest("Use projection when reading parquet features") {
     val path = tmpFile("features.parquet")

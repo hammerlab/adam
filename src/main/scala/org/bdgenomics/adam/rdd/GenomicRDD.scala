@@ -18,32 +18,29 @@
 package org.bdgenomics.adam.rdd
 
 import htsjdk.variant.vcf.{ VCFHeader, VCFHeaderLine }
-import java.util.concurrent.Executors
 import org.apache.avro.generic.IndexedRecord
-import org.apache.hadoop.fs.Path
 import org.apache.parquet.hadoop.metadata.CompressionCodecName
 import org.apache.spark.SparkFiles
 import org.apache.spark.api.java.JavaRDD
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.instrumentation.Timers._
-import org.bdgenomics.adam.models.{
-  RecordGroupDictionary,
-  ReferenceRegion,
-  SequenceDictionary
-}
+import org.bdgenomics.adam.models.{ RecordGroupDictionary, ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.formats.avro.{ Contig, RecordGroupMetadata, Sample }
 import org.bdgenomics.utils.cli.SaveArgs
 import org.bdgenomics.utils.interval.array.IntervalArray
+import org.hammerlab.paths.Path
+
 import scala.annotation.tailrec
 import scala.collection.JavaConversions._
 import scala.reflect.ClassTag
 
-private[rdd] class JavaSaveArgs(var outputPath: String,
+private[rdd] class JavaSaveArgs(var outputPath: Path,
                                 var blockSize: Int = 128 * 1024 * 1024,
                                 var pageSize: Int = 1 * 1024 * 1024,
                                 var compressionCodec: CompressionCodecName = CompressionCodecName.GZIP,
                                 var disableDictionaryEncoding: Boolean = false,
-                                var asSingleFile: Boolean = false) extends ADAMSaveAnyArgs {
+                                var asSingleFile: Boolean = false)
+  extends ADAMSaveAnyArgs {
   var sortFastqOutput = false
   var deferMerging = false
 }
@@ -287,26 +284,15 @@ trait GenomicRDD[T, U <: GenomicRDD[T, U]] {
       val os = process.getOutputStream()
       val is = process.getInputStream()
 
-      // wrap in and out formatters
+      // wrap in formatter and run as a thread
       val ifr = new InFormatterRunner[T, U, V](iter, tFormatter, os)
-      val ofr = new OutFormatterRunner[X, OutFormatter[X]](xFormatter, is)
+      new Thread(ifr).start()
 
-      // launch thread pool and submit formatters
-      val pool = Executors.newFixedThreadPool(2)
-      pool.submit(ifr)
-      val futureIter = pool.submit(ofr)
-
-      // wait for process to finish
-      val exitCode = process.waitFor()
-      if (exitCode != 0) {
-        throw new RuntimeException("Piped command %s exited with error code %d.".format(
-          finalCmd, exitCode))
-      }
-
-      // shut thread pool
-      pool.shutdown()
-
-      futureIter.get
+      // wrap out formatter
+      new OutFormatterRunner[X, OutFormatter[X]](xFormatter,
+        is,
+        process,
+        finalCmd)
     })
 
     // build the new GenomicRDD
@@ -343,11 +329,10 @@ trait GenomicRDD[T, U <: GenomicRDD[T, U]] {
 
   protected def getReferenceRegions(elem: T): Seq[ReferenceRegion]
 
-  protected def flattenRddByRegions(): RDD[(ReferenceRegion, T)] = {
-    rdd.flatMap(elem => {
+  protected def flattenRddByRegions(): RDD[(ReferenceRegion, T)] =
+    rdd.flatMap { elem ⇒
       getReferenceRegions(elem).map(r => (r, elem))
-    })
-  }
+    }
 
   /**
    * Runs a filter that selects data in the underlying RDD that overlaps a
@@ -357,16 +342,17 @@ trait GenomicRDD[T, U <: GenomicRDD[T, U]] {
    * @return Returns a new GenomicRDD containing only data that overlaps the
    *   query region.
    */
-  def filterByOverlappingRegion(query: ReferenceRegion): U = {
-    replaceRdd(rdd.filter(elem => {
+  def filterByOverlappingRegion(query: ReferenceRegion): U =
+    replaceRdd(
+      rdd.filter {
+        elem ⇒
+          // where can this item sit?
+          val regions = getReferenceRegions(elem)
 
-      // where can this item sit?
-      val regions = getReferenceRegions(elem)
-
-      // do any of these overlap with our query region?
-      regions.exists(_.overlaps(query))
-    }))
-  }
+          // do any of these overlap with our query region?
+          regions.exists(_.overlaps(query))
+      }
+    )
 
   /**
    * Runs a filter that selects data in the underlying RDD that overlaps several genomic regions.
@@ -408,12 +394,16 @@ trait GenomicRDD[T, U <: GenomicRDD[T, U]] {
       implicit tTag: ClassTag[T], xTag: ClassTag[X]): GenomicRDD[(T, X), Z] = InnerBroadcastJoin.time {
 
     // key the RDDs and join
-    GenericGenomicRDD[(T, X)](InnerTreeRegionJoin[T, X]().broadcastAndJoin(
-      buildTree(flattenRddByRegions()),
-      genomicRdd.flattenRddByRegions()),
+    GenericGenomicRDD[(T, X)](
+      InnerTreeRegionJoin[T, X]()
+        .broadcastAndJoin(
+          buildTree(flattenRddByRegions()),
+          genomicRdd.flattenRddByRegions()
+        ),
       sequences ++ genomicRdd.sequences,
-      kv => { getReferenceRegions(kv._1) ++ genomicRdd.getReferenceRegions(kv._2) })
-      .asInstanceOf[GenomicRDD[(T, X), Z]]
+      kv => { getReferenceRegions(kv._1) ++ genomicRdd.getReferenceRegions(kv._2) }
+    )
+    .asInstanceOf[GenomicRDD[(T, X), Z]]
   }
 
   /**
@@ -501,12 +491,16 @@ trait GenomicRDD[T, U <: GenomicRDD[T, U]] {
     implicit tTag: ClassTag[T], xTag: ClassTag[X]): GenomicRDD[(Iterable[T], X), Z] = BroadcastJoinAndGroupByRight.time {
 
     // key the RDDs and join
-    GenericGenomicRDD[(Iterable[T], X)](InnerTreeRegionJoinAndGroupByRight[T, X]().broadcastAndJoin(
-      buildTree(flattenRddByRegions()),
-      genomicRdd.flattenRddByRegions()),
+    GenericGenomicRDD[(Iterable[T], X)](
+      InnerTreeRegionJoinAndGroupByRight[T, X]()
+        .broadcastAndJoin(
+          buildTree(flattenRddByRegions()),
+          genomicRdd.flattenRddByRegions()
+        ),
       sequences ++ genomicRdd.sequences,
-      kv => { (kv._1.flatMap(getReferenceRegions) ++ genomicRdd.getReferenceRegions(kv._2)).toSeq })
-      .asInstanceOf[GenomicRDD[(Iterable[T], X), Z]]
+      kv => { (kv._1.flatMap(getReferenceRegions) ++ genomicRdd.getReferenceRegions(kv._2)).toSeq }
+    )
+    .asInstanceOf[GenomicRDD[(Iterable[T], X), Z]]
   }
 
   /**
@@ -525,8 +519,8 @@ trait GenomicRDD[T, U <: GenomicRDD[T, U]] {
    *   overlapped in the genomic coordinate space, and all keys from the
    *   right RDD that did not overlap a key in the left RDD.
    */
-  def rightOuterBroadcastRegionJoinAndGroupByRight[X, Y <: GenomicRDD[X, Y], Z <: GenomicRDD[(Iterable[T], X), Z]](genomicRdd: GenomicRDD[X, Y])(
-    implicit tTag: ClassTag[T], xTag: ClassTag[X]): GenomicRDD[(Iterable[T], X), Z] = RightOuterBroadcastJoinAndGroupByRight.time {
+  def rightOuterBroadcastRegionJoinAndGroupByRight[X: ClassTag, Y <: GenomicRDD[X, Y], Z <: GenomicRDD[(Iterable[T], X), Z]](genomicRdd: GenomicRDD[X, Y])(
+    implicit tTag: ClassTag[T]): GenomicRDD[(Iterable[T], X), Z] = RightOuterBroadcastJoinAndGroupByRight.time {
 
     // key the RDDs and join
     GenericGenomicRDD[(Iterable[T], X)](RightOuterTreeRegionJoinAndGroupByRight[T, X]().broadcastAndJoin(
@@ -668,21 +662,33 @@ trait GenomicRDD[T, U <: GenomicRDD[T, U]] {
     optPartitions: Option[Int] = None)(
       implicit tTag: ClassTag[T], xTag: ClassTag[X]): GenomicRDD[(Option[T], Option[X]), Z] = FullOuterShuffleJoin.time {
 
-    val (partitionSize, endSequences) = joinPartitionSizeAndSequences(optPartitions,
-      genomicRdd)
+    val (partitionSize, endSequences) =
+      joinPartitionSizeAndSequences(
+        optPartitions,
+        genomicRdd
+      )
 
     // key the RDDs and join
     GenericGenomicRDD[(Option[T], Option[X])](
-      FullOuterShuffleRegionJoin[T, X](endSequences,
+      FullOuterShuffleRegionJoin[T, X](
+        endSequences,
         partitionSize,
-        rdd.context).partitionAndJoin(flattenRddByRegions(),
-          genomicRdd.flattenRddByRegions()),
+        rdd.context
+      )
+      .partitionAndJoin(
+        flattenRddByRegions(),
+        genomicRdd.flattenRddByRegions()
+      ),
       endSequences,
-      kv => {
-        Seq(kv._2.map(v => genomicRdd.getReferenceRegions(v)),
-          kv._1.map(v => getReferenceRegions(v))).flatten.flatten
-      })
-      .asInstanceOf[GenomicRDD[(Option[T], Option[X]), Z]]
+      kv ⇒
+        Seq(
+          kv._2.map(genomicRdd.getReferenceRegions),
+          kv._1.map(getReferenceRegions)
+        )
+        .flatten
+        .flatten
+    )
+    .asInstanceOf[GenomicRDD[(Option[T], Option[X]), Z]]
   }
 
   /**
@@ -701,10 +707,11 @@ trait GenomicRDD[T, U <: GenomicRDD[T, U]] {
    *   overlapped in the genomic coordinate space, grouped together by
    *   the value they overlapped in the left RDD..
    */
-  def shuffleRegionJoinAndGroupByLeft[X, Y <: GenomicRDD[X, Y], Z <: GenomicRDD[(T, Iterable[X]), Z]](
+  def shuffleRegionJoinAndGroupByLeft[X: ClassTag, Y <: GenomicRDD[X, Y], Z <: GenomicRDD[(T, Iterable[X]), Z]](
     genomicRdd: GenomicRDD[X, Y],
     optPartitions: Option[Int] = None)(
-      implicit tTag: ClassTag[T], xTag: ClassTag[X]): GenomicRDD[(T, Iterable[X]), Z] = ShuffleJoinAndGroupByLeft.time {
+      implicit tTag: ClassTag[T]
+  ): GenomicRDD[(T, Iterable[X]), Z] = ShuffleJoinAndGroupByLeft.time {
 
     val (partitionSize, endSequences) = joinPartitionSizeAndSequences(optPartitions,
       genomicRdd)
@@ -741,10 +748,11 @@ trait GenomicRDD[T, U <: GenomicRDD[T, U]] {
    *   the value they overlapped in the left RDD, and all values from the
    *   right RDD that did not overlap an item in the left RDD.
    */
-  def rightOuterShuffleRegionJoinAndGroupByLeft[X, Y <: GenomicRDD[X, Y], Z <: GenomicRDD[(Option[T], Iterable[X]), Z]](
+  def rightOuterShuffleRegionJoinAndGroupByLeft[X: ClassTag, Y <: GenomicRDD[X, Y], Z <: GenomicRDD[(Option[T], Iterable[X]), Z]](
     genomicRdd: GenomicRDD[X, Y],
     optPartitions: Option[Int] = None)(
-      implicit tTag: ClassTag[T], xTag: ClassTag[X]): GenomicRDD[(Option[T], Iterable[X]), Z] = RightOuterShuffleJoinAndGroupByLeft.time {
+      implicit tTag: ClassTag[T]
+  ): GenomicRDD[(Option[T], Iterable[X]), Z] = RightOuterShuffleJoinAndGroupByLeft.time {
 
     val (partitionSize, endSequences) = joinPartitionSizeAndSequences(optPartitions,
       genomicRdd)
@@ -766,21 +774,17 @@ trait GenomicRDD[T, U <: GenomicRDD[T, U]] {
 
 private case class GenericGenomicRDD[T](rdd: RDD[T],
                                         sequences: SequenceDictionary,
-                                        regionFn: T => Seq[ReferenceRegion]) extends GenomicRDD[T, GenericGenomicRDD[T]] {
+                                        regionFn: T => Seq[ReferenceRegion])
+  extends GenomicRDD[T, GenericGenomicRDD[T]] {
 
   protected def buildTree(
     rdd: RDD[(ReferenceRegion, T)])(
-      implicit tTag: ClassTag[T]): IntervalArray[ReferenceRegion, T] = {
+      implicit tTag: ClassTag[T]): IntervalArray[ReferenceRegion, T] =
     IntervalArray(rdd)
-  }
 
-  protected def replaceRdd(newRdd: RDD[T]): GenericGenomicRDD[T] = {
-    copy(rdd = newRdd)
-  }
+  protected def replaceRdd(newRdd: RDD[T]): GenericGenomicRDD[T] = copy(rdd = newRdd)
 
-  protected def getReferenceRegions(elem: T): Seq[ReferenceRegion] = {
-    regionFn(elem)
-  }
+  protected def getReferenceRegions(elem: T): Seq[ReferenceRegion] = regionFn(elem)
 }
 
 /**
@@ -800,29 +804,37 @@ trait MultisampleGenomicRDD[T, U <: MultisampleGenomicRDD[T, U]] extends Genomic
  * * The data are Avro IndexedRecords.
  * * The data are associated to read groups (i.e., they are reads or fragments).
  */
-abstract class AvroReadGroupGenomicRDD[T <% IndexedRecord: Manifest, U <: AvroReadGroupGenomicRDD[T, U]] extends AvroGenomicRDD[T, U] {
+abstract class AvroReadGroupGenomicRDD[T <% IndexedRecord: Manifest, U <: AvroReadGroupGenomicRDD[T, U]]
+  extends AvroGenomicRDD[T, U] {
 
   /**
    * A dictionary describing the read groups attached to this GenomicRDD.
    */
   val recordGroups: RecordGroupDictionary
 
-  override protected def saveMetadata(filePath: String) {
+  override protected def saveMetadata(path: Path) {
 
     // convert sequence dictionary to avro form and save
     val contigs = sequences.toAvro
-    saveAvro("%s/_seqdict.avro".format(filePath),
+    saveAvro(
+      path / "_seqdict.avro",
       rdd.context,
       Contig.SCHEMA$,
-      contigs)
+      contigs
+    )
 
     // convert record group to avro and save
-    val rgMetadata = recordGroups.recordGroups
-      .map(_.toMetadata)
-    saveAvro("%s/_rgdict.avro".format(filePath),
+    val rgMetadata =
+      recordGroups
+        .recordGroups
+        .map(_.toMetadata)
+
+    saveAvro(
+      path / "_rgdict.avro",
       rdd.context,
       RecordGroupMetadata.SCHEMA$,
-      rgMetadata)
+      rgMetadata
+    )
   }
 }
 
@@ -830,7 +842,8 @@ abstract class AvroReadGroupGenomicRDD[T <% IndexedRecord: Manifest, U <: AvroRe
  * An abstract class that extends the MultisampleGenomicRDD trait, where the data
  * are Avro IndexedRecords.
  */
-abstract class MultisampleAvroGenomicRDD[T <% IndexedRecord: Manifest, U <: MultisampleAvroGenomicRDD[T, U]] extends AvroGenomicRDD[T, U]
+abstract class MultisampleAvroGenomicRDD[T <% IndexedRecord: Manifest, U <: MultisampleAvroGenomicRDD[T, U]]
+  extends AvroGenomicRDD[T, U]
     with MultisampleGenomicRDD[T, U] {
 
   /**
@@ -838,22 +851,26 @@ abstract class MultisampleAvroGenomicRDD[T <% IndexedRecord: Manifest, U <: Mult
    */
   val headerLines: Seq[VCFHeaderLine]
 
-  override protected def saveMetadata(filePath: String) {
+  override protected def saveMetadata(path: Path) {
 
     // write vcf headers to file
-    VCFHeaderUtils.write(new VCFHeader(headerLines.toSet),
-      new Path("%s/_header".format(filePath)),
-      rdd.context.hadoopConfiguration)
+    VCFHeaderUtils.write(
+      new VCFHeader(headerLines.toSet),
+      path / "_header"
+    )
 
     // get file to write to
-    saveAvro("%s/_samples.avro".format(filePath),
+    saveAvro(
+      path / "_samples.avro",
       rdd.context,
       Sample.SCHEMA$,
-      samples)
+      samples
+    )
 
     // convert sequence dictionary to avro form and save
     val contigs = sequences.toAvro
-    saveAvro("%s/_seqdict.avro".format(filePath),
+    saveAvro(
+      path / "_seqdict.avro",
       rdd.context,
       Contig.SCHEMA$,
       contigs)
@@ -874,11 +891,11 @@ abstract class AvroGenomicRDD[T <% IndexedRecord: Manifest, U <: AvroGenomicRDD[
    * Writes any necessary metadata to disk. If not overridden, writes the
    * sequence dictionary to disk as Avro.
    */
-  protected def saveMetadata(filePath: String) {
-
+  protected def saveMetadata(path: Path) {
     // convert sequence dictionary to avro form and save
     val contigs = sequences.toAvro
-    saveAvro("%s/_seqdict.avro".format(filePath),
+    saveAvro(
+      path / "_seqdict.avro",
       rdd.context,
       Contig.SCHEMA$,
       contigs)
@@ -907,57 +924,59 @@ abstract class AvroGenomicRDD[T <% IndexedRecord: Manifest, U <: AvroGenomicRDD[
   /**
    * Saves this RDD to disk as a Parquet file.
    *
-   * @param filePath Path to save the file at.
+   * @param path Path to save the file at.
    * @param blockSize Size per block.
    * @param pageSize Size per page.
    * @param compressCodec Name of the compression codec to use.
    * @param disableDictionaryEncoding Whether or not to disable bit-packing.
    *   Default is false.
    */
-  def saveAsParquet(
-    filePath: String,
-    blockSize: Int = 128 * 1024 * 1024,
-    pageSize: Int = 1 * 1024 * 1024,
-    compressCodec: CompressionCodecName = CompressionCodecName.GZIP,
-    disableDictionaryEncoding: Boolean = false) {
-    saveRddAsParquet(filePath,
+  def saveAsParquet(path: Path,
+                    blockSize: Int = 128 * 1024 * 1024,
+                    pageSize: Int = 1 * 1024 * 1024,
+                    compressCodec: CompressionCodecName = CompressionCodecName.GZIP,
+                    disableDictionaryEncoding: Boolean = false) {
+    saveRddAsParquet(
+      path,
       blockSize,
       pageSize,
       compressCodec,
-      disableDictionaryEncoding)
-    saveMetadata(filePath)
+      disableDictionaryEncoding
+    )
+    saveMetadata(path)
   }
 
   /**
    * Saves this RDD to disk as a Parquet file.
    *
-   * @param filePath Path to save the file at.
+   * @param path Path to save the file at.
    * @param blockSize Size per block.
    * @param pageSize Size per page.
    * @param compressCodec Name of the compression codec to use.
    * @param disableDictionaryEncoding Whether or not to disable bit-packing.
    */
-  def saveAsParquet(
-    filePath: java.lang.String,
-    blockSize: java.lang.Integer,
-    pageSize: java.lang.Integer,
-    compressCodec: CompressionCodecName,
-    disableDictionaryEncoding: java.lang.Boolean) {
+  def saveAsParquet(path: Path,
+                    blockSize: java.lang.Integer,
+                    pageSize: java.lang.Integer,
+                    compressCodec: CompressionCodecName,
+                    disableDictionaryEncoding: java.lang.Boolean) {
     saveAsParquet(
-      new JavaSaveArgs(filePath,
+      new JavaSaveArgs(
+        path,
         blockSize = blockSize,
         pageSize = pageSize,
         compressionCodec = compressCodec,
-        disableDictionaryEncoding = disableDictionaryEncoding))
+        disableDictionaryEncoding = disableDictionaryEncoding)
+    )
   }
 
   /**
    * Saves this RDD to disk as a Parquet file.
    *
-   * @param filePath Path to save the file at.
+   * @param path Path to save the file at.
    */
-  def saveAsParquet(filePath: java.lang.String) {
-    saveAsParquet(new JavaSaveArgs(filePath))
+  def saveAsParquet(path: Path) {
+    saveAsParquet(new JavaSaveArgs(path))
   }
 }
 

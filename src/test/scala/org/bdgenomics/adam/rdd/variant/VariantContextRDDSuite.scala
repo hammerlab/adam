@@ -17,62 +17,69 @@
  */
 package org.bdgenomics.adam.rdd.variant
 
-import java.io.File
+import java.nio.file.Files.exists
 
 import com.google.common.collect.ImmutableList
-import com.google.common.io.Files
 import org.bdgenomics.adam.models.{ SequenceDictionary, VariantContext }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.TestSaveArgs
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro._
-import org.hammerlab.genomics.reference.test.ClearContigNames
-import org.scalactic.ConversionCheckedTripleEquals
-import org.scalatest.Matchers
 
 import scala.collection.JavaConversions._
 
 class VariantContextRDDSuite
-  extends ADAMFunSuite
-    with Matchers
-    with ConversionCheckedTripleEquals
-    with ClearContigNames {
-
-  val tempDir = Files.createTempDir()
+  extends ADAMFunSuite {
 
   def variants: VariantContextRDD = {
     val contig = Contig.newBuilder.setContigName("11")
       .setContigLength(249250621L)
       .build
-    val v0 = Variant.newBuilder
-      .setContigName("11")
-      .setStart(17409572L)
-      .setEnd(17409573L)
-      .setReferenceAllele("T")
-      .setAlternateAllele("C")
-      .setNames(ImmutableList.of("rs3131972", "rs201888535"))
-      .setFiltersApplied(true)
-      .setFiltersPassed(true)
-      .build
 
-    val g0 = Genotype.newBuilder().setVariant(v0)
-      .setSampleId("NA12878")
-      .setAlleles(List(GenotypeAllele.REF, GenotypeAllele.ALT))
-      .build
+    val v0 =
+      Variant
+        .newBuilder
+        .setContigName("11")
+        .setStart(17409572L)
+        .setEnd(17409573L)
+        .setReferenceAllele("T")
+        .setAlternateAllele("C")
+        .setNames(ImmutableList.of("rs3131972", "rs201888535"))
+        .setFiltersApplied(true)
+        .setFiltersPassed(true)
+        .build
 
-    VariantContextRDD(sc.parallelize(List(
-      VariantContext(v0, Seq(g0))), 1),
-      SequenceDictionary.fromAvro(Seq(contig)), Seq(Sample.newBuilder()
+    val g0 =
+      Genotype
+        .newBuilder()
+        .setVariant(v0)
         .setSampleId("NA12878")
-        .build))
+        .setAlleles(List(GenotypeAllele.REF, GenotypeAllele.ALT))
+        .build
+
+    VariantContextRDD(
+      sc.parallelize(
+        List(
+          VariantContext(v0, Seq(g0))
+        ),
+        1
+      ),
+      SequenceDictionary.fromAvro(Seq(contig)),
+      Seq(
+        Sample
+          .newBuilder()
+          .setSampleId("NA12878")
+         .build
+      )
+    )
   }
 
   sparkTest("can write, then read in .vcf file") {
-    val path = new File(tempDir, "test.vcf")
-    variants.saveAsVcf(TestSaveArgs(path.getAbsolutePath), sortOnSave = false)
-    assert(path.exists)
+    val path = tmpLocation(".vcf")
+    variants.saveAsVcf(TestSaveArgs(path), sortOnSave = false)
+    assert(exists(path))
 
-    val vcRdd = sc.loadVcf("%s/test.vcf/part-r-00000".format(tempDir))
+    val vcRdd = sc.loadVcf(path / "part-r-00000")
     vcRdd.rdd.count should === (1)
 
     val variant = vcRdd.rdd.first.variant.variant
@@ -92,10 +99,11 @@ class VariantContextRDDSuite
   }
 
   sparkTest("can write as a single file, then read in .vcf file") {
-    val path = new File(tempDir, "test_single.vcf")
-    variants.saveAsVcf(path.getAbsolutePath, asSingleFile = true)
-    assert(path.exists)
-    val vcRdd = sc.loadVcf("%s/test_single.vcf".format(tempDir))
+    val path = tmpLocation(".vcf")
+    variants.saveAsVcf(path, asSingleFile = true)
+    assert(exists(path))
+
+    val vcRdd = sc.loadVcf(path)
     vcRdd.rdd.count should === (1)
     vcRdd.sequences.records.size should === (1)
     vcRdd.sequences.records(0).name should === ("11")
@@ -107,7 +115,7 @@ class VariantContextRDDSuite
     val records = rdd.rdd.count
 
     implicit val tFormatter = VCFInFormatter
-    implicit val uFormatter = new VCFOutFormatter(rdd.headerLines)
+    implicit val uFormatter = VCFOutFormatter(rdd.headerLines)
 
     val pipedRdd: VariantContextRDD = rdd.pipe[VariantContext, VariantContextRDD, VCFInFormatter]("tee /dev/null")
       .transform(_.cache())
@@ -121,9 +129,12 @@ class VariantContextRDDSuite
     val variants = sc.loadVcf(inputPath)
     val outputPath = tmpFile("sorted.vcf")
 
-    variants.sort()
-      .saveAsVcf(outputPath,
-        asSingleFile = true)
+    variants
+      .sort()
+      .saveAsVcf(
+        outputPath,
+        asSingleFile = true
+      )
 
     checkFiles(outputPath, "sorted.vcf")
   }
@@ -134,8 +145,10 @@ class VariantContextRDDSuite
     val outputPath = tmpFile("sorted.lex.vcf")
 
     variants.sortLexicographically()
-      .saveAsVcf(outputPath,
-        asSingleFile = true)
+      .saveAsVcf(
+        outputPath,
+        asSingleFile = true
+      )
 
     checkFiles(outputPath, "sorted.lex.vcf")
   }

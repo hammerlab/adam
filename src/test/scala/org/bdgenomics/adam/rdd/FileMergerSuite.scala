@@ -17,31 +17,38 @@
  */
 package org.bdgenomics.adam.rdd
 
-import org.apache.hadoop.fs.{ FileSystem, Path }
 import org.bdgenomics.adam.util.ADAMFunSuite
+import FileMerger.mergeFiles
 
-class FileMergerSuite extends ADAMFunSuite {
+class FileMergerSuite
+  extends ADAMFunSuite {
+
+  // These paths won't actually get written to.
+  lazy val dir = tmpDir()
+  lazy val outputPath = dir / "output"
+  lazy val headPath = dir / "head"
 
   sparkTest("cannot write both empty gzip block and cram eof") {
     intercept[IllegalArgumentException] {
-      // we don't need to pass real paths here
-      FileMerger.mergeFiles(sc.hadoopConfiguration,
-        FileSystem.getLocal(sc.hadoopConfiguration),
-        new Path("output"),
-        new Path("head"),
+      mergeFiles(
+        sc,
+        outputPath,
+        headPath,
         writeEmptyGzipBlock = true,
-        writeCramEOF = true)
+        writeCramEOF = true
+      )
     }
   }
 
   sparkTest("buffer size must be non-negative") {
     intercept[IllegalArgumentException] {
       // we don't need to pass real paths here
-      FileMerger.mergeFiles(sc.hadoopConfiguration,
-        FileSystem.getLocal(sc.hadoopConfiguration),
-        new Path("output"),
-        new Path("head"),
-        optBufferSize = Some(0))
+      mergeFiles(
+        sc,
+        outputPath,
+        headPath,
+        optBufferSize = Some(0)
+      )
     }
   }
 }

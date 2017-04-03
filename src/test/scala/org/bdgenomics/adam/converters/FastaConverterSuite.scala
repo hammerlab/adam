@@ -17,8 +17,6 @@
  */
 package org.bdgenomics.adam.converters
 
-import java.io.File
-
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.hammerlab.genomics.reference.test.ClearContigNames
@@ -80,7 +78,7 @@ class FastaConverterSuite
       (13L, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
       (14L, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
       (15L, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"))
-    val rdd = sc.parallelize(fasta.toSeq)
+    val rdd = sc.parallelize(fasta)
 
     val adamFasta = FastaConverter(rdd)
     assert(adamFasta.count === 1)
@@ -131,7 +129,7 @@ class FastaConverterSuite
       (32L, "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"),
       (33L, "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"))
     val fasta = fasta1 ::: fasta2
-    val rdd = sc.parallelize(fasta.toSeq)
+    val rdd = sc.parallelize(fasta)
 
     val adamFasta = FastaConverter(rdd)
     assert(adamFasta.count === 2)
@@ -142,7 +140,7 @@ class FastaConverterSuite
 
     assert(convertedFragmentSequence1 === fastaFragmentSequence1)
     assert(fastaElement1.getContig.getContigLength() == fastaFragmentSequence1.length)
-    assert(fastaElement1.getContig.getContigName().toString === "chr1")
+    assert(fastaElement1.getContig.getContigName() === "chr1")
     assert(fastaElement1.getDescription === null)
 
     val fastaElement2 = adamFasta.filter(_.getContig.getContigName == "chr2").first()
@@ -151,7 +149,7 @@ class FastaConverterSuite
 
     assert(convertedFragmentSequence2 === fastaFragmentSequence2)
     assert(fastaElement2.getContig.getContigLength() == fastaFragmentSequence2.length)
-    assert(fastaElement2.getContig.getContigName().toString === "chr2")
+    assert(fastaElement2.getContig.getContigName() === "chr2")
     assert(fastaElement2.getDescription === null)
   }
 
@@ -191,7 +189,7 @@ class FastaConverterSuite
       (32L, "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"),
       (33L, "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"))
     val fasta = fasta1 ::: fasta2
-    val rdd = sc.parallelize(fasta.toSeq)
+    val rdd = sc.parallelize(fasta)
 
     val adamFasta = FastaConverter(rdd, maxFragmentLength = 35)
     assert(adamFasta.count === 64)
@@ -199,13 +197,13 @@ class FastaConverterSuite
     val fastaElement1 = adamFasta.filter(_.getContig.getContigName == "chr1").collect()
     val fastaFragmentSequence1 = fasta1.drop(1).map(_._2).mkString
     val seqs = fastaElement1.sortBy(_.getFragmentNumber)
-    val convertedFragmentSequence1 = fastaElement1.sortBy(_.getFragmentNumber).map(_.getFragmentSequence.toString).mkString
+    val convertedFragmentSequence1 = fastaElement1.sortBy(_.getFragmentNumber).map(_.getFragmentSequence).mkString
     assert(seqs != null)
     assert(convertedFragmentSequence1 === fastaFragmentSequence1)
 
     val fastaElement2 = adamFasta.filter(_.getContig.getContigName == "chr2").collect()
     val fastaFragmentSequence2 = fasta2.drop(1).map(_._2).mkString
-    val convertedFragmentSequence2 = fastaElement2.sortBy(_.getFragmentNumber).map(_.getFragmentSequence.toString).mkString
+    val convertedFragmentSequence2 = fastaElement2.sortBy(_.getFragmentNumber).map(_.getFragmentSequence).mkString
 
     assert(convertedFragmentSequence2 === fastaFragmentSequence2)
   }
@@ -215,11 +213,11 @@ class FastaConverterSuite
   sparkTest("convert reference fasta file") {
     //Loading "human_g1k_v37_chr1_59kb.fasta"
     val referenceSequences = sc.loadSequences(chr1File, fragmentLength = 10).rdd.collect()
-    assert(referenceSequences.forall(_.getContig.getContigName.toString == "1"))
+    assert(referenceSequences.forall(_.getContig.getContigName == "1"))
     assert(referenceSequences.slice(0, referenceSequences.length - 2).forall(_.getFragmentSequence.length == 10))
 
     val reassembledSequence = referenceSequences.sortBy(_.getFragmentNumber).map(_.getFragmentSequence).mkString
-    val originalSequence = scala.io.Source.fromFile(new File(chr1File)).getLines().filter(!_.startsWith(">")).mkString
+    val originalSequence = chr1File.lines.filter(!_.startsWith(">")).mkString
 
     assert(reassembledSequence === originalSequence)
   }

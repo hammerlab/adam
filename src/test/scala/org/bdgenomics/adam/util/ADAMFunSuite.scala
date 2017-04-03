@@ -22,9 +22,10 @@ import java.net.URL
 import htsjdk.samtools.util.Log
 import org.bdgenomics.adam.serialization.ADAMKryoRegistrator
 import org.hammerlab.genomics.reference.test.{ ClearContigNames, ContigNameCanEqualString, LocusCanEqualInt }
+import org.hammerlab.paths.Path
 import org.hammerlab.spark.test.suite.KryoSparkSuite
 import org.hammerlab.test.matchers.files.FileMatcher.fileMatch
-import org.hammerlab.test.resources.File
+import org.hammerlab.test.resources.{ File, Url }
 import org.scalactic.TypeCheckedTripleEquals
 
 abstract class ADAMFunSuite
@@ -37,21 +38,26 @@ abstract class ADAMFunSuite
   // added to resolve #1280
   Log.setGlobalLogLevel(Log.LogLevel.ERROR)
 
-  def resourceUrl(path: String): URL =
-    Thread.currentThread().getContextClassLoader.getResource(path)
+  def resourceUrl(path: String): URL = Url(path)
 
-  def testFile(name: String): String = File(name)
+  def testFile(name: String): Path = File(name)
 
-  def sparkTest(name: String)(body: ⇒ Unit): Unit = {
+  def sparkTest(name: String)(body: ⇒ Unit): Unit =
     test(name) { body }
-  }
 
-  def tmpLocation(extension: String = ".adam"): String = tmpFile(suffix = extension)
+  def tmpLocation(extension: String = ".adam"): Path = tmpFile(suffix = extension)
 
-  override def tmpFile(prefix: String, suffix: String): String = tmpPath(prefix, suffix)
+  /**
+   * Lots of tests use [[tmpFile]] to get a [[Path]] to a not-yet-created temporary file.
+   *
+   * [[org.hammerlab.test.files.TmpFiles]] creates and returns a [[Path]] with [[tmpFile]] and only returns one with
+   * [[tmpPath]], so we just reroute them here to avoid potential merge conflicts with upstream by rewriting many tests'
+   * calls.
+   */
+  override def tmpFile(prefix: String, suffix: String): Path = tmpPath(prefix, suffix)
 
-  def checkFiles(expectedPath: String, actualPath: String): Unit = {
-    expectedPath should fileMatch(actualPath)
+  def checkFiles(actualPath: Path, expectedPath: File): Unit = {
+    actualPath should fileMatch(expectedPath)
   }
 }
 

@@ -17,14 +17,7 @@
  */
 package org.bdgenomics.adam.converters
 
-import htsjdk.variant.vcf.{
-  VCFConstants,
-  VCFFormatHeaderLine,
-  VCFHeaderLineCount,
-  VCFHeaderLineType,
-  VCFInfoHeaderLine,
-  VCFStandardHeaderLines
-}
+import htsjdk.variant.vcf.{ VCFFormatHeaderLine, VCFHeaderLineCount, VCFHeaderLineType, VCFInfoHeaderLine }
 
 /**
  * Default set of VCF header lines for INFO and GT format fields supported in ADAM.

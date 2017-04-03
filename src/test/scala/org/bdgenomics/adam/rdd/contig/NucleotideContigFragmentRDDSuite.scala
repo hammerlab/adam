@@ -17,9 +17,9 @@
  */
 package org.bdgenomics.adam.rdd.contig
 
-import java.io.File
+import java.nio.file.Files.lines
 
-import com.google.common.io.Files
+import scala.collection.JavaConverters._
 import org.bdgenomics.adam.models._
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro._
@@ -30,28 +30,47 @@ import org.scalatest.Matchers
 import scala.collection.mutable.ListBuffer
 
 class NucleotideContigFragmentRDDSuite
-  extends ADAMFunSuite
-    with Matchers
-    with ClearContigNames {
+  extends ADAMFunSuite {
+
+  def chr1(length: Int = 7): Contig =
+    Contig
+      .newBuilder
+      .setContigName("chr1")
+      .setContigLength(length)
+      .build
+
+  def writeFastaLines(fragments: NucleotideContigFragment*): Seq[String] = {
+    val rdd = NucleotideContigFragmentRDD(sc.parallelize(fragments))
+
+    val outputFastaFile = tmpLocation(".fa")
+    rdd.transform(_.coalesce(1)).saveAsFasta(outputFastaFile)
+
+    lines(outputFastaFile / "part-00000")
+      .iterator
+      .asScala
+      .toSeq
+  }
 
   sparkTest("generate sequence dict from fasta") {
-    val contig0 = Contig.newBuilder
-      .setContigName("chr0")
-      .setContigLength(1000L)
-      .setReferenceURL("http://bigdatagenomics.github.io/chr0.fa")
-      .build
+    val contig0 =
+      Contig
+        .newBuilder
+        .setContigName("chr0")
+        .setContigLength(1000L)
+        .setReferenceURL("http://bigdatagenomics.github.io/chr0.fa")
+        .build
 
-    val contig1 = Contig.newBuilder
-      .setContigName("chr1")
-      .setContigLength(900L)
-      .build
+    val ctg0 =
+      NucleotideContigFragment
+        .newBuilder()
+        .setContig(contig0)
+        .build()
 
-    val ctg0 = NucleotideContigFragment.newBuilder()
-      .setContig(contig0)
-      .build()
-    val ctg1 = NucleotideContigFragment.newBuilder()
-      .setContig(contig1)
-      .build()
+    val ctg1 =
+      NucleotideContigFragment
+        .newBuilder()
+        .setContig(chr1(900))
+        .build()
 
     val rdd = NucleotideContigFragmentRDD(sc.parallelize(List(ctg0, ctg1)))
 
@@ -76,19 +95,17 @@ class NucleotideContigFragmentRDDSuite
   }
 
   sparkTest("recover reference string from a single contig fragment") {
-    val contig = Contig.newBuilder
-      .setContigName("chr1")
-      .setContigLength(7L)
-      .build
-
     val sequence = "ACTGTAC"
-    val fragment = NucleotideContigFragment.newBuilder()
-      .setContig(contig)
-      .setFragmentSequence(sequence)
-      .setFragmentNumber(0)
-      .setFragmentStartPosition(0L)
-      .setNumberOfFragmentsInContig(1)
-      .build()
+    val fragment =
+      NucleotideContigFragment
+        .newBuilder()
+        .setContig(chr1())
+        .setFragmentSequence(sequence)
+        .setFragmentNumber(0)
+        .setFragmentStartPosition(0L)
+        .setNumberOfFragmentsInContig(1)
+        .build()
+
     val region = ReferenceRegion(fragment).get
 
     val rdd = NucleotideContigFragmentRDD(sc.parallelize(List(fragment)))
@@ -97,19 +114,17 @@ class NucleotideContigFragmentRDDSuite
   }
 
   sparkTest("recover trimmed reference string from a single contig fragment") {
-    val contig = Contig.newBuilder
-      .setContigName("chr1")
-      .setContigLength(7L)
-      .build
-
     val sequence = "ACTGTAC"
-    val fragment = NucleotideContigFragment.newBuilder()
-      .setContig(contig)
-      .setFragmentSequence(sequence)
-      .setFragmentNumber(0)
-      .setFragmentStartPosition(0L)
-      .setNumberOfFragmentsInContig(1)
-      .build()
+    val fragment =
+      NucleotideContigFragment
+        .newBuilder()
+        .setContig(chr1())
+        .setFragmentSequence(sequence)
+        .setFragmentNumber(0)
+        .setFragmentStartPosition(0L)
+        .setNumberOfFragmentsInContig(1)
+        .build()
+
     val region = new ReferenceRegion("chr1", 1L, 6L)
 
     val rdd = NucleotideContigFragmentRDD(sc.parallelize(List(fragment)))
@@ -118,11 +133,6 @@ class NucleotideContigFragmentRDDSuite
   }
 
   sparkTest("recover reference string from multiple contig fragments") {
-    val contig1 = Contig.newBuilder
-      .setContigName("chr1")
-      .setContigLength(7L)
-      .build
-
     val contig2 = Contig.newBuilder
       .setContigName("chr2")
       .setContigLength(11L)
@@ -132,27 +142,36 @@ class NucleotideContigFragmentRDDSuite
     val sequence0 = sequence.take(7) // ACTGTAC
     val sequence1 = sequence.slice(3, 8) // GTACT
     val sequence2 = sequence.takeRight(6).reverse // CTCATG
-    val fragment0 = NucleotideContigFragment.newBuilder()
-      .setContig(contig1)
-      .setFragmentSequence(sequence0)
-      .setFragmentNumber(0)
-      .setFragmentStartPosition(0L)
-      .setNumberOfFragmentsInContig(1)
-      .build()
-    val fragment1 = NucleotideContigFragment.newBuilder()
-      .setContig(contig2)
-      .setFragmentSequence(sequence1)
-      .setFragmentNumber(0)
-      .setFragmentStartPosition(0L)
-      .setNumberOfFragmentsInContig(2)
-      .build()
-    val fragment2 = NucleotideContigFragment.newBuilder()
-      .setContig(contig2)
-      .setFragmentSequence(sequence2)
-      .setFragmentNumber(1)
-      .setFragmentStartPosition(5L)
-      .setNumberOfFragmentsInContig(2)
-      .build()
+    val fragment0 =
+      NucleotideContigFragment
+        .newBuilder()
+        .setContig(chr1())
+        .setFragmentSequence(sequence0)
+        .setFragmentNumber(0)
+        .setFragmentStartPosition(0L)
+        .setNumberOfFragmentsInContig(1)
+        .build()
+
+    val fragment1 =
+      NucleotideContigFragment
+        .newBuilder()
+        .setContig(contig2)
+        .setFragmentSequence(sequence1)
+        .setFragmentNumber(0)
+        .setFragmentStartPosition(0L)
+        .setNumberOfFragmentsInContig(2)
+        .build()
+
+    val fragment2 =
+      NucleotideContigFragment
+        .newBuilder()
+        .setContig(contig2)
+        .setFragmentSequence(sequence2)
+        .setFragmentNumber(1)
+        .setFragmentStartPosition(5L)
+        .setNumberOfFragmentsInContig(2)
+        .build()
+
     val region0 = ReferenceRegion(fragment0).get
     val region1 = ReferenceRegion(fragment1).get.merge(ReferenceRegion(fragment2).get)
 
@@ -165,41 +184,48 @@ class NucleotideContigFragmentRDDSuite
   }
 
   sparkTest("recover trimmed reference string from multiple contig fragments") {
-    val contig1 = Contig.newBuilder
-      .setContigName("chr1")
-      .setContigLength(7L)
-      .build
-
-    val contig2 = Contig.newBuilder
-      .setContigName("chr2")
-      .setContigLength(11L)
-      .build
+    val contig2 =
+      Contig
+        .newBuilder
+        .setContigName("chr2")
+        .setContigLength(11L)
+        .build
 
     val sequence = "ACTGTACTC"
     val sequence0 = sequence.take(7) // ACTGTAC
     val sequence1 = sequence.slice(3, 8) // GTACT
     val sequence2 = sequence.takeRight(6).reverse // CTCATG
-    val fragment0 = NucleotideContigFragment.newBuilder()
-      .setContig(contig1)
-      .setFragmentSequence(sequence0)
-      .setFragmentNumber(0)
-      .setFragmentStartPosition(0L)
-      .setNumberOfFragmentsInContig(1)
-      .build()
-    val fragment1 = NucleotideContigFragment.newBuilder()
-      .setContig(contig2)
-      .setFragmentSequence(sequence1)
-      .setFragmentNumber(0)
-      .setFragmentStartPosition(0L)
-      .setNumberOfFragmentsInContig(2)
-      .build()
-    val fragment2 = NucleotideContigFragment.newBuilder()
-      .setContig(contig2)
-      .setFragmentSequence(sequence2)
-      .setFragmentNumber(1)
-      .setFragmentStartPosition(5L)
-      .setNumberOfFragmentsInContig(2)
-      .build()
+
+    val fragment0 =
+      NucleotideContigFragment
+        .newBuilder()
+        .setContig(chr1())
+        .setFragmentSequence(sequence0)
+        .setFragmentNumber(0)
+        .setFragmentStartPosition(0L)
+        .setNumberOfFragmentsInContig(1)
+        .build()
+
+    val fragment1 =
+      NucleotideContigFragment
+        .newBuilder()
+        .setContig(contig2)
+        .setFragmentSequence(sequence1)
+        .setFragmentNumber(0)
+        .setFragmentStartPosition(0L)
+        .setNumberOfFragmentsInContig(2)
+        .build()
+
+    val fragment2 =
+      NucleotideContigFragment
+        .newBuilder()
+        .setContig(contig2)
+        .setFragmentSequence(sequence2)
+        .setFragmentNumber(1)
+        .setFragmentStartPosition(5L)
+        .setNumberOfFragmentsInContig(2)
+        .build()
+
     val region0 = new ReferenceRegion("chr1", 1L, 6L)
     val region1 = new ReferenceRegion("chr2", 3L, 9L)
 
@@ -212,20 +238,16 @@ class NucleotideContigFragmentRDDSuite
   }
 
   sparkTest("testing nondeterminism from reduce when recovering referencestring") {
-    val contig1 = Contig.newBuilder
-      .setContigName("chr1")
-      .setContigLength(1000L)
-      .build
-
     var fragments: ListBuffer[NucleotideContigFragment] = new ListBuffer[NucleotideContigFragment]()
-    for (a <- 0L to 1000L) {
+    for (a ← 0 to 1000) {
       val seq = "A"
-      val frag = NucleotideContigFragment.newBuilder()
-        .setContig(contig1)
-        .setFragmentStartPosition(0L + a)
-        .setFragmentSequence(seq)
-        .build()
-      fragments += frag
+      fragments +=
+        NucleotideContigFragment
+          .newBuilder()
+          .setContig(chr1(1000))
+          .setFragmentStartPosition(a)
+          .setFragmentSequence(seq)
+          .build()
     }
     var passed = true
     val rdd = NucleotideContigFragmentRDD(sc.parallelize(fragments.toList))
@@ -238,260 +260,193 @@ class NucleotideContigFragmentRDDSuite
   }
 
   sparkTest("save single contig fragment as FASTA text file") {
-    val contig = Contig.newBuilder
-      .setContigName("chr1")
-      .setContigLength(7L)
-      .build
+    val fragment =
+      NucleotideContigFragment
+        .newBuilder()
+        .setContig(chr1())
+        .setFragmentSequence("ACTGTAC")
+        .setFragmentNumber(0)
+        .setNumberOfFragmentsInContig(1)
+        .build
 
-    val fragment = NucleotideContigFragment.newBuilder()
-      .setContig(contig)
-      .setFragmentSequence("ACTGTAC")
-      .setFragmentNumber(0)
-      .setNumberOfFragmentsInContig(1)
-      .build
-
-    val rdd = NucleotideContigFragmentRDD(sc.parallelize(List(fragment)))
-
-    val outputDir = Files.createTempDir()
-    val outputFastaFile = outputDir.getAbsolutePath + "/test.fa"
-    rdd.transform(_.coalesce(1)).saveAsFasta(outputFastaFile)
-    val fastaLines = scala.io.Source.fromFile(new File(outputFastaFile + "/part-00000")).getLines().toSeq
-
-    assert(fastaLines.length === 2)
-    assert(fastaLines(0) === ">chr1")
-    assert(fastaLines(1) === "ACTGTAC")
+    writeFastaLines(fragment) should be(Seq(">chr1", "ACTGTAC"))
   }
 
   sparkTest("save single contig fragment with description as FASTA text file") {
-    val contig = Contig.newBuilder
-      .setContigName("chr1")
-      .setContigLength(7L)
-      .build
+    val fragment =
+      NucleotideContigFragment
+        .newBuilder()
+        .setContig(chr1())
+        .setDescription("description")
+        .setFragmentSequence("ACTGTAC")
+        .setFragmentNumber(0)
+        .setNumberOfFragmentsInContig(1)
+        .build
 
-    val fragment = NucleotideContigFragment.newBuilder()
-      .setContig(contig)
-      .setDescription("description")
-      .setFragmentSequence("ACTGTAC")
-      .setFragmentNumber(0)
-      .setNumberOfFragmentsInContig(1)
-      .build
-
-    val rdd = NucleotideContigFragmentRDD(sc.parallelize(List(fragment)))
-
-    val outputDir = Files.createTempDir()
-    val outputFastaFile = outputDir.getAbsolutePath + "/test.fa"
-    rdd.transform(_.coalesce(1)).saveAsFasta(outputFastaFile)
-    val fastaLines = scala.io.Source.fromFile(new File(outputFastaFile + "/part-00000")).getLines().toSeq
-
-    assert(fastaLines.length === 2)
-    assert(fastaLines(0) === ">chr1 description")
-    assert(fastaLines(1) === "ACTGTAC")
+    writeFastaLines(fragment) should be(Seq(">chr1 description", "ACTGTAC"))
   }
 
   sparkTest("save single contig fragment with null fields as FASTA text file") {
-    val contig = Contig.newBuilder
-      .setContigName("chr1")
-      .setContigLength(7L)
-      .build
+    val fragment =
+      NucleotideContigFragment
+        .newBuilder()
+        .setContig(chr1())
+        .setFragmentSequence("ACTGTAC")
+        .setFragmentNumber(null)
+        .setFragmentStartPosition(null)
+        .setFragmentEndPosition(null)
+        .setNumberOfFragmentsInContig(null)
+        .build
 
-    val fragment = NucleotideContigFragment.newBuilder()
-      .setContig(contig)
-      .setFragmentSequence("ACTGTAC")
-      .setFragmentNumber(null)
-      .setFragmentStartPosition(null)
-      .setFragmentEndPosition(null)
-      .setNumberOfFragmentsInContig(null)
-      .build
-
-    val rdd = NucleotideContigFragmentRDD(sc.parallelize(List(fragment)))
-
-    val outputDir = Files.createTempDir()
-    val outputFastaFile = outputDir.getAbsolutePath + "/test.fa"
-    rdd.transform(_.coalesce(1)).saveAsFasta(outputFastaFile)
-    val fastaLines = scala.io.Source.fromFile(new File(outputFastaFile + "/part-00000")).getLines().toSeq
-
-    assert(fastaLines.length === 2)
-    assert(fastaLines(0) === ">chr1")
-    assert(fastaLines(1) === "ACTGTAC")
+    writeFastaLines(fragment) should be(Seq(">chr1", "ACTGTAC"))
   }
 
   sparkTest("save single contig fragment with null fragment number as FASTA text file") {
-    val contig = Contig.newBuilder
-      .setContigName("chr1")
-      .setContigLength(7L)
-      .build
+    val fragment =
+      NucleotideContigFragment
+        .newBuilder()
+        .setContig(chr1())
+        .setFragmentSequence("ACTGTAC")
+        .setFragmentNumber(null)
+        .setFragmentStartPosition(null)
+        .setFragmentEndPosition(null)
+        .setNumberOfFragmentsInContig(1)
+        .build
 
-    val fragment = NucleotideContigFragment.newBuilder()
-      .setContig(contig)
-      .setFragmentSequence("ACTGTAC")
-      .setFragmentNumber(null)
-      .setFragmentStartPosition(null)
-      .setFragmentEndPosition(null)
-      .setNumberOfFragmentsInContig(1)
-      .build
-
-    val rdd = NucleotideContigFragmentRDD(sc.parallelize(List(fragment)))
-
-    val outputDir = Files.createTempDir()
-    val outputFastaFile = outputDir.getAbsolutePath + "/test.fa"
-    rdd.transform(_.coalesce(1)).saveAsFasta(outputFastaFile)
-    val fastaLines = scala.io.Source.fromFile(new File(outputFastaFile + "/part-00000")).getLines().toSeq
-
-    assert(fastaLines.length === 2)
-    assert(fastaLines(0) === ">chr1")
-    assert(fastaLines(1) === "ACTGTAC")
+    writeFastaLines(fragment) should be(Seq(">chr1", "ACTGTAC"))
   }
 
   sparkTest("save single contig fragment with null number of fragments in contig as FASTA text file") {
-    val contig = Contig.newBuilder
-      .setContigName("chr1")
-      .setContigLength(7L)
-      .build
+    val fragment =
+      NucleotideContigFragment
+        .newBuilder()
+        .setContig(chr1())
+        .setFragmentSequence("ACTGTAC")
+        .setFragmentNumber(0)
+        .setFragmentStartPosition(null)
+        .setFragmentEndPosition(null)
+        .setNumberOfFragmentsInContig(null)
+        .build
 
-    val fragment = NucleotideContigFragment.newBuilder()
-      .setContig(contig)
-      .setFragmentSequence("ACTGTAC")
-      .setFragmentNumber(0)
-      .setFragmentStartPosition(null)
-      .setFragmentEndPosition(null)
-      .setNumberOfFragmentsInContig(null)
-      .build
-
-    val rdd = NucleotideContigFragmentRDD(sc.parallelize(List(fragment)))
-
-    val outputDir = Files.createTempDir()
-    val outputFastaFile = outputDir.getAbsolutePath + "/test.fa"
-    rdd.transform(_.coalesce(1)).saveAsFasta(outputFastaFile)
-    val fastaLines = scala.io.Source.fromFile(new File(outputFastaFile + "/part-00000")).getLines().toSeq
-
-    assert(fastaLines.length === 2)
-    assert(fastaLines(0) === ">chr1")
-    assert(fastaLines(1) === "ACTGTAC")
+    writeFastaLines(fragment) should be(Seq(">chr1", "ACTGTAC"))
   }
 
   sparkTest("save multiple contig fragments from same contig as FASTA text file") {
-    val contig = Contig.newBuilder
-      .setContigName("chr1")
-      .setContigLength(21L)
-      .build
+    val contig = chr1(21)
 
-    val fragment0 = NucleotideContigFragment.newBuilder()
-      .setContig(contig)
-      .setFragmentSequence("ACTGTAC")
-      .setFragmentNumber(0)
-      .setNumberOfFragmentsInContig(3)
-      .build
-    val fragment1 = NucleotideContigFragment.newBuilder()
-      .setContig(contig)
-      .setFragmentSequence("GCATATC")
-      .setFragmentNumber(1)
-      .setNumberOfFragmentsInContig(3)
-      .build
-    val fragment2 = NucleotideContigFragment.newBuilder()
-      .setContig(contig)
-      .setFragmentSequence("CTGATCG")
-      .setFragmentNumber(2)
-      .setNumberOfFragmentsInContig(3)
-      .build
+    val fragment0 =
+      NucleotideContigFragment
+        .newBuilder()
+        .setContig(contig)
+        .setFragmentSequence("ACTGTAC")
+        .setFragmentNumber(0)
+        .setNumberOfFragmentsInContig(3)
+        .build
 
-    val rdd = NucleotideContigFragmentRDD(sc.parallelize(List(fragment0, fragment1, fragment2)))
+    val fragment1 =
+      NucleotideContigFragment
+        .newBuilder()
+        .setContig(contig)
+        .setFragmentSequence("GCATATC")
+        .setFragmentNumber(1)
+        .setNumberOfFragmentsInContig(3)
+        .build
 
-    val outputDir = Files.createTempDir()
-    val outputFastaFile = outputDir.getAbsolutePath + "/test.fa"
-    rdd.transform(_.coalesce(1)).saveAsFasta(outputFastaFile)
-    val fastaLines = scala.io.Source.fromFile(new File(outputFastaFile + "/part-00000")).getLines().toSeq
+    val fragment2 =
+      NucleotideContigFragment
+        .newBuilder()
+        .setContig(contig)
+        .setFragmentSequence("CTGATCG")
+        .setFragmentNumber(2)
+        .setNumberOfFragmentsInContig(3)
+        .build
 
-    assert(fastaLines.length === 6)
-    assert(fastaLines(0) === ">chr1 fragment 1 of 3")
-    assert(fastaLines(1) === "ACTGTAC")
-    assert(fastaLines(2) === ">chr1 fragment 2 of 3")
-    assert(fastaLines(3) === "GCATATC")
-    assert(fastaLines(4) === ">chr1 fragment 3 of 3")
-    assert(fastaLines(5) === "CTGATCG")
+    writeFastaLines(fragment0, fragment1, fragment2) should be(
+      Seq(
+        ">chr1 fragment 1 of 3",
+        "ACTGTAC",
+        ">chr1 fragment 2 of 3",
+        "GCATATC",
+        ">chr1 fragment 3 of 3",
+        "CTGATCG"
+      )
+    )
   }
 
   sparkTest("save multiple contig fragments with description from same contig as FASTA text file") {
-    val contig = Contig.newBuilder
-      .setContigName("chr1")
-      .setContigLength(21L)
-      .build
+    val contig = chr1(21)
 
-    val fragment0 = NucleotideContigFragment.newBuilder()
-      .setContig(contig)
-      .setDescription("description")
-      .setFragmentSequence("ACTGTAC")
-      .setFragmentNumber(0)
-      .setNumberOfFragmentsInContig(3)
-      .build
-    val fragment1 = NucleotideContigFragment.newBuilder()
-      .setContig(contig)
-      .setDescription("description")
-      .setFragmentSequence("GCATATC")
-      .setFragmentNumber(1)
-      .setNumberOfFragmentsInContig(3)
-      .build
-    val fragment2 = NucleotideContigFragment.newBuilder()
-      .setContig(contig)
-      .setDescription("description")
-      .setFragmentSequence("CTGATCG")
-      .setFragmentNumber(2)
-      .setNumberOfFragmentsInContig(3)
-      .build
+    val fragment0 =
+      NucleotideContigFragment
+        .newBuilder()
+        .setContig(contig)
+        .setDescription("description")
+        .setFragmentSequence("ACTGTAC")
+        .setFragmentNumber(0)
+        .setNumberOfFragmentsInContig(3)
+        .build
 
-    val rdd = NucleotideContigFragmentRDD(sc.parallelize(List(fragment0,
-      fragment1,
-      fragment2)))
+    val fragment1 =
+      NucleotideContigFragment
+        .newBuilder()
+        .setContig(contig)
+        .setDescription("description")
+        .setFragmentSequence("GCATATC")
+        .setFragmentNumber(1)
+        .setNumberOfFragmentsInContig(3)
+        .build
 
-    val outputDir = Files.createTempDir()
-    val outputFastaFile = outputDir.getAbsolutePath + "/test.fa"
-    rdd.transform(_.coalesce(1)).saveAsFasta(outputFastaFile)
-    val fastaLines = scala.io.Source.fromFile(new File(outputFastaFile + "/part-00000")).getLines().toSeq
+    val fragment2 =
+      NucleotideContigFragment
+        .newBuilder()
+        .setContig(contig)
+        .setDescription("description")
+        .setFragmentSequence("CTGATCG")
+        .setFragmentNumber(2)
+        .setNumberOfFragmentsInContig(3)
+        .build
 
-    assert(fastaLines.length === 6)
-    assert(fastaLines(0) === ">chr1 description fragment 1 of 3")
-    assert(fastaLines(1) === "ACTGTAC")
-    assert(fastaLines(2) === ">chr1 description fragment 2 of 3")
-    assert(fastaLines(3) === "GCATATC")
-    assert(fastaLines(4) === ">chr1 description fragment 3 of 3")
-    assert(fastaLines(5) === "CTGATCG")
+    writeFastaLines(fragment0, fragment1, fragment2) should be(
+      Seq(
+        ">chr1 description fragment 1 of 3",
+        "ACTGTAC",
+        ">chr1 description fragment 2 of 3",
+        "GCATATC",
+        ">chr1 description fragment 3 of 3",
+        "CTGATCG"
+      )
+    )
   }
 
   sparkTest("merge single contig fragment null fragment number") {
-    val contig = Contig.newBuilder
-      .setContigName("chr1")
-      .setContigLength(7L)
-      .build
-
-    val fragment = NucleotideContigFragment.newBuilder()
-      .setContig(contig)
-      .setFragmentSequence("ACTGTAC")
-      .setFragmentNumber(null)
-      .setFragmentStartPosition(null)
-      .setFragmentEndPosition(null)
-      .setNumberOfFragmentsInContig(null)
-      .build
+    val fragment =
+      NucleotideContigFragment
+        .newBuilder()
+        .setContig(chr1())
+        .setFragmentSequence("ACTGTAC")
+        .setFragmentNumber(null)
+        .setFragmentStartPosition(null)
+        .setFragmentEndPosition(null)
+        .setNumberOfFragmentsInContig(null)
+        .build
 
     val rdd = NucleotideContigFragmentRDD(sc.parallelize(List(fragment)))
     val merged = rdd.mergeFragments()
 
-    assert(merged.rdd.count == 1L)
-    assert(merged.rdd.first.getFragmentSequence() === "ACTGTAC")
+    assert(merged.rdd.map(_.getFragmentSequence()).collect === Array("ACTGTAC"))
   }
 
   sparkTest("merge single contig fragment number zero") {
-    val contig = Contig.newBuilder
-      .setContigName("chr1")
-      .setContigLength(7L)
-      .build
-
-    val fragment = NucleotideContigFragment.newBuilder()
-      .setContig(contig)
-      .setFragmentSequence("ACTGTAC")
-      .setFragmentNumber(0)
-      .setFragmentStartPosition(0L)
-      .setFragmentEndPosition(6L)
-      .setNumberOfFragmentsInContig(1)
-      .build
+    val fragment =
+      NucleotideContigFragment
+        .newBuilder()
+        .setContig(chr1())
+        .setFragmentSequence("ACTGTAC")
+        .setFragmentNumber(0)
+        .setFragmentStartPosition(0L)
+        .setFragmentEndPosition(6L)
+        .setNumberOfFragmentsInContig(1)
+        .build
 
     val rdd = NucleotideContigFragmentRDD(sc.parallelize(List(fragment)))
     val merged = rdd.mergeFragments()
@@ -501,54 +456,71 @@ class NucleotideContigFragmentRDDSuite
   }
 
   sparkTest("merge multiple contig fragments") {
-    val contig1 = Contig.newBuilder
-      .setContigName("chr1")
-      .setContigLength(7L)
-      .build
-
-    val contig2 = Contig.newBuilder
-      .setContigName("chr2")
-      .setContigLength(11L)
-      .build
+    val contig2 =
+      Contig
+        .newBuilder
+        .setContigName("chr2")
+        .setContigLength(11L)
+        .build
 
     val sequence = "ACTGTACTC"
-    val sequence0 = sequence.take(7) // ACTGTAC
-    val sequence1 = sequence.slice(3, 8) // GTACT
-    val sequence2 = sequence.takeRight(6).reverse // CTCATG
-    val fragment0 = NucleotideContigFragment.newBuilder()
-      .setContig(contig1)
-      .setFragmentSequence(sequence0)
-      .setFragmentNumber(0)
-      .setFragmentStartPosition(0L)
-      .setFragmentEndPosition(sequence0.length - 1L)
-      .setNumberOfFragmentsInContig(1)
-      .build()
-    val fragment1 = NucleotideContigFragment.newBuilder()
-      .setContig(contig2)
-      .setFragmentSequence(sequence1)
-      .setFragmentNumber(0)
-      .setFragmentStartPosition(0L)
-      .setFragmentEndPosition(sequence1.length - 1L)
-      .setNumberOfFragmentsInContig(2)
-      .build()
-    val fragment2 = NucleotideContigFragment.newBuilder()
-      .setContig(contig2)
-      .setFragmentSequence(sequence2)
-      .setFragmentNumber(1)
-      .setFragmentStartPosition(5L)
-      .setFragmentEndPosition(sequence2.length - 1L)
-      .setNumberOfFragmentsInContig(2)
-      .build()
+    val sequence0 = sequence.take(7)  // ACTGTAC
+    val sequence1 = sequence.slice(3, 8)  // GTACT
+    val sequence2 = sequence.takeRight(6).reverse  // CTCATG
 
-    val rdd = NucleotideContigFragmentRDD(sc.parallelize(List(fragment2,
-      fragment1,
-      fragment0)))
+    val fragment0 =
+      NucleotideContigFragment
+        .newBuilder()
+        .setContig(chr1())
+        .setFragmentSequence(sequence0)
+        .setFragmentNumber(0)
+        .setFragmentStartPosition(0L)
+        .setFragmentEndPosition(sequence0.length - 1L)
+        .setNumberOfFragmentsInContig(1)
+        .build()
+
+    val fragment1 =
+      NucleotideContigFragment
+        .newBuilder()
+        .setContig(contig2)
+        .setFragmentSequence(sequence1)
+        .setFragmentNumber(0)
+        .setFragmentStartPosition(0L)
+        .setFragmentEndPosition(sequence1.length - 1L)
+        .setNumberOfFragmentsInContig(2)
+        .build()
+
+    val fragment2 =
+      NucleotideContigFragment
+        .newBuilder()
+        .setContig(contig2)
+        .setFragmentSequence(sequence2)
+        .setFragmentNumber(1)
+        .setFragmentStartPosition(5L)
+        .setFragmentEndPosition(sequence2.length - 1L)
+        .setNumberOfFragmentsInContig(2)
+        .build()
+
+    val rdd =
+      NucleotideContigFragmentRDD(
+        sc.parallelize(
+          List(
+            fragment2,
+            fragment1,
+            fragment0
+          )
+        )
+      )
+
     val merged = rdd.mergeFragments()
 
     assert(merged.rdd.count == 2L)
 
-    val collect = merged.rdd.collect
-    assert(collect(0).getFragmentSequence() === "ACTGTAC")
-    assert(collect(1).getFragmentSequence() === "GTACTCTCATG")
+    merged.rdd.collect.map(_.getFragmentSequence) should be(
+      Array(
+        "ACTGTAC",
+        "GTACTCTCATG"
+      )
+    )
   }
 }

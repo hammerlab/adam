@@ -17,25 +17,26 @@
  */
 package org.bdgenomics.adam.rdd
 
-import java.io.{ File, FileNotFoundException }
+import java.io.FileNotFoundException
 
-import com.google.common.io.Files
-import org.apache.hadoop.fs.Path
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.parquet.hadoop.metadata.CompressionCodecName
 import org.apache.spark.rdd.RDD
+import org.apache.spark.storage.StorageLevel
 import org.bdgenomics.adam.models._
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.adam.util.PhredUtils._
 import org.bdgenomics.formats.avro._
 import org.hammerlab.genomics.reference.test.ClearContigNames
+import org.hammerlab.paths.Path
 import org.scalactic.ConversionCheckedTripleEquals
 import org.scalatest.Matchers
-import org.seqdoop.hadoop_bam.CRAMInputFormat
+import org.seqdoop.hadoop_bam.CRAMInputFormat.REFERENCE_SOURCE_PATH_PROPERTY
 
-case class TestSaveArgs(var outputPath: String) extends ADAMSaveAnyArgs {
+case class TestSaveArgs(outputPath: Path)
+  extends ADAMSaveAnyArgs {
   var sortFastqOutput = false
   var asSingleFile = false
   var deferMerging = false
@@ -71,13 +72,13 @@ class ADAMContextSuite
     val readsFilepath = testFile("unmapped.sam")
     val bamReads = sc.loadAlignments(readsFilepath)
     //save it as an Adam file so we can test the Adam loader
-    val bamReadsAdamFile = new File(Files.createTempDir(), "bamReads.adam")
-    bamReads.saveAsParquet(bamReadsAdamFile.getAbsolutePath)
+    val bamReadsAdamFile = tmpLocation(".adam")
+    bamReads.saveAsParquet(bamReadsAdamFile)
     intercept[IllegalArgumentException] {
-      val noReturnType = sc.loadParquet(bamReadsAdamFile.getAbsolutePath)
+      sc.loadParquet(bamReadsAdamFile)
     }
     //finally just make sure we did not break anything,we came might as well
-    val returnType: RDD[AlignmentRecord] = sc.loadParquet(bamReadsAdamFile.getAbsolutePath)
+    val returnType: RDD[AlignmentRecord] = sc.loadParquet(bamReadsAdamFile)
     assert(manifest[returnType.type] != manifest[RDD[Nothing]])
   }
 
@@ -90,7 +91,7 @@ class ADAMContextSuite
   sparkTest("can read a small .CRAM file") {
     val path = testFile("artificial.cram")
     val referencePath = resourceUrl("artificial.fa").toString
-    sc.hadoopConfiguration.set(CRAMInputFormat.REFERENCE_SOURCE_PATH_PROPERTY,
+    sc.hadoopConfiguration.set(REFERENCE_SOURCE_PATH_PROPERTY,
       referencePath)
     val reads: RDD[AlignmentRecord] = sc.loadAlignments(path).rdd
     reads.count() should === (10)
@@ -132,6 +133,12 @@ class ADAMContextSuite
     val path = testFile("gencode.v7.annotation.trunc10.bed")
     val features: RDD[Feature] = sc.loadFeatures(path).rdd
     features.count should === (10)
+  }
+
+  sparkTest("Can read a .bed file without cache") {
+    val path = testFile("gencode.v7.annotation.trunc10.bed")
+    val features: RDD[Feature] = sc.loadFeatures(path, optStorageLevel = Some(StorageLevel.NONE)).rdd
+    assert(features.count === 10)
   }
 
   sparkTest("Can read a .narrowPeak file") {
@@ -361,59 +368,58 @@ class ADAMContextSuite
     assert(reads.rdd.count == 2)
   }
 
+  lazy val indexedBamDir = testFile("indexed_bams")
+  lazy val indexedBamGlob = indexedBamDir / "*.bam"
+  lazy val sortedBam = indexedBamDir / "sorted.bam"
+
   sparkTest("loadIndexedBam with multiple ReferenceRegions and indexed bams") {
     val refRegion1 = ReferenceRegion("2", 100, 101)
     val refRegion2 = ReferenceRegion("3", 10, 17)
-    val path = testFile("indexed_bams/sorted.bam").replace(".bam", "*.bam")
-    val reads = sc.loadIndexedBam(path, Iterable(refRegion1, refRegion2))
+    val reads = sc.loadIndexedBam(indexedBamGlob, Iterable(refRegion1, refRegion2))
     assert(reads.rdd.count == 4)
   }
 
   sparkTest("loadIndexedBam with multiple ReferenceRegions and a directory of indexed bams") {
     val refRegion1 = ReferenceRegion("2", 100, 101)
     val refRegion2 = ReferenceRegion("3", 10, 17)
-    val path = new File(testFile("indexed_bams/sorted.bam")).getParent()
-    val reads = sc.loadIndexedBam(path, Iterable(refRegion1, refRegion2))
+    val reads = sc.loadIndexedBam(indexedBamDir, Iterable(refRegion1, refRegion2))
     assert(reads.rdd.count == 4)
   }
 
   sparkTest("loadBam with a glob") {
-    val path = testFile("indexed_bams/sorted.bam").replace(".bam", "*.bam")
+    val path = indexedBamGlob
     val reads = sc.loadBam(path)
     assert(reads.rdd.count == 10)
   }
 
   sparkTest("loadBam with a directory") {
-    val path = new File(testFile("indexed_bams/sorted.bam")).getParent()
-    val reads = sc.loadBam(path)
+    val reads = sc.loadBam(indexedBamDir)
     assert(reads.rdd.count == 10)
   }
 
-  sparkTest("load vcf with a glob") {
-    val path = testFile("bqsr1.vcf").replace("bqsr1", "*")
+  test("load vcf with a glob") {
+    val path = testFile("bqsr1.vcf").parent / "*.vcf"
 
     val variants = sc.loadVcf(path).toVariantRDD
     assert(variants.rdd.count === 715)
   }
 
   sparkTest("load vcf from a directory") {
-    val path = new File(testFile("vcf_dir/1.vcf")).getParent()
+    val path = testFile("vcf_dir")
 
     val variants = sc.loadVcf(path).toVariantRDD
     variants.rdd.count should === (681)
   }
 
-  sparkTest("load gvcf which contains a multi-allelic row from a directory") {
-    val path = new File(testFile("gvcf_dir/gvcf_multiallelic.g.vcf")).getParent()
+  lazy val gvcfDir = testFile("gvcf_dir")
 
-    val variants = sc.loadVcf(path).toVariantRDD
+  sparkTest("load gvcf which contains a multi-allelic row from a directory") {
+    val variants = sc.loadVcf(gvcfDir).toVariantRDD
     assert(variants.rdd.count === 6)
   }
 
   sparkTest("parse annotations for multi-allelic rows") {
-    val path = new File(testFile("gvcf_dir/gvcf_multiallelic.g.vcf")).getParent()
-
-    val variants = sc.loadVcf(path).toVariantRDD
+    val variants = sc.loadVcf(gvcfDir).toVariantRDD
     val multiAllelicVariants = variants.rdd
       .filter(_.getReferenceAllele == "TAAA")
       .sortBy(_.getAlternateAllele.length)
@@ -428,18 +434,22 @@ class ADAMContextSuite
   sparkTest("load parquet with globs") {
     val inputPath = testFile("small.sam")
     val reads = sc.loadAlignments(inputPath)
-    val outputPath = tmpLocation()
+    val outputPath = tmpLocation(".adam")
     reads.saveAsParquet(outputPath)
-    reads.saveAsParquet(outputPath.replace(".adam", ".2.adam"))
 
-    val paths = new Path(outputPath.replace(".adam", "*.adam") + "/*")
+    val parent = outputPath.parent
+    val basename = outputPath.basename
+    reads.saveAsParquet(parent / basename.replace(".adam", ".2.adam"))
 
-    val reloadedReads = sc.loadParquetAlignments(outputPath.replace(".adam", "*.adam") + "/*")
+    val globPath = parent / basename.replace(".adam", "*.adam") / "*"
+
+    val reloadedReads = sc.loadParquetAlignments(globPath)
+
     (2 * reads.rdd.count) should === (reloadedReads.rdd.count)
   }
 
   sparkTest("bad glob should fail") {
-    val inputPath = testFile("small.sam").replace(".sam", "*.sad")
+    val inputPath = testFile("small.sam").parent / "*.sad"
     intercept[FileNotFoundException] {
       sc.loadAlignments(inputPath)
     }
@@ -455,10 +465,14 @@ class ADAMContextSuite
   sparkTest("can read a SnpEff-annotated .vcf file") {
     val path = testFile("small_snpeff.vcf")
     val variantRdd = sc.loadVariants(path)
-    val variants = variantRdd.rdd.sortBy(_.getStart).collect
+    val variants =
+      variantRdd
+        .rdd
+        .sortBy(_.getStart)
+        .collect
 
     variants.foreach(v => v.getStart.longValue match {
-      case 14396L => {
+      case 14396L ⇒
         assert(v.getReferenceAllele === "CTGT")
         assert(v.getAlternateAllele === "C")
         assert(v.getAnnotation.getTranscriptEffects.size === 4)
@@ -471,28 +485,35 @@ class ADAMContextSuite
         assert(te.getFeatureType === "transcript")
         assert(te.getFeatureId === "ENST00000488147.1")
         assert(te.getBiotype === "unprocessed_pseudogene")
-      }
-      case 14521L => {
+      case 14521L ⇒
         assert(v.getReferenceAllele === "G")
         assert(v.getAlternateAllele === "A")
         assert(v.getAnnotation.getTranscriptEffects.size === 4)
-      }
-      case 19189L => {
+      case 19189L ⇒
         assert(v.getReferenceAllele === "GC")
         assert(v.getAlternateAllele === "G")
         assert(v.getAnnotation.getTranscriptEffects.size === 3)
-      }
-      case 63734L => {
+      case 63734L ⇒
         assert(v.getReferenceAllele === "CCTA")
         assert(v.getAlternateAllele === "C")
         assert(v.getAnnotation.getTranscriptEffects.size === 1)
-      }
-      case 752720L => {
+      case 752720L ⇒
         assert(v.getReferenceAllele === "A")
         assert(v.getAlternateAllele === "G")
         assert(v.getAnnotation.getTranscriptEffects.size === 2)
-      }
-      case _ => fail("unexpected variant start " + v.getStart)
+      case _ ⇒
+        fail("unexpected variant start " + v.getStart)
     })
+  }
+
+  sparkTest("loadAlignments should not fail on single-end and paired-end fastq reads") {
+    val readsFilepath1 = testFile("bqsr1-r1.fq")
+    val readsFilepath2 = testFile("bqsr1-r2.fq")
+    val fastqReads1: RDD[AlignmentRecord] = sc.loadAlignments(readsFilepath1).rdd
+    val fastqReads2: RDD[AlignmentRecord] = sc.loadAlignments(readsFilepath2).rdd
+    val pairedReads: RDD[AlignmentRecord] = sc.loadAlignments(readsFilepath1, path2Opt = Option(readsFilepath2)).rdd
+    assert(fastqReads1.rdd.count === 488)
+    assert(fastqReads2.rdd.count === 488)
+    assert(pairedReads.rdd.count === 976)
   }
 }

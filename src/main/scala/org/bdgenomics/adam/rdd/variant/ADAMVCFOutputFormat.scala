@@ -17,61 +17,67 @@
  */
 package org.bdgenomics.adam.rdd.variant
 
-import htsjdk.variant.vcf.{ VCFHeaderLine, VCFHeader }
 import org.apache.hadoop.fs.{ FileSystem, Path }
 import org.apache.hadoop.mapreduce.{ RecordWriter, TaskAttemptContext }
-import org.bdgenomics.adam.models.SequenceDictionary
-import org.seqdoop.hadoop_bam.{
-  KeyIgnoringVCFOutputFormat,
-  KeyIgnoringVCFRecordWriter,
-  VariantContextWritable,
-  VCFFormat
-}
+import org.seqdoop.hadoop_bam.{ KeyIgnoringVCFOutputFormat, KeyIgnoringVCFRecordWriter, VCFFormat, VariantContextWritable }
+import ADAMVCFOutputFormat.HEADER_PATH_KEY
 
 /**
  * Wrapper for Hadoop-BAM to work around requirement for no-args constructor.
  *
  * @tparam K The key type. Keys are not written.
  */
-class ADAMVCFOutputFormat[K] extends KeyIgnoringVCFOutputFormat[K](VCFFormat.VCF) with Serializable {
+class ADAMVCFOutputFormat[K]
+  extends KeyIgnoringVCFOutputFormat[K](VCFFormat.VCF)
+    with Serializable {
 
   override def getRecordWriter(context: TaskAttemptContext): RecordWriter[K, VariantContextWritable] = {
     val conf = context.getConfiguration()
 
     // where is our header file?
-    val path = new Path(conf.get("org.bdgenomics.adam.rdd.variant.vcf_header_path"))
+    val path = new Path(conf.get(HEADER_PATH_KEY))
 
     // read the header file
     readHeaderFrom(path, FileSystem.get(conf))
 
     // return record writer
-    return new KeyIgnoringVCFRecordWriter[K](getDefaultWorkFile(context, ""),
+    new KeyIgnoringVCFRecordWriter[K](
+      getDefaultWorkFile(context, ""),
       header,
       true,
-      context);
+      context
+    )
   }
 }
 
+object ADAMVCFOutputFormat {
+  val HEADER_PATH_KEY = "org.bdgenomics.adam.rdd.variant.vcf_header_path"
+}
+
 /**
  * Wrapper for Hadoop-BAM to work around requirement for no-args constructor.
  *
  * @tparam K The key type. Keys are not written.
  */
-class ADAMHeaderlessVCFOutputFormat[K] extends KeyIgnoringVCFOutputFormat[K](VCFFormat.VCF) with Serializable {
+class ADAMHeaderlessVCFOutputFormat[K]
+  extends KeyIgnoringVCFOutputFormat[K](VCFFormat.VCF)
+    with Serializable {
 
   override def getRecordWriter(context: TaskAttemptContext): RecordWriter[K, VariantContextWritable] = {
     val conf = context.getConfiguration()
 
     // where is our header file?
-    val path = new Path(conf.get("org.bdgenomics.adam.rdd.variant.vcf_header_path"))
+    val path = new Path(conf.get(HEADER_PATH_KEY))
 
     // read the header file
     readHeaderFrom(path, FileSystem.get(conf))
 
     // return record writer
-    return new KeyIgnoringVCFRecordWriter[K](getDefaultWorkFile(context, ""),
+    new KeyIgnoringVCFRecordWriter[K](
+      getDefaultWorkFile(context, ""),
       header,
       false,
-      context);
+      context
+    )
   }
 }

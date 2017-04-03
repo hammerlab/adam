@@ -38,8 +38,12 @@ class FragmentRDDSuite extends ADAMFunSuite {
     // this script converts interleaved fastq to unaligned sam
     val scriptPath = testFile("fastq_to_usam.py")
 
-    val pipedRdd: AlignmentRecordRDD = ardd.pipe("python $0",
-      files = Seq(scriptPath))
+    val pipedRdd: AlignmentRecordRDD =
+      ardd.pipe(
+        "python $0",
+        files = Seq(scriptPath.toString)
+      )
+
     val newRecords = pipedRdd.rdd.count
     assert(2 * records === newRecords)
   }
@@ -189,8 +193,8 @@ class FragmentRDDSuite extends ADAMFunSuite {
 
     val c = jRdd.rdd.collect
     val c0 = jRdd0.rdd.collect
-    assert(c.size === 5)
-    assert(c0.size === 5)
+    assert(c.length === 5)
+    assert(c0.length === 5)
     assert(c.forall(_._2.size == 1))
     assert(c0.forall(_._2.size == 1))
   }
