@@ -24,14 +24,14 @@ deps ++= Seq(
   libs.value('commons_io),
   libs.value('hadoop_bam),
   libs.value('htsjdk),
-  libs.value('loci) exclude("com.github.samtools", "htsjdk"),
+  libs.value('loci),
   libs.value('log4j),
+  libs.value('parquet_avro),
   libs.value('spark_util),
   "com.netflix.servo" % "servo-core" % "0.10.0",
   "it.unimi.dsi" % "fastutil" % "6.6.5",
   "org.apache.avro" % "avro" % "1.8.0",
   "org.apache.httpcomponents" % "httpclient" % "4.5.2",
-  "org.apache.parquet" % "parquet-avro" % "1.8.1",
   "org.apache.parquet" % "parquet-scala_2.10" % "1.8.1" exclude("org.scala-lang", "scala-library")
 )
 

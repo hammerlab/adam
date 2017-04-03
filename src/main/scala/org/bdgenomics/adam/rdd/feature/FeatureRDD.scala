@@ -75,7 +75,7 @@ private trait FeatureOrdering[T <: Feature] extends Ordering[T] {
     // use ComparisonChain to safely handle nulls, as Feature is a java object
     ComparisonChain.start()
       // consider reference region first
-      .compare(x.getContigName, y.getContigName)
+      .compare(x.getContigName: ContigName, y.getContigName: ContigName)
       .compare(x.getStart, y.getStart)
       .compare(x.getEnd, y.getEnd)
       .compare(x.getStrand, y.getStrand, strandNullsLast)
@@ -120,10 +120,13 @@ object FeatureRDD {
       // create sequence records with length max(start, end) + 1L
       val sequenceRecords =
         rdd
-        .keyBy(_.getContigName)
-          .mapValues { feature => NumLoci(max(feature.getStart, feature.getEnd) + 1L) }
+          .map {
+            feature ⇒
+              (feature.getContigName: ContigName) →
+                NumLoci(max(feature.getStart, feature.getEnd) + 1L)
+          }
           .reduceByKey(_ max _)
-          .map { case (contigName, size) => SequenceRecord(contigName, size) }
+          .map { case (contigName, size) ⇒ SequenceRecord(contigName, size) }
 
       val sd = new SequenceDictionary(sequenceRecords.collect.toVector)
 

@@ -115,7 +115,7 @@ object ADAMContext {
   }
 
   // Add ADAM Spark context methods
-  implicit def sparkContextToADAMContext(sc: SparkContext): ADAMContext = new ADAMContext(sc)
+  implicit def sparkContextToADAMContext(sc: SparkContext)(implicit factory: Factory): ADAMContext = new ADAMContext(sc)
 
   // Add generic RDD methods for all types of ADAM RDDs
   implicit def rddToADAMRDD[T: Manifest](rdd: RDD[T])(implicit ev1: T => IndexedRecord): ConcreteADAMRDDFunctions[T] =
@@ -147,9 +147,8 @@ private class FileFilter(private val name: String) extends PathFilter {
  *
  * @param sc The SparkContext to wrap.
  */
-class ADAMContext(@transient val sc: SparkContext)
-  extends Serializable
-    with Logging {
+class ADAMContext(val sc: SparkContext)(implicit factory: Factory)
+  extends Logging {
 
   implicit def pathToHPath(path: Path): HPath = new HPath(path.uri)
 
@@ -1503,7 +1502,7 @@ class ADAMContext(@transient val sc: SparkContext)
    *
    * @see loadSequences
    */
-  def loadReferenceFile(path: Path, fragmentLength: Long)(implicit factory: Factory): ReferenceFile =
+  def loadReferenceFile(path: Path, fragmentLength: Long): ReferenceFile =
     if (path.extension == "2bit")
       TwoBitFile(path)
     else
