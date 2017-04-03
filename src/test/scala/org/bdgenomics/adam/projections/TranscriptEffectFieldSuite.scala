@@ -27,7 +27,7 @@ import org.bdgenomics.formats.avro.{ TranscriptEffect, VariantAnnotationMessage 
 
 class TranscriptEffectFieldSuite extends ADAMFunSuite {
 
-  sparkTest("Use projection when reading parquet transcript effects") {
+  test("Use projection when reading parquet transcript effects") {
     val path = tmpFile("transcriptEffects.parquet")
     val rdd = sc.parallelize(Seq(TranscriptEffect.newBuilder()
       .setAlternateAllele("A")

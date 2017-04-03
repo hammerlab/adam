@@ -32,7 +32,7 @@ class ConsensusGeneratorFromReadsSuite extends ADAMFunSuite {
     sc.loadAlignments(path).rdd
   }
 
-  sparkTest("checking search for consensus list for artificial reads") {
+  test("checking search for consensus list for artificial reads") {
     val consensus = cg.findConsensus(artificial_reads.map(new RichAlignmentRecord(_))
       .collect()
       .toSeq)

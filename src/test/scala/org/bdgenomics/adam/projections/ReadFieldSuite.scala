@@ -30,7 +30,7 @@ import org.bdgenomics.formats.avro.{
 
 class ReadFieldSuite extends ADAMFunSuite {
 
-  sparkTest("Use projection when reading parquet reads") {
+  test("Use projection when reading parquet reads") {
     val path = tmpFile("reads.parquet")
     val rdd = sc.parallelize(Seq(Read.newBuilder()
       .setName("read 1")

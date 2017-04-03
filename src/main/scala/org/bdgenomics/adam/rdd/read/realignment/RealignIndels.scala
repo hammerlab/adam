@@ -52,7 +52,7 @@ private[read] object RealignIndels extends Serializable with Logging {
     maxTargetSize: Int = 3000,
     maxReadsPerTarget: Int = 20000,
     optReferenceFile: Option[ReferenceFile] = None,
-    unclipReads: Boolean = false): RDD[AlignmentRecord] = {
+    unclipReads: Boolean = false): RDD[AlignmentRecord] =
     new RealignIndels(
       rdd.context,
       consensusModel = consensusModel,
@@ -64,8 +64,8 @@ private[read] object RealignIndels extends Serializable with Logging {
       maxReadsPerTarget = maxReadsPerTarget,
       optReferenceFile = optReferenceFile,
       unclipReads = unclipReads
-    ).realignIndels(rdd)
-  }
+    )
+    .realignIndels(rdd)
 
   /**
    * Method to map a record to an indel realignment target. Returns the index of the target to align to if the read has a
@@ -295,7 +295,6 @@ private[read] class RealignIndels(
         val (targetIdx, _) = target.get
         val startTime = System.nanoTime()
         // bootstrap realigned read set with the reads that need to be realigned
-        val (realignedReads, readsToRealign) = reads.partition(r => r.mdTag.exists(!_.hasMismatches))
 
         // get reference from reads
         val refStart = reads.map(_.getStart).min
@@ -305,7 +304,7 @@ private[read] class RealignIndels(
 
         // preprocess reads and get consensus
         val readsToClean = consensusModel.preprocessReadsForRealignment(
-          readsToRealign,
+          reads,
           reference,
           refRegion
         ).zipWithIndex
@@ -380,75 +379,74 @@ private[read] class RealignIndels(
             FinalizingRealignments.time {
               var realignedReadCount = 0
 
-              // generate a reference sequence from the consensus
-              val consensusSequence = bestConsensus.insertIntoReference(reference, refRegion)
-
               // if we see a sufficient improvement, realign the reads
-              val cleanedReads: Iterable[RichAlignmentRecord] = readsToClean.map(p => {
-                val (r, rIdx) = p
+              val cleanedReads: Iterable[RichAlignmentRecord] = readsToClean.map {
+                case (r, _) ⇒
 
-                try {
-                  val finalRemapping = bestMappings(r)
+                  try {
+                    val finalRemapping = bestMappings(r)
 
-                  // if read alignment is improved by aligning against new consensus, realign
-                  if (finalRemapping != -1) {
-                    realignedReadCount += 1
-                    val builder: AlignmentRecord.Builder = AlignmentRecord.newBuilder(r)
+                    // if read alignment is improved by aligning against new consensus, realign
+                    if (finalRemapping != -1) {
+                      realignedReadCount += 1
+                      val builder: AlignmentRecord.Builder = AlignmentRecord.newBuilder(r)
 
-                    // bump up mapping quality by 10
-                    builder.setMapq(r.getMapq + 10)
+                      // bump up mapping quality by 10
+                      builder.setMapq(r.getMapq + 10)
 
-                    // how many bases are clipped at the start/end of the read?
-                    val (basesClippedAtStart, basesClippedAtEnd) = if (unclipReads) {
-                      (0, 0)
+                      // how many bases are clipped at the start/end of the read?
+                      val (basesClippedAtStart, basesClippedAtEnd) = if (unclipReads) {
+                        (0, 0)
+                      } else {
+                        val richCigar = RichCigar(r.samtoolsCigar)
+                        (richCigar.softClippedBasesAtStart, richCigar.softClippedBasesAtEnd)
+                      }
+
+                      // get start, end, cigar
+                      val (newStart, newEnd, newCigar) =
+                        cigarAndCoordinates(
+                          r.getSequence.length,
+                          basesClippedAtStart, basesClippedAtEnd,
+                          r.getBasesTrimmedFromStart, r.getBasesTrimmedFromEnd,
+                          refStart,
+                          finalRemapping,
+                          bestConsensus
+                        )
+
+                      if (newEnd <= newStart) {
+                        log.warn(s"Realigning read $r failed because realignment issued an illegal alignment: start $newStart, end $newEnd, CIGAR $newCigar")
+                        r
+                      } else {
+                        builder.setStart(newStart)
+                          .setEnd(newEnd)
+                          .setCigar(newCigar.toString)
+
+                        // update mdtag and cigar
+                        val newMdTag = MdTag.moveAlignment(r,
+                          newCigar,
+                          reference.drop((newStart - refStart).toInt),
+                          newStart).toString()
+                        builder.setMismatchingPositions(newMdTag)
+                        builder.setOldPosition(r.getStart())
+                        builder.setOldCigar(r.getCigar())
+                        val rec = builder.build()
+
+                        new RichAlignmentRecord(rec)
+                      }
                     } else {
-                      val richCigar = RichCigar(r.samtoolsCigar)
-                      (richCigar.softClippedBasesAtStart, richCigar.softClippedBasesAtEnd)
-                    }
-
-                    // get start, end, cigar
-                    val (newStart, newEnd, newCigar) = cigarAndCoordinates(
-                      r.getSequence.length,
-                      basesClippedAtStart, basesClippedAtEnd,
-                      r.getBasesTrimmedFromStart, r.getBasesTrimmedFromEnd,
-                      refStart,
-                      finalRemapping,
-                      bestConsensus)
-
-                    if (newEnd <= newStart) {
-                      log.warn("Realigning read %s failed because realignment issued an illegal alignment: start %d, end %d, CIGAR %s.".format(r, newStart, newEnd, newCigar))
                       r
-                    } else {
-                      builder.setStart(newStart)
-                        .setEnd(newEnd)
-                        .setCigar(newCigar.toString)
-
-                      // update mdtag and cigar
-                      val newMdTag = MdTag.moveAlignment(r,
-                        newCigar,
-                        reference.drop((newStart - refStart).toInt),
-                        newStart).toString()
-                      builder.setMismatchingPositions(newMdTag)
-                      builder.setOldPosition(r.getStart())
-                      builder.setOldCigar(r.getCigar())
-                      val rec = builder.build()
-
-                      new RichAlignmentRecord(rec)
                     }
-                  } else {
-                    r
+                  } catch {
+                    case t: Throwable ⇒
+                      log.warn("Realigning read %s failed with %s. At:".format(r, t))
+                      r
                   }
-                } catch {
-                  case t: Throwable ⇒
-                    log.warn("Realigning read %s failed with %s. At:".format(r, t))
-                    r
-                }
-              })
+              }
 
               log.info("On " + refRegion + ", realigned " + realignedReadCount + " reads to " +
                 bestConsensus + " due to LOD improvement of " + lodImprovement)
 
-              cleanedReads ++ realignedReads
+              cleanedReads
             }
           } else {
             log.info("On " + refRegion + ", skipping realignment due to insufficient LOD improvement (" +

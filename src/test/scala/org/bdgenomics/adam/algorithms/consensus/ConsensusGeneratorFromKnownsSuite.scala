@@ -30,12 +30,12 @@ class ConsensusGeneratorFromKnownsSuite extends ADAMFunSuite {
     ConsensusGenerator.fromKnownIndels(sc.loadVariants(path))
   }
 
-  sparkTest("no consensuses for empty target") {
+  test("no consensuses for empty target") {
     val c = cg(sc)
     assert(c.findConsensus(Iterable.empty).isEmpty)
   }
 
-  sparkTest("no consensuses for reads that don't overlap a target") {
+  test("no consensuses for reads that don't overlap a target") {
     val c = cg(sc)
     val read = AlignmentRecord.newBuilder
       .setStart(1L)
@@ -45,7 +45,7 @@ class ConsensusGeneratorFromKnownsSuite extends ADAMFunSuite {
     assert(c.findConsensus(Iterable(new RichAlignmentRecord(read))).isEmpty)
   }
 
-  sparkTest("return a consensus for read overlapping a single target") {
+  test("return a consensus for read overlapping a single target") {
     val c = cg(sc)
     val read = AlignmentRecord.newBuilder
       .setStart(19189L)

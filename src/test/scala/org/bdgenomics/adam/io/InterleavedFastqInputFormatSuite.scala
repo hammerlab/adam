@@ -28,7 +28,7 @@ class InterleavedFastqInputFormatSuite extends ADAMFunSuite {
     val expectedOutputPath = testFile(expectedOutputName)
     val expectedOutputData = expectedOutputPath.read
 
-    sparkTest("interleaved FASTQ hadoop reader: %s->%s".format(inputName, expectedOutputName)) {
+    test("interleaved FASTQ hadoop reader: %s->%s".format(inputName, expectedOutputName)) {
 
       val ifq_reads =
         sc.newAPIHadoopFile(

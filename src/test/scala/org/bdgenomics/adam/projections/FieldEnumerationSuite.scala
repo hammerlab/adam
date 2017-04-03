@@ -34,7 +34,7 @@ class FieldEnumerationSuite
     }
   }
 
-  sparkTest("Simple projection on Read works") {
+  test("Simple projection on Read works") {
     val readsFilepath = testFile("reads12.sam")
     val readsParquetFilepath = tmpFile("reads12.adam")
 

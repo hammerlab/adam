@@ -57,7 +57,7 @@ class IndelRealignmentTargetSuite
       .build())
   }
 
-  sparkTest("checking simple realignment target") {
+  test("checking simple realignment target") {
     val target1 = new IndelRealignmentTarget(Some(ReferenceRegion("1", 1, 10)),
       ReferenceRegion("1", 1, 51))
     val target2 = new IndelRealignmentTarget(None,
@@ -72,7 +72,7 @@ class IndelRealignmentTargetSuite
     assert(target2.isEmpty)
   }
 
-  sparkTest("creating simple target from read with deletion") {
+  test("creating simple target from read with deletion") {
     val read = make_read(3L, "2M3D2M", "2^AAA2", 4, 7)
     val read_rdd: RDD[RichAlignmentRecord] = sc.makeRDD(Seq(read), 1)
     val targets = RealignmentTargetFinder(read_rdd)
@@ -90,7 +90,7 @@ class IndelRealignmentTargetSuite
     assert(TargetOrdering.lt(targets.head, read4))
   }
 
-  sparkTest("creating simple target from read with insertion") {
+  test("creating simple target from read with insertion") {
     val read = make_read(3L, "2M3I2M", "4", 7, 4)
     val read_rdd: RDD[RichAlignmentRecord] = sc.makeRDD(Seq(read), 1)
     val targets = RealignmentTargetFinder(read_rdd)
@@ -102,7 +102,7 @@ class IndelRealignmentTargetSuite
     assert(targets.head.readRange.end === 7)
   }
 
-  sparkTest("joining simple realignment targets on same chr") {
+  test("joining simple realignment targets on same chr") {
     val target1 = new IndelRealignmentTarget(Some(ReferenceRegion("1", 10, 16)),
       ReferenceRegion("1", 1, 21))
     val target2 = new IndelRealignmentTarget(Some(ReferenceRegion("1", 10, 16)),
@@ -114,7 +114,7 @@ class IndelRealignmentTargetSuite
     assert(merged_target.variation.get.end === 16)
   }
 
-  sparkTest("joining simple realignment targets on different chr throws exception") {
+  test("joining simple realignment targets on different chr throws exception") {
     val target1 = new IndelRealignmentTarget(Some(ReferenceRegion("1", 10, 16)),
       ReferenceRegion("1", 1, 21))
     val target2 = new IndelRealignmentTarget(Some(ReferenceRegion("2", 10, 16)),
@@ -125,7 +125,7 @@ class IndelRealignmentTargetSuite
     }
   }
 
-  sparkTest("creating targets from three intersecting reads, same indel") {
+  test("creating targets from three intersecting reads, same indel") {
     val read1 = make_read(1L, "4M3D2M", "4^AAA2", 6, 9)
     val read2 = make_read(2L, "3M3D2M", "3^AAA2", 5, 8)
     val read3 = make_read(3L, "2M3D2M", "2^AAA2", 4, 7)
@@ -139,7 +139,7 @@ class IndelRealignmentTargetSuite
     assert(targets.head.readRange.end === 10)
   }
 
-  sparkTest("creating targets from three intersecting reads, two different indel") {
+  test("creating targets from three intersecting reads, two different indel") {
     val read1 = make_read(1L, "2M2D4M", "2^AA4", 6, 8, 0)
     val read2 = make_read(1L, "2M2D2M2D2M", "2^AA2^AA2", 6, 10, 1)
     val read3 = make_read(5L, "2M2D4M", "2^AA4", 6, 8, 2)
@@ -155,7 +155,7 @@ class IndelRealignmentTargetSuite
     assert(targets.head.readRange.end === 13)
   }
 
-  sparkTest("creating targets from two disjoint reads") {
+  test("creating targets from two disjoint reads") {
     val read1 = make_read(1L, "2M2D2M", "2^AA2", 4, 6)
     val read2 = make_read(7L, "2M2D2M", "2^AA2", 4, 6)
     val read_rdd: RDD[RichAlignmentRecord] = sc.makeRDD(Seq(read1, read2), 1)
@@ -172,7 +172,7 @@ class IndelRealignmentTargetSuite
     assert(targets(1).readRange.end === 13)
   }
 
-  sparkTest("creating targets for artificial reads: one-by-one") {
+  test("creating targets for artificial reads: one-by-one") {
     def check_indel(target: IndelRealignmentTarget, read: AlignmentRecord): Boolean = {
       val indelRange: ReferenceRegion = target.variation.get
       read.getStart.toLong match {
@@ -200,7 +200,7 @@ class IndelRealignmentTargetSuite
       })
   }
 
-  sparkTest("creating targets for artificial reads: all-at-once (merged)") {
+  test("creating targets for artificial reads: all-at-once (merged)") {
     val targets_collected: Array[IndelRealignmentTarget] = RealignmentTargetFinder(artificial_reads).toArray
 
     assert(targets_collected.size === 1)
@@ -210,7 +210,7 @@ class IndelRealignmentTargetSuite
     assert(targets_collected.head.variation.get.end === 64)
   }
 
-  sparkTest("creating indel targets for mason reads") {
+  test("creating indel targets for mason reads") {
     val targets_collected: Array[IndelRealignmentTarget] = RealignmentTargetFinder(mason_reads).toArray
 
     // the first read has no indels

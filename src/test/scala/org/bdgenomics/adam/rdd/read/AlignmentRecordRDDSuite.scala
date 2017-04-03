@@ -54,7 +54,7 @@ class AlignmentRecordRDDSuite
 
   val smallSam = testFile("small.sam")
 
-  sparkTest("sorting reads") {
+  test("sorting reads") {
     val random = new Random("sorting".hashCode)
     val numReadsToCreate = 1000
     val reads = for (i <- 0 until numReadsToCreate) yield {
@@ -93,7 +93,7 @@ class AlignmentRecordRDDSuite
     assert(expectedSortedReads === mapped)
   }
 
-  sparkTest("coverage does not fail on unmapped reads") {
+  test("coverage does not fail on unmapped reads") {
     val inputPath = testFile("unmapped.sam")
     val reads: AlignmentRecordRDD = sc.loadAlignments(inputPath)
       .transform(rdd => {
@@ -104,7 +104,7 @@ class AlignmentRecordRDDSuite
     assert(coverage.rdd.count === 0)
   }
 
-  sparkTest("computes coverage") {
+  test("computes coverage") {
     val inputPath = testFile("artificial.sam")
     val reads: AlignmentRecordRDD = sc.loadAlignments(inputPath)
 
@@ -114,7 +114,7 @@ class AlignmentRecordRDDSuite
     assert(coverage.rdd.filter(r => r.start == 30).first.count == pointCoverage)
   }
 
-  sparkTest("test filterByOverlappingRegions") {
+  test("test filterByOverlappingRegions") {
     val inputPath = testFile("artificial.sam")
     val reads: AlignmentRecordRDD = sc.loadAlignments(inputPath)
 
@@ -124,7 +124,7 @@ class AlignmentRecordRDDSuite
     assert(coverage.rdd.filter(r => r.start == 30).first.count == pointCoverage)
   }
 
-  sparkTest("merges adjacent records with equal coverage values") {
+  test("merges adjacent records with equal coverage values") {
     val inputPath = testFile("artificial.sam")
     val reads: AlignmentRecordRDD = sc.loadAlignments(inputPath)
 
@@ -135,7 +135,7 @@ class AlignmentRecordRDDSuite
     assert(coverage.flatten().rdd.count == 170)
   }
 
-  sparkTest("sorting reads by reference index") {
+  test("sorting reads by reference index") {
     val random = new Random("sortingIndices".hashCode)
     val numReadsToCreate = 1000
     val reads = for (i <- 0 until numReadsToCreate) yield {
@@ -186,7 +186,7 @@ class AlignmentRecordRDDSuite
     assert(expectedSortedReads === mapped)
   }
 
-  sparkTest("round trip from ADAM to SAM and back to ADAM produces equivalent Read values") {
+  test("round trip from ADAM to SAM and back to ADAM produces equivalent Read values") {
     val reads12Path = testFile("reads12.sam")
     val ardd = sc.loadBam(reads12Path)
     val rdd12A = ardd.rdd
@@ -214,7 +214,7 @@ class AlignmentRecordRDDSuite
     }
   }
 
-  sparkTest("round trip with single CRAM file produces equivalent Read values") {
+  test("round trip with single CRAM file produces equivalent Read values") {
     val readsPath = testFile("artificial.cram")
     val referencePath = resourceUrl("artificial.fa").toString
     sc.hadoopConfiguration.set(REFERENCE_SOURCE_PATH_PROPERTY,
@@ -247,7 +247,7 @@ class AlignmentRecordRDDSuite
     }
   }
 
-  sparkTest("round trip with sharded CRAM file produces equivalent Read values") {
+  test("round trip with sharded CRAM file produces equivalent Read values") {
     val readsPath = testFile("artificial.cram")
     val referencePath = resourceUrl("artificial.fa").toString
     sc.hadoopConfiguration.set(REFERENCE_SOURCE_PATH_PROPERTY,
@@ -280,14 +280,14 @@ class AlignmentRecordRDDSuite
     }
   }
 
-  sparkTest("SAM conversion sets read mapped flag properly") {
+  test("SAM conversion sets read mapped flag properly") {
     val filePath = testFile("reads12.sam")
     val sam = sc.loadAlignments(filePath)
 
     sam.rdd.collect().foreach(r => assert(r.getReadMapped))
   }
 
-  sparkTest("convert malformed FASTQ (no quality scores) => SAM => well-formed FASTQ => SAM") {
+  test("convert malformed FASTQ (no quality scores) => SAM => well-formed FASTQ => SAM") {
     val noqualPath = testFile("fastq_noqual.fq")
 
     //read FASTQ (malformed)
@@ -321,7 +321,7 @@ class AlignmentRecordRDDSuite
     }
   }
 
-  sparkTest("round trip from ADAM to FASTQ and back to ADAM produces equivalent Read values") {
+  test("round trip from ADAM to FASTQ and back to ADAM produces equivalent Read values") {
     val reads12Path = testFile("fastq_sample1.fq")
     val rdd12A = sc.loadAlignments(reads12Path)
 
@@ -345,7 +345,7 @@ class AlignmentRecordRDDSuite
     }
   }
 
-  sparkTest("round trip from ADAM to paired-FASTQ and back to ADAM produces equivalent Read values") {
+  test("round trip from ADAM to paired-FASTQ and back to ADAM produces equivalent Read values") {
     val path1 = testFile("proper_pairs_1.fq")
     val path2 = testFile("proper_pairs_2.fq")
     val rddA = sc.loadAlignments(path1).reassembleReadPairs(sc.loadAlignments(path2).rdd,
@@ -376,7 +376,7 @@ class AlignmentRecordRDDSuite
     }
   }
 
-  sparkTest("writing a small sorted file as SAM should produce the expected result") {
+  test("writing a small sorted file as SAM should produce the expected result") {
     val unsortedPath = testFile("unsorted.sam")
     val ardd = sc.loadBam(unsortedPath)
     val reads = ardd.rdd
@@ -390,7 +390,7 @@ class AlignmentRecordRDDSuite
     checkFiles(actualSortedPath, "sorted.sam")
   }
 
-  sparkTest("writing unordered sam from unordered sam") {
+  test("writing unordered sam from unordered sam") {
     val unsortedPath = testFile("unordered.sam")
     val ardd = sc.loadBam(unsortedPath)
     val reads = ardd.rdd
@@ -403,7 +403,7 @@ class AlignmentRecordRDDSuite
     checkFiles(actualUnorderedPath, "unordered.sam")
   }
 
-  sparkTest("writing ordered sam from unordered sam") {
+  test("writing ordered sam from unordered sam") {
     val unsortedPath = testFile("unordered.sam")
     val ardd = sc.loadBam(unsortedPath)
     val reads = ardd.sortReadsByReferencePosition()
@@ -507,71 +507,71 @@ class AlignmentRecordRDDSuite
       }
   }
 
-  sparkTest("write single sam file back") {
+  test("write single sam file back") {
     testBQSR(true, "bqsr1.sam")
   }
 
-  sparkTest("write single bam file back") {
+  test("write single bam file back") {
     testBQSR(false, "bqsr1.bam")
   }
 
-  sparkTest("saveAsParquet with save args, sequence dictionary, and record group dictionary") {
+  test("saveAsParquet with save args, sequence dictionary, and record group dictionary") {
     val reads: AlignmentRecordRDD = sc.loadAlignments(smallSam)
     val outputPath = tmpLocation()
     reads.saveAsParquet(TestSaveArgs(outputPath))
     assert(exists(outputPath))
   }
 
-  sparkTest("save as SAM format") {
+  test("save as SAM format") {
     val reads: AlignmentRecordRDD = sc.loadAlignments(smallSam)
     val outputPath = tmpLocation(".sam")
     reads.save(TestSaveArgs(outputPath))
     assert(exists(outputPath))
   }
 
-  sparkTest("save as sorted SAM format") {
+  test("save as sorted SAM format") {
     val reads: AlignmentRecordRDD = sc.loadAlignments(smallSam)
     val outputPath = tmpLocation(".sam")
     reads.save(TestSaveArgs(outputPath), true)
     assert(exists(outputPath))
   }
 
-  sparkTest("save as BAM format") {
+  test("save as BAM format") {
     val reads: AlignmentRecordRDD = sc.loadAlignments(smallSam)
     val outputPath = tmpLocation(".bam")
     reads.save(TestSaveArgs(outputPath))
     assert(exists(outputPath))
   }
 
-  sparkTest("save as sorted BAM format") {
+  test("save as sorted BAM format") {
     val reads: AlignmentRecordRDD = sc.loadAlignments(smallSam)
     val outputPath = tmpLocation(".bam")
     reads.save(TestSaveArgs(outputPath), true)
     assert(exists(outputPath))
   }
 
-  sparkTest("save as FASTQ format") {
+  test("save as FASTQ format") {
     val reads: AlignmentRecordRDD = sc.loadAlignments(smallSam)
     val outputPath = tmpLocation(".fq")
     reads.save(TestSaveArgs(outputPath))
     assert(exists(outputPath))
   }
 
-  sparkTest("save as ADAM parquet format") {
+  test("save as ADAM parquet format") {
     val reads: AlignmentRecordRDD = sc.loadAlignments(smallSam)
     val outputPath = tmpLocation(".adam")
     reads.save(TestSaveArgs(outputPath))
     assert(exists(outputPath))
   }
 
-  sparkTest("saveAsSam SAM format") {
+  test("saveAsSam SAM format") {
     val reads: AlignmentRecordRDD = sc.loadAlignments(smallSam)
     val outputPath = tmpLocation(".sam")
     reads.saveAsSam(outputPath, asType = Some(SAM))
     assert(exists(outputPath))
   }
 
-  sparkTest("saveAsSam SAM format single file") {
+  test("saveAsSam SAM format single file") {
     val reads: AlignmentRecordRDD = sc.loadAlignments(smallSam)
     val outputPath = tmpLocation(".sam")
     reads.saveAsSam(outputPath,
@@ -580,7 +580,7 @@ class AlignmentRecordRDDSuite
     assert(exists(outputPath))
   }
 
-  sparkTest("saveAsSam sorted SAM format single file") {
+  test("saveAsSam sorted SAM format single file") {
     val reads: AlignmentRecordRDD = sc.loadAlignments(smallSam)
     val outputPath = tmpLocation(".sam")
     reads.saveAsSam(outputPath,
@@ -590,14 +590,14 @@ class AlignmentRecordRDDSuite
     assert(exists(outputPath))
   }
 
-  sparkTest("saveAsSam BAM format") {
+  test("saveAsSam BAM format") {
     val reads: AlignmentRecordRDD = sc.loadAlignments(smallSam)
     val outputPath = tmpLocation(".bam")
     reads.saveAsSam(outputPath, asType = Some(BAM))
     assert(exists(outputPath))
   }
 
-  sparkTest("saveAsSam BAM format single file") {
+  test("saveAsSam BAM format single file") {
     val reads: AlignmentRecordRDD = sc.loadAlignments(smallSam)
     val outputPath = tmpLocation(".bam")
     reads.saveAsSam(
@@ -608,7 +608,7 @@ class AlignmentRecordRDDSuite
     assert(exists(outputPath))
   }
 
-  sparkTest("saveAsSam sorted BAM format single file") {
+  test("saveAsSam sorted BAM format single file") {
     val reads: AlignmentRecordRDD = sc.loadAlignments(smallSam)
     val outputPath = tmpLocation(".bam")
     reads.saveAsSam(
@@ -620,35 +620,35 @@ class AlignmentRecordRDDSuite
     assert(exists(outputPath))
   }
 
-  sparkTest("saveAsFastq") {
+  test("saveAsFastq") {
     val reads: AlignmentRecordRDD = sc.loadAlignments(smallSam)
     val outputPath = tmpLocation(".fq")
     reads.saveAsFastq(outputPath, None)
     assert(exists(outputPath))
   }
 
-  sparkTest("saveAsFastq with original base qualities") {
+  test("saveAsFastq with original base qualities") {
     val reads: AlignmentRecordRDD = sc.loadAlignments(smallSam)
     val outputPath = tmpLocation(".fq")
     reads.saveAsFastq(outputPath, None, true)
     assert(exists(outputPath))
   }
 
-  sparkTest("saveAsFastq sorted by read name") {
+  test("saveAsFastq sorted by read name") {
     val reads: AlignmentRecordRDD = sc.loadAlignments(smallSam)
     val outputPath = tmpLocation(".fq")
     reads.saveAsFastq(outputPath, None, false, true)
     assert(exists(outputPath))
   }
 
-  sparkTest("saveAsFastq sorted by read name with original base qualities") {
+  test("saveAsFastq sorted by read name with original base qualities") {
     val reads: AlignmentRecordRDD = sc.loadAlignments(smallSam)
     val outputPath = tmpLocation(".fq")
     reads.saveAsFastq(outputPath, None, true, true)
     assert(exists(outputPath))
   }
 
-  sparkTest("saveAsFastq paired FASTQ") {
+  test("saveAsFastq paired FASTQ") {
     val reads: AlignmentRecordRDD = sc.loadAlignments(smallSam)
     val outputPath1 = tmpLocation("_1.fq")
     val outputPath2 = tmpLocation("_2.fq")
@@ -657,7 +657,7 @@ class AlignmentRecordRDDSuite
     assert(exists(outputPath2))
   }
 
-  sparkTest("saveAsPairedFastq") {
+  test("saveAsPairedFastq") {
     val reads: AlignmentRecordRDD = sc.loadAlignments(smallSam)
     val outputPath1 = tmpLocation("_1.fq")
     val outputPath2 = tmpLocation("_2.fq")
@@ -666,7 +666,7 @@ class AlignmentRecordRDDSuite
     assert(exists(outputPath2))
   }
 
-  sparkTest("don't lose any reads when piping as SAM") {
+  test("don't lose any reads when piping as SAM") {
     val reads12Path = testFile("reads12.sam")
     val ardd = sc.loadBam(reads12Path)
     val records = ardd.rdd.count
@@ -679,7 +679,7 @@ class AlignmentRecordRDDSuite
     assert(records === newRecords)
   }
 
-  sparkTest("don't lose any reads when piping as BAM") {
+  test("don't lose any reads when piping as BAM") {
     val reads12Path = testFile("reads12.sam")
     val ardd = sc.loadBam(reads12Path)
     val records = ardd.rdd.count
@@ -692,7 +692,7 @@ class AlignmentRecordRDDSuite
     assert(records === newRecords)
   }
 
-  sparkTest("can properly set environment variables inside of a pipe") {
+  test("can properly set environment variables inside of a pipe") {
     val reads12Path = testFile("reads12.sam")
     val scriptPath = testFile("env_test_command.sh")
     val ardd = sc.loadBam(reads12Path)
@@ -741,7 +741,7 @@ class AlignmentRecordRDDSuite
     assert(tempBam.rdd.count === ardd.rdd.count)
   }
 
-  sparkTest("use broadcast join to pull down reads mapped to targets") {
+  test("use broadcast join to pull down reads mapped to targets") {
 
     val reads = sc.loadAlignments(readsPath)
     val targets = sc.loadFeatures(targetsPath)
@@ -768,7 +768,7 @@ class AlignmentRecordRDDSuite
     assert(jRdd.rdd.count === 5)
   }
 
-  sparkTest("use right outer broadcast join to pull down reads mapped to targets") {
+  test("use right outer broadcast join to pull down reads mapped to targets") {
     val reads = sc.loadAlignments(readsPath)
     val targets = sc.loadFeatures(targetsPath)
 
@@ -779,7 +779,7 @@ class AlignmentRecordRDDSuite
     assert(c.count(_._1.isDefined) === 5)
   }
 
-  sparkTest("use shuffle join to pull down reads mapped to targets") {
+  test("use shuffle join to pull down reads mapped to targets") {
     val reads = sc.loadAlignments(readsPath)
       .transform(_.repartition(1))
     val targets = sc.loadFeatures(targetsPath)
@@ -797,7 +797,7 @@ class AlignmentRecordRDDSuite
     assert(jRdd0.rdd.count === 5)
   }
 
-  sparkTest("use right outer shuffle join to pull down reads mapped to targets") {
+  test("use right outer shuffle join to pull down reads mapped to targets") {
     val reads = sc.loadAlignments(readsPath)
       .transform(_.repartition(1))
     val targets = sc.loadFeatures(targetsPath)
@@ -819,7 +819,7 @@ class AlignmentRecordRDDSuite
     assert(c0.count(_._1.isDefined) === 5)
   }
 
-  sparkTest("use left outer shuffle join to pull down reads mapped to targets") {
+  test("use left outer shuffle join to pull down reads mapped to targets") {
     val reads = sc.loadAlignments(readsPath)
       .transform(_.repartition(1))
     val targets = sc.loadFeatures(targetsPath)
@@ -841,7 +841,7 @@ class AlignmentRecordRDDSuite
     assert(c0.count(_._2.isDefined) === 5)
   }
 
-  sparkTest("use full outer shuffle join to pull down reads mapped to targets") {
+  test("use full outer shuffle join to pull down reads mapped to targets") {
     val reads = sc.loadAlignments(readsPath)
       .transform(_.repartition(1))
     val targets = sc.loadFeatures(targetsPath)
@@ -867,7 +867,7 @@ class AlignmentRecordRDDSuite
     assert(c0.count(t => t._1.isDefined && t._2.isDefined) === 5)
   }
 
-  sparkTest("use shuffle join with group by to pull down reads mapped to targets") {
+  test("use shuffle join with group by to pull down reads mapped to targets") {
     val reads = sc.loadAlignments(readsPath)
       .transform(_.repartition(1))
     val targets = sc.loadFeatures(targetsPath)
@@ -889,7 +889,7 @@ class AlignmentRecordRDDSuite
     assert(c0.forall(_._2.size == 1))
   }
 
-  sparkTest("use right outer shuffle join with group by to pull down reads mapped to targets") {
+  test("use right outer shuffle join with group by to pull down reads mapped to targets") {
     val reads = sc.loadAlignments(readsPath).transform(_.repartition(1))
     val targets = sc.loadFeatures(targetsPath).transform(_.repartition(1))
 

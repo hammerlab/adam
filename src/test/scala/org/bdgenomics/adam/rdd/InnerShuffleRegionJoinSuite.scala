@@ -36,7 +36,7 @@ class InnerShuffleRegionJoinSuite
       SequenceRecord("chr2", 5, url = "tes=t://chrom2"))
   }
 
-  sparkTest("Overlapping reference regions") {
+  test("Overlapping reference regions") {
     val contig = Contig.newBuilder
       .setContigName("chr1")
       .setContigLength(5L)
@@ -80,7 +80,7 @@ class InnerShuffleRegionJoinSuite
     )
   }
 
-  sparkTest("Multiple reference regions do not throw exception") {
+  test("Multiple reference regions do not throw exception") {
     val contig1 = Contig.newBuilder
       .setContigName("chr1")
       .setContigLength(5L)

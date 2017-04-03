@@ -44,7 +44,7 @@ class IndelTableSuite
     indelTable.getIndelsInRegion(ReferenceRegion("1", 1002L, 1005L)).length should === (0)
   }
 
-  sparkTest("build indel table from rdd of variants") {
+  test("build indel table from rdd of variants") {
     val ins = Variant.newBuilder()
       .setContigName("1")
       .setStart(1000L)

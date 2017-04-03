@@ -2525,7 +2525,7 @@ class VariantContextConverterSuite
     assert(adamGt.getVariantCallingAnnotations.getAttributes.get("STRING_G") === "foo,bar,baz")
   }
 
-  sparkTest("respect end position for symbolic alts") {
+  test("respect end position for symbolic alts") {
     val vcRecords = sc.loadVcf(testFile("gvcf_dir/gvcf_multiallelic.g.vcf"))
       .rdd
       .collect()

@@ -25,7 +25,7 @@ class VariantRDDSuite
   extends ADAMFunSuite
     with ClearContigNames {
 
-  sparkTest("use broadcast join to pull down variants mapped to targets") {
+  test("use broadcast join to pull down variants mapped to targets") {
     val variantsPath = testFile("small.vcf")
     val targetsPath = testFile("small.1.bed")
 
@@ -37,7 +37,7 @@ class VariantRDDSuite
     assert(jRdd.rdd.count === 3L)
   }
 
-  sparkTest("use right outer broadcast join to pull down variants mapped to targets") {
+  test("use right outer broadcast join to pull down variants mapped to targets") {
     val variantsPath = testFile("small.vcf")
     val targetsPath = testFile("small.1.bed")
 
@@ -51,7 +51,7 @@ class VariantRDDSuite
     assert(c.count(_._1.isDefined) === 3)
   }
 
-  sparkTest("use shuffle join to pull down variants mapped to targets") {
+  test("use shuffle join to pull down variants mapped to targets") {
     val variantsPath = testFile("small.vcf")
     val targetsPath = testFile("small.1.bed")
 
@@ -72,7 +72,7 @@ class VariantRDDSuite
     assert(jRdd0.rdd.count === 3L)
   }
 
-  sparkTest("use right outer shuffle join to pull down variants mapped to targets") {
+  test("use right outer shuffle join to pull down variants mapped to targets") {
     val variantsPath = testFile("small.vcf")
     val targetsPath = testFile("small.1.bed")
 
@@ -97,7 +97,7 @@ class VariantRDDSuite
     assert(c0.count(_._1.isDefined) === 3)
   }
 
-  sparkTest("use left outer shuffle join to pull down variants mapped to targets") {
+  test("use left outer shuffle join to pull down variants mapped to targets") {
     val variantsPath = testFile("small.vcf")
     val targetsPath = testFile("small.1.bed")
 
@@ -122,7 +122,7 @@ class VariantRDDSuite
     assert(c0.count(_._2.isDefined) === 3)
   }
 
-  sparkTest("use full outer shuffle join to pull down variants mapped to targets") {
+  test("use full outer shuffle join to pull down variants mapped to targets") {
     val variantsPath = testFile("small.vcf")
     val targetsPath = testFile("small.1.bed")
 
@@ -151,7 +151,7 @@ class VariantRDDSuite
     assert(c0.count(t => t._1.isDefined && t._2.isDefined) === 3)
   }
 
-  sparkTest("use shuffle join with group by to pull down variants mapped to targets") {
+  test("use shuffle join with group by to pull down variants mapped to targets") {
     val variantsPath = testFile("small.vcf")
     val targetsPath = testFile("small.1.bed")
 
@@ -176,7 +176,7 @@ class VariantRDDSuite
     assert(c0.forall(_._2.size == 1))
   }
 
-  sparkTest("use right outer shuffle join with group by to pull down variants mapped to targets") {
+  test("use right outer shuffle join with group by to pull down variants mapped to targets") {
     val variantsPath = testFile("small.vcf")
     val targetsPath = testFile("small.1.bed")
 
@@ -208,7 +208,7 @@ class VariantRDDSuite
     assert(c0.filter(_._1.isEmpty).forall(_._2.size == 1))
   }
 
-  sparkTest("convert back to variant contexts") {
+  test("convert back to variant contexts") {
     val variantsPath = testFile("small.vcf")
     val variants = sc.loadVariants(variantsPath)
     val variantContexts = variants.toVariantContextRDD

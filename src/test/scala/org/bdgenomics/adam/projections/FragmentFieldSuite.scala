@@ -27,7 +27,7 @@ import org.bdgenomics.formats.avro.{ AlignmentRecord, Fragment }
 
 class FragmentFieldSuite extends ADAMFunSuite {
 
-  sparkTest("Use projection when reading parquet fragments") {
+  test("Use projection when reading parquet fragments") {
     val path = tmpFile("fragments.parquet")
     val rdd = sc.parallelize(Seq(Fragment.newBuilder()
       .setReadName("read_name")

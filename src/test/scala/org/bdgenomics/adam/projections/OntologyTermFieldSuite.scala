@@ -26,7 +26,7 @@ import org.bdgenomics.formats.avro.OntologyTerm
 
 class OntologyTermFieldSuite extends ADAMFunSuite {
 
-  sparkTest("Use projection when reading parquet ontology terms") {
+  test("Use projection when reading parquet ontology terms") {
     val path = tmpFile("ontologyTerms.parquet")
     val rdd = sc.parallelize(Seq(OntologyTerm.newBuilder()
       .setDb("GO")

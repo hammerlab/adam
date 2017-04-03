@@ -95,7 +95,7 @@ class RealignIndelsSuite
     assert(mapToTarget(makeRead(700L, 1000L), targets, 0, 3) < 0)
   }
 
-  sparkTest("checking mapping to targets for artificial reads") {
+  test("checking mapping to targets for artificial reads") {
     val targets = RealignmentTargetFinder(artificialReads.map(RichAlignmentRecord(_))).toArray
     assert(targets.length === 1)
     val rr = artificialReads.map(RichAlignmentRecord(_))
@@ -124,7 +124,7 @@ class RealignIndelsSuite
     )
   }
 
-  sparkTest("checking alternative consensus for artificial reads") {
+  test("checking alternative consensus for artificial reads") {
     var consensus = List[Consensus]()
 
     // similar to realignTargetGroup() in RealignIndels
@@ -148,7 +148,7 @@ class RealignIndelsSuite
     // TODO: add check with insertions, how about SNPs
   }
 
-  sparkTest("checking extraction of reference from reads") {
+  test("checking extraction of reference from reads") {
     def checkReference(readReference: (String, Long, Long)) {
       // the first three lines of artificial.fasta
       val refStr = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGGGGGGGGGGAAAAAAAAAAGGGGGGGGGGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
@@ -185,7 +185,7 @@ class RealignIndelsSuite
     }
   }
 
-  sparkTest("checking realigned reads for artificial input") {
+  test("checking realigned reads for artificial input") {
     val artificialRealignedReadsCollected = artificialRealignedReads()
       .collect()
     val gatkArtificialRealignedReadsCollected = gatkArtificialRealignedReads
@@ -203,7 +203,7 @@ class RealignIndelsSuite
     result.foreach(pair => assert(pair._1.getMapq === pair._2.getMapq))
   }
 
-  sparkTest("checking realigned reads for artificial input with reference file") {
+  test("checking realigned reads for artificial input with reference file") {
     val artificialRealignedReadsCollected = artificialRealignedReads(optRefFile = Some(sc.loadReferenceFile(testFile("artificial.fa"), 1000)))
       .collect()
     val gatkArtificialRealignedReadsCollected = gatkArtificialRealignedReads
@@ -221,7 +221,7 @@ class RealignIndelsSuite
     result.foreach(pair => assert(pair._1.getMapq === pair._2.getMapq))
   }
 
-  sparkTest("checking realigned reads for artificial input using knowns") {
+  test("checking realigned reads for artificial input using knowns") {
     val indel = Variant.newBuilder()
       .setContigName("artificial")
       .setStart(33)
@@ -249,7 +249,7 @@ class RealignIndelsSuite
     result.foreach(pair => assert(pair._1.getMapq === pair._2.getMapq))
   }
 
-  sparkTest("checking realigned reads for artificial input using knowns and reads") {
+  test("checking realigned reads for artificial input using knowns and reads") {
     val indel = Variant.newBuilder()
       .setContigName("artificial")
       .setStart(33)
@@ -278,7 +278,7 @@ class RealignIndelsSuite
     result.foreach(pair => assert(pair._1.getMapq === pair._2.getMapq))
   }
 
-  sparkTest("skip realigning reads if target is highly covered") {
+  test("skip realigning reads if target is highly covered") {
     val artificialRealignedReadsCollected = artificialRealignedReads(maxCoverage = 0)
       .collect()
     val reads = artificialReads
@@ -290,7 +290,7 @@ class RealignIndelsSuite
     result.foreach(pair => assert(pair._1.getMapq === pair._2.getMapq))
   }
 
-  sparkTest("skip realignment if target is an insufficient LOD improvement") {
+  test("skip realignment if target is an insufficient LOD improvement") {
     val path = testFile("NA12878.1_922305.G_GC_hom.sam")
     val reads = sc.loadAlignments(path)
     val realignedReads = reads.realignIndels()
@@ -302,7 +302,7 @@ class RealignIndelsSuite
     result.foreach(pair => assert(pair._1 === pair._2))
   }
 
-  sparkTest("realign reads to an insertion") {
+  test("realign reads to an insertion") {
     val path = testFile("NA12878.1_922305.G_GC_hom.sam")
     val reads = sc.loadAlignments(path)
     val realignedReads = reads.realignIndels(lodThreshold = 0.0, unclipReads = true)
@@ -312,7 +312,7 @@ class RealignIndelsSuite
       .collect()
 
     val movedReads = result.filter(pair => pair._1 != pair._2)
-    assert(movedReads.size === 22)
+    assert(movedReads.size === 41)
     val read = movedReads.map(_._2)
       .filter(_.getReadName === "H06HDADXX130110:1:1114:19044:27806")
       .head
@@ -356,7 +356,7 @@ class RealignIndelsSuite
     assert(ri.sumMismatchQualityIgnoreCigar(read, ref, qScores, 120, 0) === Int.MaxValue)
   }
 
-  sparkTest("test mismatch quality scoring after unpacking read") {
+  test("test mismatch quality scoring after unpacking read") {
     val ri = new RealignIndels(sc)
     val read = artificialReads.first()
 
@@ -408,7 +408,7 @@ class RealignIndelsSuite
     )
   }
 
-  sparkTest("we shouldn't try to realign reads with no indel evidence") {
+  test("we shouldn't try to realign reads with no indel evidence") {
     val ctg = Contig.newBuilder()
       .setContigName("chr1")
       .build()
@@ -454,7 +454,7 @@ class RealignIndelsSuite
     assert(RealignIndels(reads).count === 4)
   }
 
-  sparkTest("test OP and OC tags") {
+  test("test OP and OC tags") {
     artificialRealignedReads()
       .collect()
       .foreach { realn =>
@@ -470,7 +470,7 @@ class RealignIndelsSuite
       }
   }
 
-  sparkTest("realign a read with an insertion that goes off the end of the read") {
+  test("realign a read with an insertion that goes off the end of the read") {
     // ref: TTACCA___CCACA
     // ins:   ACCAGTTC
     // ext: TTACCA   GT
@@ -571,7 +571,7 @@ class RealignIndelsSuite
     val realignedReads = rdd.realignIndels(lodThreshold = 0.0)
       .rdd
       .collect
-    assert(realignedReads.count(_.getMapq >= 50) === 6)
+    assert(realignedReads.count(_.getMapq >= 50) === 7)
     val realignedExtRead = realignedReads.filter(_.getMapq == 50).head
     assert(realignedExtRead.getStart === 8L)
     assert(realignedExtRead.getEnd === 14L)
@@ -605,7 +605,7 @@ class RealignIndelsSuite
     assert(realignedEcRead.getBasesTrimmedFromEnd === 1)
   }
 
-  sparkTest("if realigning a target doesn't improve the LOD, don't drop reads") {
+  test("if realigning a target doesn't improve the LOD, don't drop reads") {
     val reads = sc.loadAlignments(testFile("NA12878.1_854950_855150.sam"))
     val realignedReads = reads.realignIndels()
     assert(reads.rdd.count === realignedReads.rdd.count)

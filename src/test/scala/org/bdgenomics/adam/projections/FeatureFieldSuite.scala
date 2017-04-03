@@ -33,7 +33,7 @@ import org.bdgenomics.formats.avro.{
 class FeatureFieldSuite
   extends ADAMFunSuite {
 
-  sparkTest("Use projection when reading parquet features") {
+  test("Use projection when reading parquet features") {
     val path = tmpFile("features.parquet")
     val rdd = sc.parallelize(Seq(Feature.newBuilder()
       .setFeatureId("ENSG00000206503")

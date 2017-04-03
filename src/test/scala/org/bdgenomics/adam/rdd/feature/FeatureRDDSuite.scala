@@ -57,7 +57,7 @@ class FeatureRDDSuite
     }
   }
 
-  sparkTest("round trip GTF format") {
+  test("round trip GTF format") {
     val inputPath = testFile("Homo_sapiens.GRCh37.75.trun100.gtf")
     val features = sc.loadGtf(inputPath)
 
@@ -92,7 +92,7 @@ class FeatureRDDSuite
     })
   }
 
-  sparkTest("save GTF as GFF3 format") {
+  test("save GTF as GFF3 format") {
     val inputPath = testFile("Homo_sapiens.GRCh37.75.trun100.gtf")
     val features = sc.loadGtf(inputPath)
     val outputPath = tmpLocation(".gff3")
@@ -101,7 +101,7 @@ class FeatureRDDSuite
     assert(features.rdd.count === reloadedFeatures.rdd.count)
   }
 
-  sparkTest("save GTF as BED format") {
+  test("save GTF as BED format") {
     val inputPath = testFile("Homo_sapiens.GRCh37.75.trun100.gtf")
     val features = sc.loadGtf(inputPath)
     val outputPath = tmpLocation(".bed")
@@ -110,7 +110,7 @@ class FeatureRDDSuite
     assert(features.rdd.count === reloadedFeatures.rdd.count)
   }
 
-  sparkTest("save GTF as IntervalList format") {
+  test("save GTF as IntervalList format") {
     val inputPath = testFile("Homo_sapiens.GRCh37.75.trun100.gtf")
     val features = sc.loadGtf(inputPath)
     val outputPath = tmpLocation(".interval_list")
@@ -119,7 +119,7 @@ class FeatureRDDSuite
     assert(features.rdd.count === reloadedFeatures.rdd.count)
   }
 
-  sparkTest("save GTF as NarrowPeak format") {
+  test("save GTF as NarrowPeak format") {
     val inputPath = testFile("Homo_sapiens.GRCh37.75.trun100.gtf")
     val features = sc.loadGtf(inputPath)
     val outputPath = tmpLocation(".narrowPeak")
@@ -128,7 +128,7 @@ class FeatureRDDSuite
     assert(features.rdd.count === reloadedFeatures.rdd.count)
   }
 
-  sparkTest("save GFF3 as GTF format") {
+  test("save GFF3 as GTF format") {
     val inputPath = testFile("dvl1.200.gff3")
     val features = sc.loadGff3(inputPath)
     val outputPath = tmpLocation(".gtf")
@@ -137,7 +137,7 @@ class FeatureRDDSuite
     assert(features.rdd.count === reloadedFeatures.rdd.count)
   }
 
-  sparkTest("save GFF3 as BED format") {
+  test("save GFF3 as BED format") {
     val inputPath = testFile("dvl1.200.gff3")
     val features = sc.loadGff3(inputPath)
     val outputPath = tmpLocation(".bed")
@@ -146,7 +146,7 @@ class FeatureRDDSuite
     assert(features.rdd.count === reloadedFeatures.rdd.count)
   }
 
-  sparkTest("save GFF3 as IntervalList format") {
+  test("save GFF3 as IntervalList format") {
     val inputPath = testFile("dvl1.200.gff3")
     val features = sc.loadGff3(inputPath)
     val outputPath = tmpLocation(".interval_list")
@@ -155,7 +155,7 @@ class FeatureRDDSuite
     assert(features.rdd.count === reloadedFeatures.rdd.count)
   }
 
-  sparkTest("save GFF3 as NarrowPeak format") {
+  test("save GFF3 as NarrowPeak format") {
     val inputPath = testFile("dvl1.200.gff3")
     val features = sc.loadGff3(inputPath)
     val outputPath = tmpLocation(".narrowPeak")
@@ -164,7 +164,7 @@ class FeatureRDDSuite
     assert(features.rdd.count === reloadedFeatures.rdd.count)
   }
 
-  sparkTest("round trip GFF3 format") {
+  test("round trip GFF3 format") {
     val inputPath = testFile("dvl1.200.gff3")
     val expected = sc.loadGff3(inputPath)
     val outputPath = tmpLocation(".gff3")
@@ -194,7 +194,7 @@ class FeatureRDDSuite
     })
   }
 
-  sparkTest("save BED as GTF format") {
+  test("save BED as GTF format") {
     val inputPath = testFile("dvl1.200.bed")
     val features = sc.loadBed(inputPath)
     val outputPath = tmpLocation(".gtf")
@@ -203,7 +203,7 @@ class FeatureRDDSuite
     assert(features.rdd.count === reloadedFeatures.rdd.count)
   }
 
-  sparkTest("save BED as GFF3 format") {
+  test("save BED as GFF3 format") {
     val inputPath = testFile("dvl1.200.bed")
     val features = sc.loadBed(inputPath)
     val outputPath = tmpLocation(".gff3")
@@ -212,7 +212,7 @@ class FeatureRDDSuite
     assert(features.rdd.count === reloadedFeatures.rdd.count)
   }
 
-  sparkTest("save BED as IntervalList format") {
+  test("save BED as IntervalList format") {
     val inputPath = testFile("dvl1.200.bed")
     val features = sc.loadBed(inputPath)
     val outputPath = tmpLocation(".interval_list")
@@ -221,7 +221,7 @@ class FeatureRDDSuite
     assert(features.rdd.count === reloadedFeatures.rdd.count)
   }
 
-  sparkTest("save BED as NarrowPeak format") {
+  test("save BED as NarrowPeak format") {
     val inputPath = testFile("dvl1.200.bed")
     val features = sc.loadBed(inputPath)
     val outputPath = tmpLocation(".narrowPeak")
@@ -230,7 +230,7 @@ class FeatureRDDSuite
     assert(features.rdd.count === reloadedFeatures.rdd.count)
   }
 
-  sparkTest("round trip BED format") {
+  test("round trip BED format") {
     val inputPath = testFile("dvl1.200.bed")
     val expected = sc.loadBed(inputPath)
     val outputPath = tmpLocation(".bed")
@@ -253,7 +253,7 @@ class FeatureRDDSuite
     })
   }
 
-  sparkTest("save IntervalList as GTF format") {
+  test("save IntervalList as GTF format") {
     val inputPath = testFile("SeqCap_EZ_Exome_v3.hg19.interval_list")
     val features = sc.loadIntervalList(inputPath)
     val outputPath = tmpLocation(".gtf")
@@ -262,7 +262,7 @@ class FeatureRDDSuite
     assert(features.rdd.count === reloadedFeatures.rdd.count)
   }
 
-  sparkTest("save IntervalList as GFF3 format") {
+  test("save IntervalList as GFF3 format") {
     val inputPath = testFile("SeqCap_EZ_Exome_v3.hg19.interval_list")
     val features = sc.loadIntervalList(inputPath)
     val outputPath = tmpLocation(".gff3")
@@ -271,7 +271,7 @@ class FeatureRDDSuite
     assert(features.rdd.count === reloadedFeatures.rdd.count)
   }
 
-  sparkTest("save IntervalList as BED format") {
+  test("save IntervalList as BED format") {
     val inputPath = testFile("SeqCap_EZ_Exome_v3.hg19.interval_list")
     val features = sc.loadIntervalList(inputPath)
     val outputPath = tmpLocation(".bed")
@@ -280,14 +280,14 @@ class FeatureRDDSuite
     assert(features.rdd.count === reloadedFeatures.rdd.count)
   }
 
-  sparkTest("save IntervalList as IntervalList format") {
+  test("save IntervalList as IntervalList format") {
     val inputPath = testFile("SeqCap_EZ_Exome_v3.hg19.interval_list")
     val features = sc.loadIntervalList(inputPath)
     val outputPath = tmpLocation(".interval_list")
     features.saveAsIntervalList(outputPath)
   }
 
-  sparkTest("save IntervalList as NarrowPeak format") {
+  test("save IntervalList as NarrowPeak format") {
     val inputPath = testFile("SeqCap_EZ_Exome_v3.hg19.interval_list")
     val features = sc.loadIntervalList(inputPath)
     val outputPath = tmpLocation(".narrowPeak")
@@ -296,7 +296,7 @@ class FeatureRDDSuite
     assert(features.rdd.count === reloadedFeatures.rdd.count)
   }
 
-  sparkTest("round trip IntervalList format") {
+  test("round trip IntervalList format") {
     val inputPath = testFile("SeqCap_EZ_Exome_v3.hg19.interval_list")
     val expected = sc.loadIntervalList(inputPath)
 
@@ -342,7 +342,7 @@ class FeatureRDDSuite
     }
   }
 
-  sparkTest("save NarrowPeak as GTF format") {
+  test("save NarrowPeak as GTF format") {
     val inputPath = testFile("wgEncodeOpenChromDnaseGm19238Pk.trunc10.narrowPeak")
     val features = sc.loadNarrowPeak(inputPath)
     val outputPath = tmpLocation(".gtf")
@@ -351,7 +351,7 @@ class FeatureRDDSuite
     assert(features.rdd.count === reloadedFeatures.rdd.count)
   }
 
-  sparkTest("save NarrowPeak as GFF3 format") {
+  test("save NarrowPeak as GFF3 format") {
     val inputPath = testFile("wgEncodeOpenChromDnaseGm19238Pk.trunc10.narrowPeak")
     val features = sc.loadNarrowPeak(inputPath)
     val outputPath = tmpLocation(".gff3")
@@ -360,7 +360,7 @@ class FeatureRDDSuite
     assert(features.rdd.count === reloadedFeatures.rdd.count)
   }
 
-  sparkTest("save NarrowPeak as BED format") {
+  test("save NarrowPeak as BED format") {
     val inputPath = testFile("wgEncodeOpenChromDnaseGm19238Pk.trunc10.narrowPeak")
     val features = sc.loadNarrowPeak(inputPath)
     val outputPath = tmpLocation(".bed")
@@ -369,7 +369,7 @@ class FeatureRDDSuite
     assert(features.rdd.count === reloadedFeatures.rdd.count)
   }
 
-  sparkTest("save NarrowPeak as IntervalList format") {
+  test("save NarrowPeak as IntervalList format") {
     val inputPath = testFile("wgEncodeOpenChromDnaseGm19238Pk.trunc10.narrowPeak")
     val features = sc.loadNarrowPeak(inputPath)
     val outputPath = tmpLocation(".interval_list")
@@ -378,14 +378,14 @@ class FeatureRDDSuite
     assert(features.rdd.count === reloadedFeatures.rdd.count)
   }
 
-  sparkTest("save NarrowPeak as NarrowPeak format") {
+  test("save NarrowPeak as NarrowPeak format") {
     val inputPath = testFile("wgEncodeOpenChromDnaseGm19238Pk.trunc10.narrowPeak")
     val features = sc.loadNarrowPeak(inputPath)
     val outputPath = tmpLocation(".narrowPeak")
     features.saveAsNarrowPeak(outputPath)
   }
 
-  sparkTest("round trip NarrowPeak format") {
+  test("round trip NarrowPeak format") {
     val inputPath = testFile("wgEncodeOpenChromDnaseGm19238Pk.trunc10.narrowPeak")
     val expected = sc.loadNarrowPeak(inputPath)
     val outputPath = tmpLocation(".narrowPeak")
@@ -412,7 +412,7 @@ class FeatureRDDSuite
     })
   }
 
-  sparkTest("sort by reference") {
+  test("sort by reference") {
     val fb = Feature.newBuilder()
     val f1 = fb.setContigName("1").setStart(1L).setEnd(100L).build()
     val f2 = fb.setContigName("1").setStart(10L).setEnd(110L).setStrand(Strand.FORWARD).build()
@@ -434,7 +434,7 @@ class FeatureRDDSuite
     assert(f7 == sorted(6))
   }
 
-  sparkTest("sort by reference and feature fields") {
+  test("sort by reference and feature fields") {
     val fb = Feature.newBuilder().setContigName("1").setStart(1L).setEnd(100L)
     val f1 = fb.setFeatureId("featureId").build()
     val f2 = fb.clearFeatureId().setName("name").build()
@@ -456,7 +456,7 @@ class FeatureRDDSuite
     assert(f7 == sorted(6))
   }
 
-  sparkTest("sort gene features by reference and gene structure") {
+  test("sort gene features by reference and gene structure") {
     val fb = Feature.newBuilder().setContigName("1").setStart(1L).setEnd(100L).setFeatureType("gene")
     val f1 = fb.setGeneId("gene1").build()
     val f2 = fb.setGeneId("gene2").build()
@@ -470,7 +470,7 @@ class FeatureRDDSuite
     assert(f3 == sorted(2))
   }
 
-  sparkTest("sort transcript features by reference and gene structure") {
+  test("sort transcript features by reference and gene structure") {
     val fb = Feature.newBuilder().setContigName("1").setStart(1L).setEnd(100L).setFeatureType("transcript")
     val f1 = fb.setGeneId("gene1").setTranscriptId("transcript1").build()
     val f2 = fb.setGeneId("gene1").setTranscriptId("transcript1").build()
@@ -488,7 +488,7 @@ class FeatureRDDSuite
     assert(f5 == sorted(4))
   }
 
-  sparkTest("sort exon features by reference and gene structure") {
+  test("sort exon features by reference and gene structure") {
     val fb = Feature.newBuilder().setContigName("1").setStart(1L).setEnd(100L).setFeatureType("exon")
     val f1 = fb.setGeneId("gene1").setTranscriptId("transcript1").setExonId("exon1").build()
     val f2 = fb.setGeneId("gene1").setTranscriptId("transcript1").setExonId("exon2").build()
@@ -514,7 +514,7 @@ class FeatureRDDSuite
     assert(f9 == sorted(8))
   }
 
-  sparkTest("sort intron features by reference and gene structure") {
+  test("sort intron features by reference and gene structure") {
     val fb = Feature.newBuilder().setContigName("1").setStart(1L).setEnd(100L).setGeneId("gene1").setTranscriptId("transcript1").setFeatureType("intron")
     val f1 = fb.setAttributes(ImmutableMap.of("intron_number", "1")).build()
     val f2 = fb.setAttributes(ImmutableMap.of("intron_number", "2")).build()
@@ -532,7 +532,7 @@ class FeatureRDDSuite
     assert(f5 == sorted(4))
   }
 
-  sparkTest("correctly flatmaps CoverageRDD from FeatureRDD") {
+  test("correctly flatmaps CoverageRDD from FeatureRDD") {
     val f1 = Feature.newBuilder().setContigName("chr1").setStart( 1).setEnd(10).setScore(3.0).build()
     val f2 = Feature.newBuilder().setContigName("chr1").setStart(15).setEnd(20).setScore(2.0).build()
     val f3 = Feature.newBuilder().setContigName("chr2").setStart(15).setEnd(20).setScore(2.0).build()
@@ -544,7 +544,7 @@ class FeatureRDDSuite
     assert(coverage.rdd.count == 19)
   }
 
-  sparkTest("use broadcast join to pull down features mapped to targets") {
+  test("use broadcast join to pull down features mapped to targets") {
     val featuresPath = testFile("small.1.narrowPeak")
     val targetsPath = testFile("small.1.bed")
 
@@ -556,7 +556,7 @@ class FeatureRDDSuite
     assert(jRdd.rdd.count === 5L)
   }
 
-  sparkTest("use right outer broadcast join to pull down features mapped to targets") {
+  test("use right outer broadcast join to pull down features mapped to targets") {
     val featuresPath = testFile("small.1.narrowPeak")
     val targetsPath = testFile("small.1.bed")
 
@@ -575,7 +575,7 @@ class FeatureRDDSuite
       .sequences
   }
 
-  sparkTest("use shuffle join to pull down features mapped to targets") {
+  test("use shuffle join to pull down features mapped to targets") {
     val featuresPath = testFile("small.1.narrowPeak")
     val targetsPath = testFile("small.1.bed")
 
@@ -597,7 +597,7 @@ class FeatureRDDSuite
     assert(jRdd0.rdd.count === 5L)
   }
 
-  sparkTest("use right outer shuffle join to pull down features mapped to targets") {
+  test("use right outer shuffle join to pull down features mapped to targets") {
     val featuresPath = testFile("small.1.narrowPeak")
     val targetsPath = testFile("small.1.bed")
 
@@ -623,7 +623,7 @@ class FeatureRDDSuite
     assert(c0.count(_._1.isDefined) === 5)
   }
 
-  sparkTest("use left outer shuffle join to pull down features mapped to targets") {
+  test("use left outer shuffle join to pull down features mapped to targets") {
     val featuresPath = testFile("small.1.narrowPeak")
     val targetsPath = testFile("small.1.bed")
 
@@ -649,7 +649,7 @@ class FeatureRDDSuite
     assert(c0.count(_._2.isDefined) === 5)
   }
 
-  sparkTest("use full outer shuffle join to pull down features mapped to targets") {
+  test("use full outer shuffle join to pull down features mapped to targets") {
     val featuresPath = testFile("small.1.narrowPeak")
     val targetsPath = testFile("small.1.bed")
 
@@ -679,7 +679,7 @@ class FeatureRDDSuite
     assert(c0.count(t => t._1.isDefined && t._2.isDefined) === 5)
   }
 
-  sparkTest("use shuffle join with group by to pull down features mapped to targets") {
+  test("use shuffle join with group by to pull down features mapped to targets") {
     val featuresPath = testFile("small.1.narrowPeak")
     val targetsPath = testFile("small.1.bed")
 
@@ -705,7 +705,7 @@ class FeatureRDDSuite
     assert(c0.forall(_._2.size == 1))
   }
 
-  sparkTest("use right outer shuffle join with group by to pull down features mapped to targets") {
+  test("use right outer shuffle join with group by to pull down features mapped to targets") {
     val featuresPath = testFile("small.1.narrowPeak")
     val targetsPath = testFile("small.1.bed")
 
@@ -738,7 +738,7 @@ class FeatureRDDSuite
     assert(c0.filter(_._1.isEmpty).forall(_._2.size == 1))
   }
 
-  sparkTest("estimate sequence dictionary contig lengths from GTF format") {
+  test("estimate sequence dictionary contig lengths from GTF format") {
     val inputPath = testFile("Homo_sapiens.GRCh37.75.trun100.gtf")
     val features = sc.loadGtf(inputPath)
     // max(start,end) = 1 36081
@@ -747,7 +747,7 @@ class FeatureRDDSuite
     assert(features.sequences.apply("1").get.length >= 36081L)
   }
 
-  sparkTest("estimate sequence dictionary contig lengths from GFF3 format") {
+  test("estimate sequence dictionary contig lengths from GFF3 format") {
     val inputPath = testFile("dvl1.200.gff3")
     val features = sc.loadGff3(inputPath)
     // max(start, end) = 1 1356705
@@ -756,7 +756,7 @@ class FeatureRDDSuite
     assert(features.sequences.apply("1").get.length >= 1356705L)
   }
 
-  sparkTest("estimate sequence dictionary contig lengths from BED format") {
+  test("estimate sequence dictionary contig lengths from BED format") {
     val inputPath = testFile("dvl1.200.bed")
     val features = sc.loadBed(inputPath)
     // max(start, end) = 1 1358504
@@ -765,7 +765,7 @@ class FeatureRDDSuite
     assert(features.sequences.apply("1").get.length >= 1358504L)
   }
 
-  sparkTest("obtain sequence dictionary contig lengths from header in IntervalList format") {
+  test("obtain sequence dictionary contig lengths from header in IntervalList format") {
     val inputPath = testFile("SeqCap_EZ_Exome_v3.hg19.interval_list")
     val features = sc.loadIntervalList(inputPath)
     /*
@@ -781,7 +781,7 @@ class FeatureRDDSuite
     assert(features.sequences.apply("chr2").get.length >= 243199373L)
   }
 
-  sparkTest("estimate sequence dictionary contig lengths from NarrowPeak format") {
+  test("estimate sequence dictionary contig lengths from NarrowPeak format") {
     val inputPath = testFile("wgEncodeOpenChromDnaseGm19238Pk.trunc10.narrowPeak")
     val features = sc.loadNarrowPeak(inputPath)
     // max(start, end) = chr1 794336
@@ -790,7 +790,7 @@ class FeatureRDDSuite
     assert(features.sequences.apply("chr1").get.length >= 794336L)
   }
 
-  sparkTest("don't lose any features when piping as BED format") {
+  test("don't lose any features when piping as BED format") {
     val inputPath = testFile("dvl1.200.bed")
     val frdd = sc.loadBed(inputPath)
 
@@ -802,7 +802,7 @@ class FeatureRDDSuite
     assert(pipedRdd.rdd.distinct.count === frdd.rdd.distinct.count)
   }
 
-  sparkTest("don't lose any features when piping as GTF format") {
+  test("don't lose any features when piping as GTF format") {
     val inputPath = testFile("Homo_sapiens.GRCh37.75.trun100.gtf")
     val frdd = sc.loadGtf(inputPath)
 
@@ -814,7 +814,7 @@ class FeatureRDDSuite
     assert(pipedRdd.rdd.distinct.count === frdd.rdd.distinct.count)
   }
 
-  sparkTest("don't lose any features when piping as GFF3 format") {
+  test("don't lose any features when piping as GFF3 format") {
     val inputPath = testFile("dvl1.200.gff3")
     val frdd = sc.loadGff3(inputPath)
 
@@ -826,7 +826,7 @@ class FeatureRDDSuite
     assert(pipedRdd.rdd.distinct.count === frdd.rdd.distinct.count)
   }
 
-  sparkTest("don't lose any features when piping as NarrowPeak format") {
+  test("don't lose any features when piping as NarrowPeak format") {
     val inputPath = testFile("wgEncodeOpenChromDnaseGm19238Pk.trunc10.narrowPeak")
     val frdd = sc.loadNarrowPeak(inputPath)
 

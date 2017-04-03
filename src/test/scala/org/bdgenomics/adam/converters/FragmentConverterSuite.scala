@@ -53,7 +53,7 @@ class FragmentConverterSuite extends ADAMFunSuite {
     assert(fcOpt.isEmpty)
   }
 
-  sparkTest("convert an rdd of discontinuous fragments, all from the same contig") {
+  test("convert an rdd of discontinuous fragments, all from the same contig") {
     val rdd = sc.parallelize(Seq(NucleotideContigFragment.newBuilder()
       .setContig(Contig.newBuilder().setContigName("ctg").build())
       .setFragmentSequence("ACACACAC")
@@ -81,7 +81,7 @@ class FragmentConverterSuite extends ADAMFunSuite {
     assert(secondRead.getEnd === 28L)
   }
 
-  sparkTest("convert an rdd of contiguous fragments, all from the same contig") {
+  test("convert an rdd of contiguous fragments, all from the same contig") {
     val rdd = sc.parallelize(Seq(NucleotideContigFragment.newBuilder()
       .setContig(Contig.newBuilder().setContigName("ctg").build())
       .setFragmentSequence("ACACACAC")
@@ -107,7 +107,7 @@ class FragmentConverterSuite extends ADAMFunSuite {
     assert(read.getEnd === 28L)
   }
 
-  sparkTest("convert an rdd of varied fragments from multiple contigs") {
+  test("convert an rdd of varied fragments from multiple contigs") {
     val rdd = sc.parallelize(Seq(NucleotideContigFragment.newBuilder()
       .setContig(Contig.newBuilder().setContigName("ctg1").build())
       .setFragmentSequence("ACACACAC")

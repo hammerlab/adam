@@ -51,7 +51,7 @@ class NucleotideContigFragmentRDDSuite
       .toSeq
   }
 
-  sparkTest("generate sequence dict from fasta") {
+  test("generate sequence dict from fasta") {
     val contig0 =
       Contig
         .newBuilder
@@ -94,7 +94,7 @@ class NucleotideContigFragmentRDDSuite
     )
   }
 
-  sparkTest("recover reference string from a single contig fragment") {
+  test("recover reference string from a single contig fragment") {
     val sequence = "ACTGTAC"
     val fragment =
       NucleotideContigFragment
@@ -113,7 +113,7 @@ class NucleotideContigFragmentRDDSuite
     assert(rdd.extract(region) === "ACTGTAC")
   }
 
-  sparkTest("recover trimmed reference string from a single contig fragment") {
+  test("recover trimmed reference string from a single contig fragment") {
     val sequence = "ACTGTAC"
     val fragment =
       NucleotideContigFragment
@@ -132,7 +132,7 @@ class NucleotideContigFragmentRDDSuite
     assert(rdd.extract(region) === "CTGTA")
   }
 
-  sparkTest("recover reference string from multiple contig fragments") {
+  test("recover reference string from multiple contig fragments") {
     val contig2 = Contig.newBuilder
       .setContigName("chr2")
       .setContigLength(11L)
@@ -183,7 +183,7 @@ class NucleotideContigFragmentRDDSuite
     assert(rdd.extract(region1) === "GTACTCTCATG")
   }
 
-  sparkTest("recover trimmed reference string from multiple contig fragments") {
+  test("recover trimmed reference string from multiple contig fragments") {
     val contig2 =
       Contig
         .newBuilder
@@ -237,7 +237,7 @@ class NucleotideContigFragmentRDDSuite
     assert(rdd.extract(region1) === "CTCTCA")
   }
 
-  sparkTest("testing nondeterminism from reduce when recovering referencestring") {
+  test("testing nondeterminism from reduce when recovering referencestring") {
     var fragments: ListBuffer[NucleotideContigFragment] = new ListBuffer[NucleotideContigFragment]()
     for (a ← 0 to 1000) {
       val seq = "A"
@@ -259,7 +259,7 @@ class NucleotideContigFragmentRDDSuite
     passed should be(true)
   }
 
-  sparkTest("save single contig fragment as FASTA text file") {
+  test("save single contig fragment as FASTA text file") {
     val fragment =
       NucleotideContigFragment
         .newBuilder()
@@ -272,7 +272,7 @@ class NucleotideContigFragmentRDDSuite
     writeFastaLines(fragment) should be(Seq(">chr1", "ACTGTAC"))
   }
 
-  sparkTest("save single contig fragment with description as FASTA text file") {
+  test("save single contig fragment with description as FASTA text file") {
     val fragment =
       NucleotideContigFragment
         .newBuilder()
@@ -286,7 +286,7 @@ class NucleotideContigFragmentRDDSuite
     writeFastaLines(fragment) should be(Seq(">chr1 description", "ACTGTAC"))
   }
 
-  sparkTest("save single contig fragment with null fields as FASTA text file") {
+  test("save single contig fragment with null fields as FASTA text file") {
     val fragment =
       NucleotideContigFragment
         .newBuilder()
@@ -301,7 +301,7 @@ class NucleotideContigFragmentRDDSuite
     writeFastaLines(fragment) should be(Seq(">chr1", "ACTGTAC"))
   }
 
-  sparkTest("save single contig fragment with null fragment number as FASTA text file") {
+  test("save single contig fragment with null fragment number as FASTA text file") {
     val fragment =
       NucleotideContigFragment
         .newBuilder()
@@ -316,7 +316,7 @@ class NucleotideContigFragmentRDDSuite
     writeFastaLines(fragment) should be(Seq(">chr1", "ACTGTAC"))
   }
 
-  sparkTest("save single contig fragment with null number of fragments in contig as FASTA text file") {
+  test("save single contig fragment with null number of fragments in contig as FASTA text file") {
     val fragment =
       NucleotideContigFragment
         .newBuilder()
@@ -331,7 +331,7 @@ class NucleotideContigFragmentRDDSuite
     writeFastaLines(fragment) should be(Seq(">chr1", "ACTGTAC"))
   }
 
-  sparkTest("save multiple contig fragments from same contig as FASTA text file") {
+  test("save multiple contig fragments from same contig as FASTA text file") {
     val contig = chr1(21)
 
     val fragment0 =
@@ -373,7 +373,7 @@ class NucleotideContigFragmentRDDSuite
     )
   }
 
-  sparkTest("save multiple contig fragments with description from same contig as FASTA text file") {
+  test("save multiple contig fragments with description from same contig as FASTA text file") {
     val contig = chr1(21)
 
     val fragment0 =
@@ -418,7 +418,7 @@ class NucleotideContigFragmentRDDSuite
     )
   }
 
-  sparkTest("merge single contig fragment null fragment number") {
+  test("merge single contig fragment null fragment number") {
     val fragment =
       NucleotideContigFragment
         .newBuilder()
@@ -436,7 +436,7 @@ class NucleotideContigFragmentRDDSuite
     assert(merged.rdd.map(_.getFragmentSequence()).collect === Array("ACTGTAC"))
   }
 
-  sparkTest("merge single contig fragment number zero") {
+  test("merge single contig fragment number zero") {
     val fragment =
       NucleotideContigFragment
         .newBuilder()
@@ -455,7 +455,7 @@ class NucleotideContigFragmentRDDSuite
     assert(merged.rdd.first.getFragmentSequence() === "ACTGTAC")
   }
 
-  sparkTest("merge multiple contig fragments") {
+  test("merge multiple contig fragments") {
     val contig2 =
       Contig
         .newBuilder

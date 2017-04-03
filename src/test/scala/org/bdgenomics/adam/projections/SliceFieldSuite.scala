@@ -30,7 +30,7 @@ import org.bdgenomics.formats.avro.{
 
 class SliceFieldSuite extends ADAMFunSuite {
 
-  sparkTest("Use projection when reading parquet slices") {
+  test("Use projection when reading parquet slices") {
     val path = tmpFile("slices.parquet")
     val rdd = sc.parallelize(Seq(Slice.newBuilder()
       .setName("6")

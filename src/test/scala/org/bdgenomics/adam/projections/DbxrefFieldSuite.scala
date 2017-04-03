@@ -26,7 +26,7 @@ import org.bdgenomics.formats.avro.Dbxref
 
 class DbxrefFieldSuite extends ADAMFunSuite {
 
-  sparkTest("Use projection when reading parquet dbxrefs") {
+  test("Use projection when reading parquet dbxrefs") {
     val path = tmpFile("dbxrefs.parquet")
     val rdd = sc.parallelize(Seq(Dbxref.newBuilder()
       .setDb("EMBL")

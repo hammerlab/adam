@@ -17,6 +17,7 @@
  */
 package org.bdgenomics.adam.rdd.read
 
+import htsjdk.samtools.ValidationStringency.{ LENIENT, STRICT }
 import htsjdk.samtools.{ TextCigarCodec, ValidationStringency }
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.{ MdTag, ReferenceRegion }
@@ -28,7 +29,7 @@ private[read] case class MDTagging(
     reads: RDD[AlignmentRecord],
     @transient referenceFile: ReferenceFile,
     overwriteExistingTags: Boolean = false,
-    validationStringency: ValidationStringency = ValidationStringency.STRICT) extends Logging {
+    validationStringency: ValidationStringency = STRICT) extends Logging {
   @transient val sc = reads.sparkContext
 
   val mdTagsAdded = sc.accumulator(0L, "MDTags Added")
@@ -36,7 +37,7 @@ private[read] case class MDTagging(
   val numUnmappedReads = sc.accumulator(0L, "Unmapped Reads")
   val incorrectMDTags = sc.accumulator(0L, "Incorrect Extant MDTags")
 
-  val taggedReads = addMDTagsBroadcast.cache
+  val taggedReads = addMDTagsBroadcast().cache
 
   def maybeMDTagRead(read: AlignmentRecord, refSeq: String): AlignmentRecord = {
 
@@ -50,9 +51,9 @@ private[read] case class MDTagging(
           read.setMismatchingPositions(mdTag.toString)
         } else {
           val exception = IncorrectMDTagException(read, mdTag.toString)
-          if (validationStringency == ValidationStringency.STRICT) {
+          if (validationStringency == STRICT) {
             throw exception
-          } else if (validationStringency == ValidationStringency.LENIENT) {
+          } else if (validationStringency == LENIENT) {
             log.warn(exception.getMessage)
           }
         }
@@ -66,30 +67,29 @@ private[read] case class MDTagging(
 
   def addMDTagsBroadcast(): RDD[AlignmentRecord] = {
     val referenceFileB = sc.broadcast(referenceFile)
-    reads.map(read => {
+    reads.map(read ⇒
       (for {
         contig <- Option(read.getContigName)
         if read.getReadMapped
-      } yield {
+      } yield
         try {
           maybeMDTagRead(read, referenceFileB.value
             .extract(ReferenceRegion.unstranded(read)))
         } catch {
-          case t: Throwable => {
-            if (validationStringency == ValidationStringency.STRICT) {
+          case t: Throwable =>
+            if (validationStringency == STRICT) {
               throw t
-            } else if (validationStringency == ValidationStringency.LENIENT) {
+            } else if (validationStringency == LENIENT) {
               log.warn("Caught exception when processing read %s: %s".format(
                 read.getContigName, t))
             }
             read
-          }
         }
-      }).getOrElse({
+      ).getOrElse {
         numUnmappedReads += 1
         read
-      })
-    })
+      }
+    )
   }
 }
 

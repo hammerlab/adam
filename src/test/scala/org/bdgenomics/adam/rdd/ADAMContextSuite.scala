@@ -53,11 +53,11 @@ class ADAMContextSuite
     with ConversionCheckedTripleEquals
     with ClearContigNames {
 
-  sparkTest("ctr is accessible") {
+  test("ctr is accessible") {
     new ADAMContext(sc)
   }
 
-  sparkTest("sc.loadParquet should not fail on unmapped reads") {
+  test("sc.loadParquet should not fail on unmapped reads") {
     val readsFilepath = testFile("unmapped.sam")
 
     // Convert the reads12.sam file into a parquet file
@@ -65,7 +65,7 @@ class ADAMContextSuite
     bamReads.rdd.count should === (200)
   }
 
-  sparkTest("sc.loadParquet should not load a file without a type specified") {
+  test("sc.loadParquet should not load a file without a type specified") {
     //load an existing file from the resources and save it as an ADAM file.
     //This way we are not dependent on the ADAM format (as we would if we used a pre-made ADAM file)
     //but we are dependent on the unmapped.sam file existing, maybe I should make a new one
@@ -82,13 +82,13 @@ class ADAMContextSuite
     assert(manifest[returnType.type] != manifest[RDD[Nothing]])
   }
 
-  sparkTest("can read a small .SAM file") {
+  test("can read a small .SAM file") {
     val path = testFile("small.sam")
     val reads: RDD[AlignmentRecord] = sc.loadAlignments(path).rdd
     reads.count() should === (20)
   }
 
-  sparkTest("can read a small .CRAM file") {
+  test("can read a small .CRAM file") {
     val path = testFile("artificial.cram")
     val referencePath = resourceUrl("artificial.fa").toString
     sc.hadoopConfiguration.set(REFERENCE_SOURCE_PATH_PROPERTY,
@@ -97,13 +97,13 @@ class ADAMContextSuite
     reads.count() should === (10)
   }
 
-  sparkTest("can read a small .SAM with all attribute tag types") {
+  test("can read a small .SAM with all attribute tag types") {
     val path = testFile("tags.sam")
     val reads: RDD[AlignmentRecord] = sc.loadAlignments(path).rdd
     reads.count() should === (7)
   }
 
-  sparkTest("can filter a .SAM file based on quality") {
+  test("can filter a .SAM file based on quality") {
     val path = testFile("small.sam")
     val reads: RDD[AlignmentRecord] = sc.loadAlignments(path)
       .rdd
@@ -122,32 +122,32 @@ class ADAMContextSuite
     assert(phredToSuccessProbability(50) > 0.99998 && phredToSuccessProbability(50) < 0.999999)
   }
 
-  sparkTest("Can read a .gtf file") {
+  test("Can read a .gtf file") {
     val path = testFile("Homo_sapiens.GRCh37.75.trun20.gtf")
     val features: RDD[Feature] = sc.loadFeatures(path).rdd
     features.count should === (15)
   }
 
-  sparkTest("Can read a .bed file") {
+  test("Can read a .bed file") {
     // note: this .bed doesn't actually conform to the UCSC BED spec...sigh...
     val path = testFile("gencode.v7.annotation.trunc10.bed")
     val features: RDD[Feature] = sc.loadFeatures(path).rdd
     features.count should === (10)
   }
 
-  sparkTest("Can read a .bed file without cache") {
+  test("Can read a .bed file without cache") {
     val path = testFile("gencode.v7.annotation.trunc10.bed")
     val features: RDD[Feature] = sc.loadFeatures(path, optStorageLevel = Some(StorageLevel.NONE)).rdd
     assert(features.count === 10)
   }
 
-  sparkTest("Can read a .narrowPeak file") {
+  test("Can read a .narrowPeak file") {
     val path = testFile("wgEncodeOpenChromDnaseGm19238Pk.trunc10.narrowPeak")
     val annot: RDD[Feature] = sc.loadFeatures(path).rdd
     annot.count should === (10)
   }
 
-  sparkTest("Can read a .interval_list file") {
+  test("Can read a .interval_list file") {
     val path = testFile("SeqCap_EZ_Exome_v3.hg19.interval_list")
     val annot: RDD[Feature] = sc.loadFeatures(path).rdd
     assert(annot.count == 369)
@@ -160,7 +160,7 @@ class ADAMContextSuite
     last.getName should === ("gn|BPY2C;ccds|CCDS44030;ens|ENSG00000185894;vega|OTTHUMG00000045199")
   }
 
-  sparkTest("can read a small .vcf file") {
+  test("can read a small .vcf file") {
     val path = testFile("small.vcf")
 
     val gts = sc.loadGenotypes(path)
@@ -187,19 +187,19 @@ class ADAMContextSuite
     gt.getReadDepth should === (20)
   }
 
-  sparkTest("can read a gzipped .vcf file") {
+  test("can read a gzipped .vcf file") {
     val path = testFile("test.vcf.gz")
     val vcs = sc.loadVcf(path)
     vcs.rdd.count should === (6)
   }
 
-  sparkTest("can read a BGZF gzipped .vcf file with .gz file extension") {
+  test("can read a BGZF gzipped .vcf file with .gz file extension") {
     val path = testFile("test.vcf.bgzf.gz")
     val vcs = sc.loadVcf(path)
     vcs.rdd.count should === (6)
   }
 
-  sparkTest("can read a BGZF gzipped .vcf file with .bgz file extension") {
+  test("can read a BGZF gzipped .vcf file with .bgz file extension") {
     val path = testFile("test.vcf.bgz")
     val vcs = sc.loadVcf(path)
     vcs.rdd.count should === (6)
@@ -217,14 +217,14 @@ class ADAMContextSuite
     vcs.rdd.count should === (6)
   }
 
-  sparkTest("loadIndexedVcf with 1 ReferenceRegion") {
+  test("loadIndexedVcf with 1 ReferenceRegion") {
     val path = testFile("bqsr1.vcf")
     val refRegion = ReferenceRegion("22", 16097643, 16098647)
     val vcs = sc.loadIndexedVcf(path, refRegion)
     assert(vcs.rdd.count == 17)
   }
 
-  sparkTest("loadIndexedVcf with multiple ReferenceRegions") {
+  test("loadIndexedVcf with multiple ReferenceRegions") {
     val path = testFile("bqsr1.vcf")
     val refRegion1 = ReferenceRegion("22", 16050677, 16050822)
     val refRegion2 = ReferenceRegion("22", 16097643, 16098647)
@@ -236,7 +236,7 @@ class ADAMContextSuite
     val inputName = "interleaved_fastq_sample%d.ifq".format(testNumber)
     val path = testFile(inputName)
 
-    sparkTest("import records from interleaved FASTQ: %d".format(testNumber)) {
+    test("import records from interleaved FASTQ: %d".format(testNumber)) {
 
       val reads = sc.loadAlignments(path)
       if (testNumber == 1) {
@@ -260,7 +260,7 @@ class ADAMContextSuite
     val inputName = "fastq_sample%d.fq".format(testNumber)
     val path = testFile(inputName)
 
-    sparkTest("import records from single ended FASTQ: %d".format(testNumber)) {
+    test("import records from single ended FASTQ: %d".format(testNumber)) {
 
       val reads = sc.loadAlignments(path)
       if (testNumber == 1) {
@@ -279,7 +279,7 @@ class ADAMContextSuite
     }
   }
 
-  sparkTest("filter on load using the filter2 API") {
+  test("filter on load using the filter2 API") {
     val path = testFile("bqsr1.vcf")
 
     val variants = sc.loadVariants(path)
@@ -294,7 +294,7 @@ class ADAMContextSuite
     adamVariants.rdd.count should === (1)
   }
 
-  sparkTest("saveAsParquet with file path") {
+  test("saveAsParquet with file path") {
     val inputPath = testFile("small.sam")
     val reads = sc.loadAlignments(inputPath)
     val outputPath = tmpLocation()
@@ -303,7 +303,7 @@ class ADAMContextSuite
     reads.rdd.count should === (reloadedReads.rdd.count)
   }
 
-  sparkTest("saveAsParquet with file path, block size, page size") {
+  test("saveAsParquet with file path, block size, page size") {
     val inputPath = testFile("small.sam")
     val reads = sc.loadAlignments(inputPath)
     val outputPath = tmpLocation()
@@ -312,7 +312,7 @@ class ADAMContextSuite
     reads.rdd.count should === (reloadedReads.rdd.count)
   }
 
-  sparkTest("saveAsParquet with save args") {
+  test("saveAsParquet with save args") {
     val inputPath = testFile("small.sam")
     val reads = sc.loadAlignments(inputPath)
     val outputPath = tmpLocation()
@@ -321,7 +321,7 @@ class ADAMContextSuite
     reads.rdd.count should === (reloadedReads.rdd.count)
   }
 
-  sparkTest("read a HLA fasta from GRCh38") {
+  test("read a HLA fasta from GRCh38") {
     val inputPath = testFile("HLA_DQB1_05_01_01_02.fa")
     val gRdd = sc.loadFasta(inputPath, 10000L)
     gRdd.sequences.records.size should === (1)
@@ -331,7 +331,7 @@ class ADAMContextSuite
     fragments.head.getContig.getContigName should === ("HLA-DQB1*05:01:01:02")
   }
 
-  sparkTest("read a gzipped fasta file") {
+  test("read a gzipped fasta file") {
     val inputPath = testFile("chr20.250k.fa.gz")
     val contigFragments: RDD[NucleotideContigFragment] = sc.loadFasta(inputPath, 10000L)
       .rdd
@@ -353,14 +353,14 @@ class ADAMContextSuite
     last.getFragmentEndPosition should === (251929L)
   }
 
-  sparkTest("loadIndexedBam with 1 ReferenceRegion") {
+  test("loadIndexedBam with 1 ReferenceRegion") {
     val refRegion = ReferenceRegion("2", 100, 101)
     val path = testFile("indexed_bams/sorted.bam")
     val reads = sc.loadIndexedBam(path, refRegion)
     assert(reads.rdd.count == 1)
   }
 
-  sparkTest("loadIndexedBam with multiple ReferenceRegions") {
+  test("loadIndexedBam with multiple ReferenceRegions") {
     val refRegion1 = ReferenceRegion("2", 100, 101)
     val refRegion2 = ReferenceRegion("3", 10, 17)
     val path = testFile("indexed_bams/sorted.bam")
@@ -372,27 +372,27 @@ class ADAMContextSuite
   lazy val indexedBamGlob = indexedBamDir / "*.bam"
   lazy val sortedBam = indexedBamDir / "sorted.bam"
 
-  sparkTest("loadIndexedBam with multiple ReferenceRegions and indexed bams") {
+  test("loadIndexedBam with multiple ReferenceRegions and indexed bams") {
     val refRegion1 = ReferenceRegion("2", 100, 101)
     val refRegion2 = ReferenceRegion("3", 10, 17)
     val reads = sc.loadIndexedBam(indexedBamGlob, Iterable(refRegion1, refRegion2))
     assert(reads.rdd.count == 4)
   }
 
-  sparkTest("loadIndexedBam with multiple ReferenceRegions and a directory of indexed bams") {
+  test("loadIndexedBam with multiple ReferenceRegions and a directory of indexed bams") {
     val refRegion1 = ReferenceRegion("2", 100, 101)
     val refRegion2 = ReferenceRegion("3", 10, 17)
     val reads = sc.loadIndexedBam(indexedBamDir, Iterable(refRegion1, refRegion2))
     assert(reads.rdd.count == 4)
   }
 
-  sparkTest("loadBam with a glob") {
+  test("loadBam with a glob") {
     val path = indexedBamGlob
     val reads = sc.loadBam(path)
     assert(reads.rdd.count == 10)
   }
 
-  sparkTest("loadBam with a directory") {
+  test("loadBam with a directory") {
     val reads = sc.loadBam(indexedBamDir)
     assert(reads.rdd.count == 10)
   }
@@ -404,7 +404,7 @@ class ADAMContextSuite
     assert(variants.rdd.count === 715)
   }
 
-  sparkTest("load vcf from a directory") {
+  test("load vcf from a directory") {
     val path = testFile("vcf_dir")
 
     val variants = sc.loadVcf(path).toVariantRDD
@@ -413,12 +413,12 @@ class ADAMContextSuite
 
   lazy val gvcfDir = testFile("gvcf_dir")
 
-  sparkTest("load gvcf which contains a multi-allelic row from a directory") {
+  test("load gvcf which contains a multi-allelic row from a directory") {
     val variants = sc.loadVcf(gvcfDir).toVariantRDD
     assert(variants.rdd.count === 6)
   }
 
-  sparkTest("parse annotations for multi-allelic rows") {
+  test("parse annotations for multi-allelic rows") {
     val variants = sc.loadVcf(gvcfDir).toVariantRDD
     val multiAllelicVariants = variants.rdd
       .filter(_.getReferenceAllele == "TAAA")
@@ -431,7 +431,7 @@ class ADAMContextSuite
     assert(mleCounts === Array("0", "1", "1"))
   }
 
-  sparkTest("load parquet with globs") {
+  test("load parquet with globs") {
     val inputPath = testFile("small.sam")
     val reads = sc.loadAlignments(inputPath)
     val outputPath = tmpLocation(".adam")
@@ -448,21 +448,21 @@ class ADAMContextSuite
     (2 * reads.rdd.count) should === (reloadedReads.rdd.count)
   }
 
-  sparkTest("bad glob should fail") {
+  test("bad glob should fail") {
     val inputPath = testFile("small.sam").parent / "*.sad"
     intercept[FileNotFoundException] {
       sc.loadAlignments(inputPath)
     }
   }
 
-  sparkTest("empty directory should fail") {
+  test("empty directory should fail") {
     val inputPath = tmpLocation()
     intercept[FileNotFoundException] {
       sc.loadAlignments(inputPath)
     }
   }
 
-  sparkTest("can read a SnpEff-annotated .vcf file") {
+  test("can read a SnpEff-annotated .vcf file") {
     val path = testFile("small_snpeff.vcf")
     val variantRdd = sc.loadVariants(path)
     val variants =
@@ -506,7 +506,7 @@ class ADAMContextSuite
     })
   }
 
-  sparkTest("loadAlignments should not fail on single-end and paired-end fastq reads") {
+  test("loadAlignments should not fail on single-end and paired-end fastq reads") {
     val readsFilepath1 = testFile("bqsr1-r1.fq")
     val readsFilepath2 = testFile("bqsr1-r2.fq")
     val fastqReads1: RDD[AlignmentRecord] = sc.loadAlignments(readsFilepath1).rdd

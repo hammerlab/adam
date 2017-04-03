@@ -30,7 +30,7 @@ class SnpTableSuite
     assert(table.sites.isEmpty)
   }
 
-  sparkTest("create a snp table from variants on multiple contigs") {
+  test("create a snp table from variants on multiple contigs") {
     val inputPath = testFile("random.vcf")
     val table = SnpTable(sc.loadVariants(inputPath))
     assert(table.indices.size === 3)
@@ -46,7 +46,7 @@ class SnpTableSuite
     assert(table.sites(5) === 752790L)
   }
 
-  sparkTest("create a snp table from a larger set of variants") {
+  test("create a snp table from a larger set of variants") {
     val inputPath = testFile("bqsr1.vcf")
     val variants = sc.loadVariants(inputPath)
     val numVariants = variants.rdd.count
@@ -77,7 +77,7 @@ class SnpTableSuite
     table
   }
 
-  sparkTest("perform lookups on multi-contig snp table") {
+  test("perform lookups on multi-contig snp table") {
     val inputPath = testFile("random.vcf")
     val variants = sc.loadVariants(inputPath)
     val table = lookUpVariants(variants)
@@ -93,7 +93,7 @@ class SnpTableSuite
     assert(s2(752790L))
   }
 
-  sparkTest("perform lookups on larger snp table") {
+  test("perform lookups on larger snp table") {
     val inputPath = testFile("bqsr1.vcf")
     val variants = sc.loadVariants(inputPath)
     val table = lookUpVariants(variants)

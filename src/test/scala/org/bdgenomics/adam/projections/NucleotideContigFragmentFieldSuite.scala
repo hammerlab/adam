@@ -26,7 +26,7 @@ import org.bdgenomics.formats.avro.{ Contig, NucleotideContigFragment }
 
 class NucleotideContigFragmentFieldSuite extends ADAMFunSuite {
 
-  sparkTest("Use projection when reading parquet nucleotide contig fragments") {
+  test("Use projection when reading parquet nucleotide contig fragments") {
     val path = tmpFile("nucleotideContigFragments.parquet")
     val rdd = sc.parallelize(Seq(NucleotideContigFragment.newBuilder()
       .setContig(Contig.newBuilder()

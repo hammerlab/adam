@@ -26,7 +26,7 @@ import org.bdgenomics.formats.avro.Genotype
 
 class GenotypeFieldSuite extends ADAMFunSuite {
 
-  sparkTest("Use projection when reading parquet genotypes") {
+  test("Use projection when reading parquet genotypes") {
     val path = tmpFile("genotypes.parquet")
     val rdd = sc.parallelize(Seq(Genotype.newBuilder()
       .setContigName("6")
