@@ -53,34 +53,57 @@ private[adam] object Consensus extends Serializable {
     var referencePos = start.pos
 
     // do we have a single indel alignment block?
-    if (cigar.getCigarElements.count(elem => elem.getOperator == CigarOperator.I ||
-      elem.getOperator == CigarOperator.D) == 1) {
+    if (
+      cigar.getCigarElements.count(
+        elem =>
+          elem.getOperator == CigarOperator.I ||
+            elem.getOperator == CigarOperator.D
+      ) == 1
+    ) {
 
       // loop over elements and generate consensuses for indel blocks
-      cigar.getCigarElements.flatMap(cigarElement => {
-        cigarElement.getOperator match {
-          case CigarOperator.I => Some(new Consensus(sequence.substring(readPos,
-            readPos + cigarElement.getLength),
-            ReferenceRegion(start.referenceName,
-              referencePos - 1,
-              referencePos)))
-          case CigarOperator.D => Some(new Consensus("",
-            ReferenceRegion(start.referenceName,
-              referencePos,
-              referencePos + cigarElement.getLength + 1)))
-          case _ => {
-            if (cigarElement.getOperator.consumesReadBases &&
-              cigarElement.getOperator.consumesReferenceBases) {
-              readPos += cigarElement.getLength
-              referencePos += cigarElement.getLength
+      cigar
+        .getCigarElements
+        .flatMap {
+          cigarElement ⇒
+            cigarElement.getOperator match {
+              case CigarOperator.I =>
+                Some(
+                  new Consensus(
+                    sequence.substring(
+                      readPos,
+                      readPos + cigarElement.getLength
+                    ),
+                    ReferenceRegion(
+                      start.referenceName,
+                      referencePos - 1,
+                      referencePos
+                    )
+                  )
+                )
+              case CigarOperator.D =>
+                Some(
+                  new Consensus(
+                    "",
+                    ReferenceRegion(
+                      start.referenceName,
+                      referencePos,
+                      referencePos + cigarElement.getLength + 1
+                    )
+                  )
+                )
+              case _ =>
+                if (cigarElement.getOperator.consumesReadBases &&
+                  cigarElement.getOperator.consumesReferenceBases) {
+                  readPos += cigarElement.getLength
+                  referencePos += cigarElement.getLength
+                }
+                None
             }
-            None
-          }
         }
-      }).headOption
-    } else {
+        .headOption
+    } else
       None
-    }
   }
 }
 
@@ -107,25 +130,27 @@ private[adam] case class Consensus(consensus: String, index: ReferenceRegion) {
    *   allele spliced in.
    */
   def insertIntoReference(reference: String, rr: ReferenceRegion): String = {
-    require(rr.contains(index),
-      "Consensus not contained in reference region: %s vs. %s.".format(
-        index, rr))
+    require(
+      rr.contains(index),
+      s"Consensus not contained in reference region: $index vs. $rr."
+    )
 
-    if (consensus.isEmpty) {
-      "%s%s".format(reference.substring(0, (index.start - rr.start).toInt),
-        reference.substring((index.end - rr.start - 1).toInt))
-    } else {
-      "%s%s%s".format(reference.substring(0, (index.start - rr.start + 1).toInt),
+    if (consensus.isEmpty)
+      "%s%s".format(
+        reference.substring(0, (index.start - rr.start).toInt),
+        reference.substring((index.end - rr.start - 1).toInt)
+      )
+    else
+      "%s%s%s".format(
+        reference.substring(0, (index.start - rr.start + 1).toInt),
         consensus,
-        reference.substring((index.end - rr.start).toInt))
-    }
+        reference.substring((index.end - rr.start).toInt)
+      )
   }
 
-  override def toString: String = {
-    if (index.start + 1 != index.end) {
-      "Deletion over " + index.toString
-    } else {
-      "Inserted " + consensus + " at " + index.toString
-    }
-  }
+  override def toString: String =
+    if (index.start + 1 != index.end)
+      s"Deletion over $index"
+    else
+      s"Inserted $consensus at $index"
 }

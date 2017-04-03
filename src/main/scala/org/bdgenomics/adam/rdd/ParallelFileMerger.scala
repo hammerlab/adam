@@ -327,17 +327,19 @@ private[rdd] object ParallelFileMerger extends Logging {
     // all paths passed to the concat method must be qualified with
     // full scheme and name node URI
     val outputPaths =
-    (0 until numBlocksToWrite)
-      .map {
-        idx ⇒
-          val maybeUnqualifiedPath = indexToPath(idx, tmpPathString)
-          fs.makeQualified(maybeUnqualifiedPath)
-      }
+      (0 until numBlocksToWrite)
+        .map {
+          idx ⇒
+            val maybeUnqualifiedPath = indexToPath(idx, tmpPathString)
+            fs.makeQualified(maybeUnqualifiedPath)
+        }
 
-    fs.concat(
-      outputPaths.head,
-      outputPaths.tail.toArray
-    )
+    if (outputPaths.size > 1) {
+      fs.concat(
+        outputPaths.head,
+        outputPaths.tail.toArray
+      )
+    }
 
     fs.rename(outputPaths.head, outputPath)
   }
