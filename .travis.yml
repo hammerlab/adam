@@ -7,12 +7,12 @@ scala:
   - 2.11.8
 
 env:
-  - vars="-Dhadoop.version=2.3.0 -Dspark.version=1.6.3 -DDISABLE_COVERALLS=1"
-  - vars="-Dhadoop.version=2.3.0 -Dspark.version=2.0.2 -DDISABLE_COVERALLS=1"
-  - vars="-Dhadoop.version=2.3.0 -Dspark.version=2.1.0 -DDISABLE_COVERALLS=1"
-  - vars="-Dhadoop.version=2.6.0 -Dspark.version=1.6.3 -DDISABLE_COVERALLS=1"
-  - vars="-Dhadoop.version=2.6.0 -Dspark.version=2.0.2 -DDISABLE_COVERALLS=1"
-  - vars="-Dhadoop.version=2.6.0 -Dspark.version=2.1.0 -DDISABLE_COVERALLS=1"
+  - vars="-Dhadoop.version=2.3.0 -Dspark.version=1.6.3 -Dcoveralls.disable=1"
+  - vars="-Dhadoop.version=2.3.0 -Dspark.version=2.0.2 -Dcoveralls.disable=1"
+  - vars="-Dhadoop.version=2.3.0 -Dspark.version=2.1.0 -Dcoveralls.disable=1"
+  - vars="-Dhadoop.version=2.6.0 -Dspark.version=1.6.3 -Dcoveralls.disable=1"
+  - vars="-Dhadoop.version=2.6.0 -Dspark.version=2.0.2 -Dcoveralls.disable=1"
+  - vars="-Dhadoop.version=2.6.0 -Dspark.version=2.1.0 -Dcoveralls.disable=1"
   - vars=""
 
 script: sbt $vars ++$TRAVIS_SCALA_VERSION clean coverage test
@@ -23,7 +23,7 @@ cache:
   - \$HOME/.sbt/boot/
   - \$HOME/.zinc
 
-after_success: sbt $vars ++$TRAVIS_SCALA_VERSION coverageReport coveralls
+after_success: sbt $vars ++$TRAVIS_SCALA_VERSION travis-report
 
 before_cache:
   # Tricks to avoid unnecessary cache updates
