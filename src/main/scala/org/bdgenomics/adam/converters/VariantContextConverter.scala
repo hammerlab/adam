@@ -25,11 +25,12 @@ import htsjdk.variant.variantcontext.{ Allele, GenotypeBuilder, GenotypeLikeliho
 import htsjdk.variant.vcf.{ VCFConstants, VCFFormatHeaderLine, VCFHeaderLine, VCFHeaderLineCount, VCFHeaderLineType, VCFInfoHeaderLine }
 import org.bdgenomics.adam.models.{ VariantContext ⇒ ADAMVariantContext }
 import org.bdgenomics.adam.util.PhredUtils
+import org.bdgenomics.formats.avro.GenotypeAllele.{ ALT, NO_CALL, OTHER_ALT, REF }
 import org.bdgenomics.formats.avro._
 import org.bdgenomics.utils.misc.Logging
 
 import scala.collection.JavaConversions._
-import scala.collection.mutable.Buffer
+import scala.collection.mutable
 
 /**
  * Object for converting between htsjdk and ADAM VariantContexts.
@@ -45,32 +46,6 @@ object VariantContextConverter {
    * Representation for an unknown non-ref/symbolic allele in VCF.
    */
   private val NON_REF_ALLELE = Allele.create("<NON_REF>", false /* !Reference */ )
-
-  /**
-   * The index in the Avro genotype record for the splitFromMultiAllelec field.
-   *
-   * This field is true if the VCF site was not biallelic.
-   */
-  private lazy val splitFromMultiAllelicField = Genotype.SCHEMA$.getField("splitFromMultiAllelic")
-
-  /**
-   * One conversion method for each way of representing an Allele
-   *
-   * An htsjdk Allele can represent a reference or alternate allele call, or a
-   * site where no call could be made. If the allele is an alternate allele, we
-   * check to see if this matches the primary alt allele at the site before
-   * deciding to tag it as a primary alt (Alt) or a secondary alt (OtherAlt).
-   *
-   * @param vc The underlying VariantContext for the site.
-   * @param allele The allele we are converting.
-   * @return The Avro representation for this allele.
-   */
-  private def convertAllele(vc: HtsjdkVariantContext, allele: Allele): GenotypeAllele = {
-    if (allele.isNoCall) GenotypeAllele.NO_CALL
-    else if (allele.isReference) GenotypeAllele.REF
-    else if (allele == NON_REF_ALLELE || !vc.hasAlternateAllele(allele)) GenotypeAllele.OTHER_ALT
-    else GenotypeAllele.ALT
-  }
 
   /**
    * Converts an allele string from an avro Variant into an htsjdk Allele.
@@ -125,13 +100,15 @@ object VariantContextConverter {
    * @return Returns the called alleles at this site.
    */
   private def convertAlleles(g: Genotype): java.util.List[Allele] = {
-    var alleles = g.getAlleles
-    if (alleles == null) return Collections.emptyList[Allele]
-    else g.getAlleles.map {
-      case GenotypeAllele.NO_CALL | GenotypeAllele.OTHER_ALT => Allele.NO_CALL
-      case GenotypeAllele.REF                                => Allele.create(g.getVariant.getReferenceAllele, true)
-      case GenotypeAllele.ALT                                => Allele.create(g.getVariant.getAlternateAllele)
-    }
+    val alleles = g.getAlleles
+    if (alleles == null)
+      Collections.emptyList[Allele]
+    else
+      alleles.map {
+        case NO_CALL | OTHER_ALT => Allele.NO_CALL
+        case REF                                => Allele.create(g.getVariant.getReferenceAllele, true)
+        case ALT                                => Allele.create(g.getVariant.getAlternateAllele)
+      }
   }
 }
 
@@ -175,14 +152,13 @@ class VariantContextConverter(
 
     try {
       vc.getAlternateAlleles.toList match {
-        case List(NON_REF_ALLELE) => {
+        case List(NON_REF_ALLELE) =>
           val variant = variantFormatFn(vc, None, 0)
           val genotypes = vc.getGenotypes.map(g => {
             genotypeFormatFn(g, variant, NON_REF_ALLELE, 0, Some(1), false)
           })
-          return Seq(ADAMVariantContext(variant, genotypes))
-        }
-        case List(allele) => {
+          Seq(ADAMVariantContext(variant, genotypes))
+        case List(allele) =>
           require(
             allele.isNonReference,
             "Assertion failed when converting: " + vc.toString
@@ -191,9 +167,8 @@ class VariantContextConverter(
           val genotypes = vc.getGenotypes.map(g => {
             genotypeFormatFn(g, variant, allele, 1, None, false)
           })
-          return Seq(ADAMVariantContext(variant, genotypes))
-        }
-        case List(allele, NON_REF_ALLELE) => {
+          Seq(ADAMVariantContext(variant, genotypes))
+        case List(allele, NON_REF_ALLELE) =>
           require(
             allele.isNonReference,
             "Assertion failed when converting: " + vc.toString
@@ -202,10 +177,8 @@ class VariantContextConverter(
           val genotypes = vc.getGenotypes.map(g => {
             genotypeFormatFn(g, variant, allele, 1, Some(2), false)
           })
-          return Seq(ADAMVariantContext(variant, genotypes))
-        }
-        case _ => {
-          val vcb = new VariantContextBuilder(vc)
+          Seq(ADAMVariantContext(variant, genotypes))
+        case _ =>
 
           // is the last allele the non-ref allele?
           val alleles = vc.getAlternateAlleles.toSeq
@@ -214,13 +187,14 @@ class VariantContextConverter(
           } else {
             None
           }
-          val altAlleles = if (referenceModelIndex.isDefined) {
-            alleles.dropRight(1)
-          } else {
-            alleles
-          }
+          val altAlleles =
+            if (referenceModelIndex.isDefined) {
+              alleles.dropRight(1)
+            } else {
+              alleles
+            }
 
-          return altAlleles.map(allele => {
+          altAlleles.map(allele => {
             val idx = vc.getAlleleIndex(allele)
             require(idx >= 1, "Unexpected index for alternate allele: " + vc.toString)
 
@@ -235,10 +209,9 @@ class VariantContextConverter(
             })
             ADAMVariantContext(variant, genotypes)
           })
-        }
       }
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         if (stringency == ValidationStringency.STRICT) {
           throw t
         } else {
@@ -247,7 +220,6 @@ class VariantContextConverter(
           }
           Seq.empty
         }
-      }
     }
   }
 
@@ -274,7 +246,7 @@ class VariantContextConverter(
    *    from the array of variant names
    */
   private def joinNames(variant: Variant): Option[String] = {
-    if (variant.getNames != null && variant.getNames.length > 0) {
+    if (variant.getNames != null && variant.getNames.nonEmpty) {
       Some(variant.getNames.mkString(VCFConstants.ID_FIELD_SEPARATOR))
     } else {
       None
@@ -285,10 +257,8 @@ class VariantContextConverter(
 
   private[converters] def formatNames(
     vc: HtsjdkVariantContext,
-    vb: Variant.Builder): Variant.Builder = {
-
-    splitIds(vc).fold(vb)(vb.setNames(_))
-  }
+    vb: Variant.Builder): Variant.Builder =
+    splitIds(vc).fold(vb)(vb.setNames)
 
   private[converters] def formatFilters(
     vc: HtsjdkVariantContext,
@@ -304,10 +274,11 @@ class VariantContextConverter(
     vb
   }
 
-  private val variantFormatFns: Iterable[(HtsjdkVariantContext, Variant.Builder) => Variant.Builder] = Iterable(
-    formatNames(_, _),
-    formatFilters(_, _)
-  )
+  private val variantFormatFns: Iterable[(HtsjdkVariantContext, Variant.Builder) => Variant.Builder] =
+    Iterable(
+      formatNames(_, _),
+      formatFilters(_, _)
+    )
 
   // variant --> htsjdk extract functions
 
@@ -315,16 +286,15 @@ class VariantContextConverter(
     v: Variant,
     vcb: VariantContextBuilder): VariantContextBuilder = {
 
-    joinNames(v).fold(vcb.noID())(vcb.id(_))
+    joinNames(v).fold(vcb.noID())(vcb.id)
   }
 
   private[converters] def extractFilters(
     v: Variant,
-    vcb: VariantContextBuilder): VariantContextBuilder = {
-
+    vcb: VariantContextBuilder): VariantContextBuilder =
     Option(v.getFiltersApplied)
       .filter(ft => ft)
-      .map(applied => {
+      .map { _ ⇒
         Option(v.getFiltersPassed).map(passed => {
           if (passed) {
             vcb.passFilters
@@ -334,11 +304,11 @@ class VariantContextConverter(
               "Variant marked as filtered, but no failed filters listed in %s.".format(v))
             vcb.filters(failedFilters.toSet)
           }
-        }).getOrElse({
-          throw new IllegalArgumentException("Filters were applied but filters passed is null in %s.".format(v))
-        })
-      }).getOrElse(vcb.unfiltered)
-  }
+        }).getOrElse(
+          throw new IllegalArgumentException(s"Filters were applied but filters passed is null in $v")
+        )
+      }
+      .getOrElse(vcb.unfiltered)
 
   private val variantExtractFns: Iterable[(Variant, VariantContextBuilder) => VariantContextBuilder] = Iterable(
     extractNames(_, _),
@@ -354,7 +324,7 @@ class VariantContextConverter(
     index: Int): VariantAnnotation.Builder = {
 
     Option(vc.getAttributeAsString("AA", null))
-      .fold(vab)(vab.setAncestralAllele(_))
+      .fold(vab)(vab.setAncestralAllele)
   }
 
   private[converters] def formatDbSnp(
@@ -364,7 +334,7 @@ class VariantContextConverter(
     index: Int): VariantAnnotation.Builder = {
 
     Option(vc.getAttribute("DB").asInstanceOf[java.lang.Boolean])
-      .fold(vab)(vab.setDbSnp(_))
+      .fold(vab)(vab.setDbSnp)
   }
 
   private[converters] def formatHapMap2(
@@ -374,7 +344,7 @@ class VariantContextConverter(
     index: Int): VariantAnnotation.Builder = {
 
     Option(vc.getAttribute("H2").asInstanceOf[java.lang.Boolean])
-      .fold(vab)(vab.setHapMap2(_))
+      .fold(vab)(vab.setHapMap2)
   }
 
   private[converters] def formatHapMap3(
@@ -384,7 +354,7 @@ class VariantContextConverter(
     index: Int): VariantAnnotation.Builder = {
 
     Option(vc.getAttribute("H3").asInstanceOf[java.lang.Boolean])
-      .fold(vab)(vab.setHapMap3(_))
+      .fold(vab)(vab.setHapMap3)
   }
 
   private[converters] def formatValidated(
@@ -394,7 +364,7 @@ class VariantContextConverter(
     index: Int): VariantAnnotation.Builder = {
 
     Option(vc.getAttribute("VALIDATED").asInstanceOf[java.lang.Boolean])
-      .fold(vab)(vab.setValidated(_))
+      .fold(vab)(vab.setValidated)
   }
 
   private[converters] def formatThousandGenomes(
@@ -404,7 +374,7 @@ class VariantContextConverter(
     index: Int): VariantAnnotation.Builder = {
 
     Option(vc.getAttribute("1000G").asInstanceOf[java.lang.Boolean])
-      .fold(vab)(vab.setThousandGenomes(_))
+      .fold(vab)(vab.setThousandGenomes)
   }
 
   private[converters] def formatSomatic(
@@ -415,7 +385,7 @@ class VariantContextConverter(
 
     // default somatic to false if unspecified
     Option(vc.getAttribute("SOMATIC").asInstanceOf[java.lang.Boolean])
-      .fold(vab.setSomatic(false))(vab.setSomatic(_))
+      .fold(vab.setSomatic(false))(vab.setSomatic)
   }
 
   private[converters] def formatAlleleCount(
@@ -729,10 +699,9 @@ class VariantContextConverter(
         }).toList
         gb.setGenotypeLikelihoods(likelihoods)
       } catch {
-        case _: ArrayIndexOutOfBoundsException => {
+        case _: ArrayIndexOutOfBoundsException =>
           log.warn("Ran into Array Out of Bounds when accessing indices %s of genotype %s.".format(gIndices.mkString(","), g))
           gb
-        }
       }
     } else {
       gb
@@ -752,13 +721,13 @@ class VariantContextConverter(
     }
   }
 
-  private def tryAndCatchStringCast[T](attr: java.lang.Object,
-                                       tryFn: (java.lang.Object) => T,
-                                       catchFn: (String) => T): T = {
+  private def tryAndCatchStringCast[T](attr: Object,
+                                       tryFn: Object => T,
+                                       catchFn: (String) => T): T =
     try {
       tryFn(attr)
     } catch {
-      case cce: ClassCastException => {
+      case cce: ClassCastException =>
 
         // is this a string? if so, parse...
         if (attr.getClass.isAssignableFrom(classOf[String])) {
@@ -766,15 +735,13 @@ class VariantContextConverter(
         } else {
           throw cce
         }
-      }
       case t: Throwable => throw t
     }
-  }
 
   private[converters] def formatStrandBiasComponents(g: HtsjdkGenotype,
                                                      gb: Genotype.Builder,
                                                      gIdx: Int,
-                                                     gIndices: Array[Int]): Genotype.Builder = {
+                                                     gIndices: Array[Int]): Genotype.Builder =
     Option(g.getExtendedAttribute("SB"))
       .map(attr => {
         tryAndCatchStringCast(
@@ -791,7 +758,6 @@ class VariantContextConverter(
               .toSeq)
           })
       }).getOrElse(gb)
-  }
 
   private[converters] def formatPhaseInfo(g: HtsjdkGenotype,
                                           gb: Genotype.Builder,
@@ -837,12 +803,10 @@ class VariantContextConverter(
                                               gb: GenotypeBuilder): GenotypeBuilder = {
     (Option(g.getReferenceReadDepth), Option(g.getAlternateReadDepth)) match {
       case (Some(ref), Some(alt)) => gb.AD(Array(ref, alt))
-      case (Some(_), None) => {
+      case (Some(_), None) =>
         throw new IllegalArgumentException("Had reference depth but no alternate depth in %s.".format(g))
-      }
-      case (None, Some(_)) => {
+      case (None, Some(_)) =>
         throw new IllegalArgumentException("Had alternate depth but no reference depth in %s.".format(g))
-      }
       case _ => gb.noAD
     }
   }
@@ -889,10 +853,10 @@ class VariantContextConverter(
   }
 
   private[converters] def extractPhaseInfo(g: Genotype,
-                                           gb: GenotypeBuilder): GenotypeBuilder = {
+                                           gb: GenotypeBuilder): GenotypeBuilder =
     Option(g.getPhased)
       .filter(p => p)
-      .map(p => {
+      .map { _ ⇒
         val setFns: Iterable[Option[(GenotypeBuilder => GenotypeBuilder)]] = Iterable(
           Option(g.getPhaseSetId).map(ps => {
             (b: GenotypeBuilder) => b.attribute("PS", ps)
@@ -903,18 +867,19 @@ class VariantContextConverter(
 
         setFns.flatten
           .foldLeft(gb.phased(true))((b, fn) => fn(b))
-      }).getOrElse(gb.phased(false))
-  }
+      }
+      .getOrElse(gb.phased(false))
 
-  private val genotypeExtractFns: Iterable[(Genotype, GenotypeBuilder) => GenotypeBuilder] = Iterable(
-    extractAllelicDepth(_, _),
-    extractReadDepth(_, _),
-    extractMinReadDepth(_, _),
-    extractGenotypeQuality(_, _),
-    extractGenotypeLikelihoods(_, _),
-    extractStrandBiasComponents(_, _),
-    extractPhaseInfo(_, _)
-  )
+  private val genotypeExtractFns: Iterable[(Genotype, GenotypeBuilder) => GenotypeBuilder] =
+    Iterable(
+      extractAllelicDepth(_, _),
+      extractReadDepth(_, _),
+      extractMinReadDepth(_, _),
+      extractGenotypeQuality(_, _),
+      extractGenotypeLikelihoods(_, _),
+      extractStrandBiasComponents(_, _),
+      extractPhaseInfo(_, _)
+    )
 
   // htsjdk --> genotype annotation format functions
 
@@ -989,31 +954,37 @@ class VariantContextConverter(
   // genotype annotation --> htsjdk extract functions
 
   private[converters] def extractFilters(vca: VariantCallingAnnotations,
-                                         gb: GenotypeBuilder): GenotypeBuilder = {
+                                         gb: GenotypeBuilder): GenotypeBuilder =
     Option(vca.getFiltersApplied)
       .filter(ft => ft)
-      .map(applied => {
-        Option(vca.getFiltersPassed).map(passed => {
-          if (passed) {
-            gb.filters("PASS")
-          } else {
-            val failedFilters = vca.getFiltersFailed
-            require(failedFilters.nonEmpty,
-              "Genotype marked as filtered, but no failed filters listed in %s.".format(vca))
-            gb.filters(failedFilters.mkString(";"))
+      .map { _ ⇒
+        Option(vca.getFiltersPassed)
+          .map {
+            passed ⇒
+              if (passed) {
+                gb.filters("PASS")
+              } else {
+                val failedFilters = vca.getFiltersFailed
+                require(
+                  failedFilters.nonEmpty,
+                  s"Genotype marked as filtered, but no failed filters listed in $vca"
+                )
+                gb.filters(failedFilters.mkString(";"))
+              }
           }
-        }).getOrElse({
-          throw new IllegalArgumentException("Filters were applied but filters passed is null in %s.".format(vca))
-        })
-      }).getOrElse(gb.unfiltered())
-  }
+          .getOrElse(
+            throw new IllegalArgumentException("Filters were applied but filters passed is null in %s.".format(vca))
+          )
+      }
+      .getOrElse(gb.unfiltered())
 
   private[converters] def extractFisherStrandBias(vca: VariantCallingAnnotations,
-                                                  gb: GenotypeBuilder): GenotypeBuilder = {
-    Option(vca.getFisherStrandBiasPValue).map(fs => {
-      gb.attribute("FS", fs)
-    }).getOrElse(gb)
-  }
+                                                  gb: GenotypeBuilder): GenotypeBuilder =
+    Option(vca.getFisherStrandBiasPValue)
+      .map { fs ⇒
+        gb.attribute("FS", fs)
+      }
+      .getOrElse(gb)
 
   private[converters] def extractRmsMapQ(vca: VariantCallingAnnotations,
                                          gb: GenotypeBuilder): GenotypeBuilder = {
@@ -1029,28 +1000,30 @@ class VariantContextConverter(
     }).getOrElse(gb)
   }
 
-  private val genotypeAnnotationExtractFns: Iterable[(VariantCallingAnnotations, GenotypeBuilder) => GenotypeBuilder] = Iterable(
-    extractFilters(_, _),
-    extractFisherStrandBias(_, _),
-    extractRmsMapQ(_, _),
-    extractMapQ0(_, _)
-  )
+  private val genotypeAnnotationExtractFns: Iterable[(VariantCallingAnnotations, GenotypeBuilder) => GenotypeBuilder] =
+    Iterable(
+      extractFilters(_, _),
+      extractFisherStrandBias(_, _),
+      extractRmsMapQ(_, _),
+      extractMapQ0(_, _)
+    )
 
   // safe type conversions
 
-  private def toBoolean(obj: java.lang.Object): Boolean = {
-    tryAndCatchStringCast(obj, o => {
-      o.asInstanceOf[java.lang.Boolean]
-    }, o => o.toBoolean)
-  }
+  private def toBoolean(obj: Object): Boolean =
+    tryAndCatchStringCast(
+      obj,
+      _.asInstanceOf[java.lang.Boolean],
+      _.toBoolean
+    )
 
-  private def toInt(obj: java.lang.Object): Int = {
+  private def toInt(obj: Object): Int = {
     tryAndCatchStringCast(obj, o => {
       o.asInstanceOf[java.lang.Integer]
     }, o => o.toInt)
   }
 
-  private def toChar(obj: java.lang.Object): Char = {
+  private def toChar(obj: Object): Char = {
     tryAndCatchStringCast(obj, o => {
       o.asInstanceOf[java.lang.Character]
     }, o => {
@@ -1059,14 +1032,14 @@ class VariantContextConverter(
     })
   }
 
-  private def toFloat(obj: java.lang.Object): Float = {
+  private def toFloat(obj: Object): Float = {
     tryAndCatchStringCast(obj, o => {
       o.asInstanceOf[java.lang.Float]
     }, o => o.toFloat)
   }
 
   // don't shadow toString
-  private def asString(obj: java.lang.Object): String = {
+  private def asString(obj: Object): String = {
     obj.asInstanceOf[java.lang.String]
   }
 
@@ -1075,13 +1048,15 @@ class VariantContextConverter(
     if (array.forall(_ == ".")) {
       Array.empty
     } else {
-      require(array.forall(_ != "."),
-        "Array must either be fully defined or fully undefined.")
+      require(
+        !array.contains("."),
+        "Array must either be fully defined or fully undefined."
+      )
       array
     }
   }
 
-  private def toIntArray(obj: java.lang.Object): Array[Int] = {
+  private def toIntArray(obj: Object): Array[Int] = {
     tryAndCatchStringCast(obj, o => {
       o.asInstanceOf[Array[java.lang.Integer]]
         .map(i => i: Int)
@@ -1090,7 +1065,7 @@ class VariantContextConverter(
     })
   }
 
-  private def toCharArray(obj: java.lang.Object): Array[Char] = {
+  private def toCharArray(obj: Object): Array[Char] = {
     tryAndCatchStringCast(obj, o => {
       o.asInstanceOf[Array[java.lang.Character]]
         .map(c => c: Char)
@@ -1102,7 +1077,7 @@ class VariantContextConverter(
     })
   }
 
-  private def toFloatArray(obj: java.lang.Object): Array[Float] = {
+  private def toFloatArray(obj: Object): Array[Float] = {
     tryAndCatchStringCast(obj, o => {
       o.asInstanceOf[Array[java.lang.Float]]
         .map(f => f: Float)
@@ -1111,7 +1086,7 @@ class VariantContextConverter(
     })
   }
 
-  private def toStringArray(obj: java.lang.Object): Array[String] = {
+  private def toStringArray(obj: Object): Array[String] = {
     tryAndCatchStringCast(obj, o => {
       o.asInstanceOf[Array[java.lang.String]]
         .map(s => s: String)
@@ -1129,7 +1104,7 @@ class VariantContextConverter(
 
   private def arrayFieldExtractor(g: HtsjdkGenotype,
                                   id: String,
-                                  toFn: (java.lang.Object => Array[String]),
+                                  toFn: (Object => Array[String]),
                                   indices: List[Int]): Option[(String, List[String])] = {
     Option(g.getExtendedAttribute(id))
       .map(toFn)
@@ -1140,7 +1115,7 @@ class VariantContextConverter(
 
   private def fromArrayExtractor(g: HtsjdkGenotype,
                                  id: String,
-                                 toFn: (java.lang.Object => Array[String]),
+                                 toFn: (Object => Array[String]),
                                  idx: Int): Option[(String, String)] = {
     Option(g.getExtendedAttribute(id))
       .map(toFn)
@@ -1150,7 +1125,7 @@ class VariantContextConverter(
 
   private def fieldExtractor(g: HtsjdkGenotype,
                              id: String,
-                             toFn: (java.lang.Object => Any)): Option[(String, Any)] = {
+                             toFn: (Object => Any)): Option[(String, Any)] = {
     Option(g.getExtendedAttribute(id))
       .map(toFn)
       .map(attr => (id, attr))
@@ -1158,7 +1133,7 @@ class VariantContextConverter(
 
   private def arrayFieldExtractor(vc: HtsjdkVariantContext,
                                   id: String,
-                                  toFn: (java.lang.Object => Array[String]),
+                                  toFn: (Object => Array[String]),
                                   indices: List[Int]): Option[(String, List[String])] = {
     Option(vc.getAttribute(id))
       .map(toFn)
@@ -1169,7 +1144,7 @@ class VariantContextConverter(
 
   private def fromArrayExtractor(vc: HtsjdkVariantContext,
                                  id: String,
-                                 toFn: (java.lang.Object => Array[String]),
+                                 toFn: (Object => Array[String]),
                                  idx: Int): Option[(String, String)] = {
     Option(vc.getAttribute(id))
       .map(toFn)
@@ -1179,7 +1154,7 @@ class VariantContextConverter(
 
   private def variantContextFieldExtractor(vc: HtsjdkVariantContext,
                                            id: String,
-                                           toFn: (java.lang.Object => Any)): Option[(String, Any)] = {
+                                           toFn: (Object => Any)): Option[(String, Any)] = {
     Option(vc.getAttribute(id))
       .map(toFn)
       .map(attr => (id, attr))
@@ -1190,102 +1165,88 @@ class VariantContextConverter(
     val id = headerLine.getID
 
     if (headerLine.isFixedCount && headerLine.getCount == 0 && headerLine.getType == VCFHeaderLineType.Flag) {
-      (vc: HtsjdkVariantContext, idx: Int, indices: Array[Int]) =>
-        {
-          variantContextFieldExtractor(vc, id, toBoolean).map(kv => (kv._1, kv._2.toString))
-        }
+      (vc: HtsjdkVariantContext, _, _) ⇒
+          variantContextFieldExtractor(vc, id, toBoolean)
+            .map(kv ⇒ (kv._1, kv._2.toString))
     } else if (headerLine.isFixedCount && headerLine.getCount == 1) {
       headerLine.getType match {
         // Flag header line types should be Number=0, but we'll allow Number=1
-        case VCFHeaderLineType.Flag => {
-          (vc: HtsjdkVariantContext, idx: Int, indices: Array[Int]) =>
+        case VCFHeaderLineType.Flag =>
+          (vc: HtsjdkVariantContext, _, _) =>
             {
               variantContextFieldExtractor(vc, id, toBoolean).map(kv => (kv._1, kv._2.toString))
             }
-        }
-        case VCFHeaderLineType.Character => {
-          (vc: HtsjdkVariantContext, idx: Int, indices: Array[Int]) =>
+        case VCFHeaderLineType.Character =>
+          (vc: HtsjdkVariantContext, _, _) =>
             {
               variantContextFieldExtractor(vc, id, toChar).map(kv => (kv._1, kv._2.toString))
             }
-        }
-        case VCFHeaderLineType.Float => {
-          (vc: HtsjdkVariantContext, idx: Int, indices: Array[Int]) =>
+        case VCFHeaderLineType.Float =>
+          (vc: HtsjdkVariantContext, _, _) =>
             {
               variantContextFieldExtractor(vc, id, toFloat).map(kv => (kv._1, kv._2.toString))
             }
-        }
-        case VCFHeaderLineType.Integer => {
-          (vc: HtsjdkVariantContext, idx: Int, indices: Array[Int]) =>
+        case VCFHeaderLineType.Integer =>
+          (vc: HtsjdkVariantContext, _, _) =>
             {
               variantContextFieldExtractor(vc, id, toInt).map(kv => (kv._1, kv._2.toString))
             }
-        }
-        case VCFHeaderLineType.String => {
-          (vc: HtsjdkVariantContext, idx: Int, indices: Array[Int]) =>
+        case VCFHeaderLineType.String =>
+          (vc: HtsjdkVariantContext, _, _) =>
             {
               variantContextFieldExtractor(vc, id, asString).map(kv => (kv._1, kv._2.toString))
             }
-        }
       }
     } else {
-      def objToArray(obj: java.lang.Object): Array[String] = {
+      def objToArray(obj: Object): Array[String] = {
         try {
           val l: java.util.List[String] = obj.asInstanceOf[java.util.List[String]]
           // java.util.List has a conflicing toString. Get implicit to buffer first
-          val sL: Buffer[String] = l
+          val sL: mutable.Buffer[String] = l
           sL.toArray
         } catch {
-          case cce: ClassCastException => {
+          case cce: ClassCastException =>
             // is this a string? if so, split
             if (obj.getClass.isAssignableFrom(classOf[String])) {
               obj.asInstanceOf[String].split(",")
             } else {
               throw cce
             }
-          }
-          case t: Throwable => {
+          case t: Throwable =>
             throw t
-          }
         }
       }
 
-      val toFn: (java.lang.Object => Array[String]) = headerLine.getType match {
-        case VCFHeaderLineType.Flag => {
+      val toFn: (Object => Array[String]) = headerLine.getType match {
+        case VCFHeaderLineType.Flag =>
           throw new IllegalArgumentException("Multivalued flags are not supported for INFO lines: %s".format(
             headerLine))
-        }
-        case _ => {
-          objToArray(_)
-        }
+        case _ =>
+          objToArray
       }
 
       (headerLine.isFixedCount, headerLine.getCountType) match {
-        case (false, VCFHeaderLineCount.A) => {
-          (vc: HtsjdkVariantContext, idx: Int, indices: Array[Int]) =>
+        case (false, VCFHeaderLineCount.A) =>
+          (vc: HtsjdkVariantContext, idx: Int, _) =>
             {
               fromArrayExtractor(vc, id, toFn, idx)
                 .map(kv => (kv._1, kv._2.toString))
             }
-        }
-        case (false, VCFHeaderLineCount.R) => {
-          (vc: HtsjdkVariantContext, idx: Int, indices: Array[Int]) =>
+        case (false, VCFHeaderLineCount.R) =>
+          (vc: HtsjdkVariantContext, idx: Int, _) =>
             {
               arrayFieldExtractor(vc, id, toFn, List(0, idx + 1))
                 .map(kv => (kv._1, kv._2.mkString(",")))
             }
-        }
-        case (false, VCFHeaderLineCount.G) => {
+        case (false, VCFHeaderLineCount.G) =>
           throw new IllegalArgumentException("Number=G INFO lines are not supported in split-allelic model: %s".format(
             headerLine))
-        }
-        case _ => {
-          (vc: HtsjdkVariantContext, idx: Int, indices: Array[Int]) =>
+        case _ =>
+          (vc: HtsjdkVariantContext, _, _) =>
             {
               arrayFieldExtractor(vc, id, toFn, List.empty)
                 .map(kv => (kv._1, kv._2.mkString(",")))
             }
-        }
       }
     }
   }
@@ -1296,84 +1257,70 @@ class VariantContextConverter(
 
     if (headerLine.isFixedCount && headerLine.getCount == 1) {
       headerLine.getType match {
-        case VCFHeaderLineType.Flag => {
+        case VCFHeaderLineType.Flag =>
           throw new IllegalArgumentException("Flag is not supported for Format lines: %s".format(
             headerLine))
-        }
-        case VCFHeaderLineType.Character => {
-          (g: HtsjdkGenotype, idx: Int, indices: Array[Int]) =>
+        case VCFHeaderLineType.Character =>
+          (g: HtsjdkGenotype, _: Int, _: Array[Int]) =>
             {
               fieldExtractor(g, id, toChar).map(kv => (kv._1, kv._2.toString))
             }
-        }
-        case VCFHeaderLineType.Float => {
-          (g: HtsjdkGenotype, idx: Int, indices: Array[Int]) =>
+        case VCFHeaderLineType.Float =>
+          (g: HtsjdkGenotype, _: Int, _: Array[Int]) =>
             {
               fieldExtractor(g, id, toFloat).map(kv => (kv._1, kv._2.toString))
             }
-        }
-        case VCFHeaderLineType.Integer => {
-          (g: HtsjdkGenotype, idx: Int, indices: Array[Int]) =>
+        case VCFHeaderLineType.Integer =>
+          (g: HtsjdkGenotype, _: Int, _: Array[Int]) =>
             {
               fieldExtractor(g, id, toInt).map(kv => (kv._1, kv._2.toString))
             }
-        }
-        case VCFHeaderLineType.String => {
-          (g: HtsjdkGenotype, idx: Int, indices: Array[Int]) =>
+        case VCFHeaderLineType.String =>
+          (g: HtsjdkGenotype, _: Int, _: Array[Int]) =>
             {
               fieldExtractor(g, id, asString).map(kv => (kv._1, kv._2.toString))
             }
-        }
       }
     } else {
-      val toFn: (java.lang.Object => Array[String]) = headerLine.getType match {
-        case VCFHeaderLineType.Flag => {
+      val toFn: (Object => Array[String]) = headerLine.getType match {
+        case VCFHeaderLineType.Flag =>
           throw new IllegalArgumentException("Flag is not supported for Format lines: %s".format(
             headerLine))
-        }
-        case VCFHeaderLineType.Character => {
+        case VCFHeaderLineType.Character =>
           toCharArray(_).map(c => c.toString)
-        }
-        case VCFHeaderLineType.Float => {
+        case VCFHeaderLineType.Float =>
           toFloatArray(_).map(f => f.toString)
-        }
-        case VCFHeaderLineType.Integer => {
+        case VCFHeaderLineType.Integer =>
           toIntArray(_).map(i => i.toString)
-        }
-        case VCFHeaderLineType.String => {
-          toStringArray(_)
-        }
+        case VCFHeaderLineType.String =>
+          toStringArray
       }
 
       (headerLine.isFixedCount, headerLine.getCountType) match {
-        case (false, VCFHeaderLineCount.A) => {
-          (g: HtsjdkGenotype, idx: Int, indices: Array[Int]) =>
+        case (false, VCFHeaderLineCount.A) =>
+          (g: HtsjdkGenotype, idx: Int, _: Array[Int]) =>
             {
               fromArrayExtractor(g, id, toFn, idx)
                 .map(kv => (kv._1, kv._2.toString))
             }
-        }
-        case (false, VCFHeaderLineCount.R) => {
-          (g: HtsjdkGenotype, idx: Int, indices: Array[Int]) =>
+        case (false, VCFHeaderLineCount.R) =>
+          (g: HtsjdkGenotype, idx: Int, _: Array[Int]) =>
             {
               arrayFieldExtractor(g, id, toFn, List(0, idx))
                 .map(kv => (kv._1, kv._2.mkString(",")))
             }
-        }
-        case (false, VCFHeaderLineCount.G) => {
-          (g: HtsjdkGenotype, idx: Int, indices: Array[Int]) =>
+        case (false, VCFHeaderLineCount.G) =>
+          (g: HtsjdkGenotype, _: Int, indices: Array[Int]) =>
             {
               arrayFieldExtractor(g, id, toFn, indices.toList)
                 .map(kv => (kv._1, kv._2.mkString(",")))
             }
-        }
-        case _ => {
-          (g: HtsjdkGenotype, idx: Int, indices: Array[Int]) =>
+        case _ =>
+          (g: HtsjdkGenotype, _: Int, _: Array[Int]) =>
             {
               arrayFieldExtractor(g, id, toFn, List.empty)
                 .map(kv => (kv._1, kv._2.mkString(",")))
             }
-        }
       }
     }
   }
@@ -1383,20 +1330,17 @@ class VariantContextConverter(
 
     val attributeFns: Iterable[(HtsjdkVariantContext, Int, Array[Int]) => Option[(String, String)]] = headerLines
       .flatMap(hl => hl match {
-        case il: VCFInfoHeaderLine => {
+        case il: VCFInfoHeaderLine =>
           // get the id of this line
           val key = il.getID
 
           // filter out the lines that we already support
-          if (DefaultHeaderLines.infoHeaderLines
-            .find(_.getID == key)
-            .isEmpty) {
+          if (!DefaultHeaderLines.infoHeaderLines.exists(_.getID == key)) {
 
             Some(lineToVariantContextExtractor(il))
           } else {
             None
           }
-        }
         case _ => None
       })
 
@@ -1405,73 +1349,79 @@ class VariantContextConverter(
                 alleleIdx: Int): Variant = {
 
       // create the builder
-      val variantBuilder = Variant.newBuilder
-        .setContigName(vc.getChr)
-        .setStart(vc.getStart - 1)
-        .setEnd(vc.getEnd)
-        .setReferenceAllele(vc.getReference.getBaseString)
+      val variantBuilder =
+        Variant
+          .newBuilder
+          .setContigName(vc.getChr)
+          .setStart(vc.getStart - 1)
+          .setEnd(vc.getEnd)
+          .setReferenceAllele(vc.getReference.getBaseString)
 
-      alt.foreach(variantBuilder.setAlternateAllele(_))
+      alt.foreach(variantBuilder.setAlternateAllele)
 
       // bind the conversion functions and fold
-      val boundFns: Iterable[Variant.Builder => Variant.Builder] = variantFormatFns
-        .map(fn => {
-          fn(vc, _: Variant.Builder)
-        })
-      val converted = boundFns.foldLeft(variantBuilder)((vb: Variant.Builder, fn) => fn(vb))
+      val boundFns =
+        for { fn ← variantFormatFns }
+          yield
+            fn(vc, _: Variant.Builder)
+
+      boundFns.foldLeft(variantBuilder)((vb: Variant.Builder, fn) => fn(vb))
 
       val variant = variantBuilder.build
       val variantAnnotationBuilder = VariantAnnotation.newBuilder
 
-      val boundAnnotationFns: Iterable[VariantAnnotation.Builder => VariantAnnotation.Builder] = variantAnnotationFormatFns
-        .map(fn => {
-          fn(vc, _: VariantAnnotation.Builder, variant, alleleIdx)
-        })
-      val convertedAnnotation = boundAnnotationFns.foldLeft(variantAnnotationBuilder)(
-        (vab: VariantAnnotation.Builder, fn) => fn(vab))
+      val boundAnnotationFns: Iterable[VariantAnnotation.Builder => VariantAnnotation.Builder] =
+        variantAnnotationFormatFns
+          .map { fn ⇒
+            fn(vc, _: VariantAnnotation.Builder, variant, alleleIdx)
+          }
+
+      val convertedAnnotation =
+        boundAnnotationFns.foldLeft(variantAnnotationBuilder)(
+          (vab: VariantAnnotation.Builder, fn) => fn(vab)
+        )
 
       val indices = Array.empty[Int]
 
       // pull out the attribute map and process
-      val attrMap = attributeFns.flatMap(fn => fn(vc, alleleIdx, indices))
-        .toMap
+      val attrMap =
+        attributeFns
+          .flatMap(fn => fn(vc, alleleIdx, indices))
+          .toMap
 
       // if the map has kv pairs, attach it
-      val convertedAnnotationWithAttrs = if (attrMap.isEmpty) {
-        convertedAnnotation
-      } else {
-        convertedAnnotation.setAttributes(attrMap)
-      }
+      val convertedAnnotationWithAttrs =
+        if (attrMap.isEmpty)
+          convertedAnnotation
+        else
+          convertedAnnotation.setAttributes(attrMap)
 
       variantBuilder.setAnnotation(convertedAnnotationWithAttrs.build)
       variantBuilder.build
     }
 
-    convert(_, _, _)
+    convert
   }
 
   private def makeGenotypeFormatFn(
     headerLines: Seq[VCFHeaderLine]): (HtsjdkGenotype, Variant, Allele, Int, Option[Int], Boolean) => Genotype = {
 
-    val attributeFns: Iterable[(HtsjdkGenotype, Int, Array[Int]) => Option[(String, String)]] = headerLines
-      .flatMap(hl => hl match {
-        case fl: VCFFormatHeaderLine => {
+    val attributeFns: Iterable[(HtsjdkGenotype, Int, Array[Int]) => Option[(String, String)]] =
+      headerLines
+        .flatMap {
+          case fl: VCFFormatHeaderLine ⇒
 
-          // get the id of this line
-          val key = fl.getID
+            // get the id of this line
+            val key = fl.getID
 
-          // filter out the lines that we already support
-          if (DefaultHeaderLines.formatHeaderLines
-            .find(_.getID == key)
-            .isEmpty) {
-
-            Some(lineToGenotypeExtractor(fl))
-          } else {
+            // filter out the lines that we already support
+            if (!DefaultHeaderLines.formatHeaderLines.exists(_.getID == key))
+              Some(lineToGenotypeExtractor(fl))
+            else
+              None
+          case _ ⇒
             None
-          }
         }
-        case _ => None
-      })
 
     def convert(g: HtsjdkGenotype,
                 variant: Variant,
@@ -1487,17 +1437,20 @@ class VariantContextConverter(
         .setStart(variant.getStart)
         .setEnd(variant.getEnd)
         .setSampleId(g.getSampleName)
-        .setAlleles(g.getAlleles.map(gtAllele => {
-          if (gtAllele.isReference) {
-            GenotypeAllele.REF
-          } else if (gtAllele.isNoCall) {
-            GenotypeAllele.NO_CALL
-          } else if (gtAllele.equals(allele, true)) {
-            GenotypeAllele.ALT
-          } else {
-            GenotypeAllele.OTHER_ALT
-          }
-        }))
+        .setAlleles(
+          g.getAlleles.map(
+            gtAllele ⇒
+              if (gtAllele.isReference)
+                REF
+              else if (gtAllele.isNoCall)
+                NO_CALL
+              else if (gtAllele.equals(allele, true))
+                ALT
+              else
+                OTHER_ALT
+
+          )
+        )
 
       // was this split?
       if (wasSplit) {
@@ -1530,12 +1483,16 @@ class VariantContextConverter(
       val vcAnns = VariantCallingAnnotations.newBuilder
 
       // bind the annotation conversion functions and fold
-      val boundAnnotationFns: Iterable[VariantCallingAnnotations.Builder => VariantCallingAnnotations.Builder] = genotypeAnnotationFormatFns
-        .map(fn => {
-          fn(g, _: VariantCallingAnnotations.Builder, alleleIdx, indices)
-        })
+      val boundAnnotationFns: Iterable[VariantCallingAnnotations.Builder => VariantCallingAnnotations.Builder] =
+        genotypeAnnotationFormatFns
+          .map(
+            fn ⇒
+              fn(g, _: VariantCallingAnnotations.Builder, alleleIdx, indices)
+          )
+
       val convertedAnnotations = boundAnnotationFns.foldLeft(vcAnns)(
-        (vcab: VariantCallingAnnotations.Builder, fn) => fn(vcab))
+        (vcab: VariantCallingAnnotations.Builder, fn) => fn(vcab)
+      )
 
       // pull out the attribute map and process
       val attrMap = attributeFns.flatMap(fn => fn(g, alleleIdx, indices))
@@ -1556,39 +1513,39 @@ class VariantContextConverter(
       gtWithAnnotations.build()
     }
 
-    convert(_, _, _, _, _, _)
+    convert
   }
 
   private def extractorFromInfoLine(
-    headerLine: VCFInfoHeaderLine): (Map[String, String]) => Option[(String, java.lang.Object)] = {
+    headerLine: VCFInfoHeaderLine): (Map[String, String]) => Option[(String, Object)] = {
 
     val id = headerLine.getID
 
-    def toCharAndKey(s: String): (String, java.lang.Object) = {
+    def toCharAndKey(s: String): (String, Object) = {
 
       require(s.length == 1,
         "Expected character field: %s.".format(id))
       val javaChar: java.lang.Character = s(0)
 
-      (id, javaChar.asInstanceOf[java.lang.Object])
+      (id, javaChar.asInstanceOf[Object])
     }
 
-    def toFloatAndKey(s: String): (String, java.lang.Object) = {
+    def toFloatAndKey(s: String): (String, Object) = {
       val javaFloat: java.lang.Float = s.toFloat
 
-      (id, javaFloat.asInstanceOf[java.lang.Object])
+      (id, javaFloat.asInstanceOf[Object])
     }
 
-    def toBooleanAndKey(s: String): (String, java.lang.Object) = {
+    def toBooleanAndKey(s: String): (String, Object) = {
       val javaBoolean: java.lang.Boolean = s.toBoolean
 
-      (id, javaBoolean.asInstanceOf[java.lang.Object])
+      (id, javaBoolean.asInstanceOf[Object])
     }
 
-    def toIntAndKey(s: String): (String, java.lang.Object) = {
+    def toIntAndKey(s: String): (String, Object) = {
       val javaInteger: java.lang.Integer = s.toInt
 
-      (id, javaInteger.asInstanceOf[java.lang.Object])
+      (id, javaInteger.asInstanceOf[Object])
     }
 
     if (headerLine.isFixedCount && headerLine.getCount == 0 && headerLine.getType == VCFHeaderLineType.Flag) {
@@ -1599,47 +1556,41 @@ class VariantContextConverter(
     } else if (headerLine.isFixedCount && headerLine.getCount == 1) {
       headerLine.getType match {
         // Flag header line types should be Number=0, but we'll allow Number=1
-        case VCFHeaderLineType.Flag => {
+        case VCFHeaderLineType.Flag =>
           (m: Map[String, String]) =>
             {
               m.get(id).map(toBooleanAndKey)
             }
-        }
-        case VCFHeaderLineType.Character => {
+        case VCFHeaderLineType.Character =>
           (m: Map[String, String]) =>
             {
               m.get(id).map(toCharAndKey)
             }
-        }
-        case VCFHeaderLineType.Float => {
+        case VCFHeaderLineType.Float =>
           (m: Map[String, String]) =>
             {
               m.get(id).map(toFloatAndKey)
             }
-        }
-        case VCFHeaderLineType.Integer => {
+        case VCFHeaderLineType.Integer =>
           (m: Map[String, String]) =>
             {
               m.get(id).map(toIntAndKey)
             }
-        }
-        case VCFHeaderLineType.String => {
+        case VCFHeaderLineType.String =>
           (m: Map[String, String]) =>
             {
               // don't need to force to the java type, as String in scala is
               // an alias for java.lang.String
-              m.get(id).map(v => (id, v.asInstanceOf[java.lang.Object]))
+              m.get(id).map(v => (id, v.asInstanceOf[Object]))
             }
-        }
       }
     } else {
 
       headerLine.getType match {
-        case VCFHeaderLineType.Flag => {
+        case VCFHeaderLineType.Flag =>
           throw new IllegalArgumentException("Multivalue flags are not supported for INFO lines: %s".format(
             headerLine))
-        }
-        case VCFHeaderLineType.Character => {
+        case VCFHeaderLineType.Character =>
           (m: Map[String, String]) =>
             {
               m.get(id).map(v => {
@@ -1649,111 +1600,101 @@ class VariantContextConverter(
                       "Expected character field: %s in %s.".format(id,
                         m))
                     c(0): java.lang.Character
-                  }).asInstanceOf[java.lang.Object])
+                  }).asInstanceOf[Object])
               })
             }
-        }
-        case VCFHeaderLineType.Float => {
+        case VCFHeaderLineType.Float =>
           (m: Map[String, String]) =>
             {
               m.get(id).map(v => {
                 (id, v.split(",")
                   .map(f => {
                     f.toFloat: java.lang.Float
-                  }).asInstanceOf[java.lang.Object])
+                  }).asInstanceOf[Object])
               })
             }
-        }
-        case VCFHeaderLineType.Integer => {
+        case VCFHeaderLineType.Integer =>
           (m: Map[String, String]) =>
             {
               m.get(id).map(v => {
                 (id, v.split(",")
                   .map(i => {
                     i.toInt: java.lang.Integer
-                  }).asInstanceOf[java.lang.Object])
+                  }).asInstanceOf[Object])
               })
             }
-        }
-        case VCFHeaderLineType.String => {
+        case VCFHeaderLineType.String =>
           (m: Map[String, String]) =>
             {
               // don't need to force to the java type, as String in scala is
               // an alias for java.lang.String
-              m.get(id).map(v => (id, v.split(",").asInstanceOf[java.lang.Object]))
+              m.get(id).map(v => (id, v.split(",").asInstanceOf[Object]))
             }
-        }
       }
     }
   }
 
   private def extractorFromFormatLine(
-    headerLine: VCFFormatHeaderLine): (Map[String, String]) => Option[(String, java.lang.Object)] = {
+    headerLine: VCFFormatHeaderLine): (Map[String, String]) => Option[(String, Object)] = {
 
     val id = headerLine.getID
 
-    def toCharAndKey(s: String): (String, java.lang.Object) = {
+    def toCharAndKey(s: String): (String, Object) = {
 
       require(s.length == 1,
         "Expected character field: %s.".format(id))
       val javaChar: java.lang.Character = s(0)
 
-      (id, javaChar.asInstanceOf[java.lang.Object])
+      (id, javaChar.asInstanceOf[Object])
     }
 
-    def toFloatAndKey(s: String): (String, java.lang.Object) = {
+    def toFloatAndKey(s: String): (String, Object) = {
       val javaFloat: java.lang.Float = s.toFloat
 
-      (id, javaFloat.asInstanceOf[java.lang.Object])
+      (id, javaFloat.asInstanceOf[Object])
     }
 
-    def toIntAndKey(s: String): (String, java.lang.Object) = {
+    def toIntAndKey(s: String): (String, Object) = {
       val javaInteger: java.lang.Integer = s.toInt
 
-      (id, javaInteger.asInstanceOf[java.lang.Object])
+      (id, javaInteger.asInstanceOf[Object])
     }
 
     if (headerLine.isFixedCount && headerLine.getCount == 1) {
       headerLine.getType match {
-        case VCFHeaderLineType.Flag => {
+        case VCFHeaderLineType.Flag =>
           throw new IllegalArgumentException("Flag is not supported for Format lines: %s".format(
             headerLine))
-        }
-        case VCFHeaderLineType.Character => {
+        case VCFHeaderLineType.Character =>
           (m: Map[String, String]) =>
             {
               m.get(id).map(toCharAndKey)
             }
-        }
-        case VCFHeaderLineType.Float => {
+        case VCFHeaderLineType.Float =>
           (m: Map[String, String]) =>
             {
               m.get(id).map(toFloatAndKey)
             }
-        }
-        case VCFHeaderLineType.Integer => {
+        case VCFHeaderLineType.Integer =>
           (m: Map[String, String]) =>
             {
               m.get(id).map(toIntAndKey)
             }
-        }
-        case VCFHeaderLineType.String => {
+        case VCFHeaderLineType.String =>
           (m: Map[String, String]) =>
             {
               // don't need to force to the java type, as String in scala is
               // an alias for java.lang.String
-              m.get(id).map(v => (id, v.asInstanceOf[java.lang.Object]))
+              m.get(id).map(v => (id, v.asInstanceOf[Object]))
             }
-        }
       }
     } else {
 
       headerLine.getType match {
-        case VCFHeaderLineType.Flag => {
+        case VCFHeaderLineType.Flag =>
           throw new IllegalArgumentException("Flag is not supported for Format lines: %s".format(
             headerLine))
-        }
-        case VCFHeaderLineType.Character => {
+        case VCFHeaderLineType.Character =>
           (m: Map[String, String]) =>
             {
               m.get(id).map(v => {
@@ -1763,40 +1704,36 @@ class VariantContextConverter(
                       "Expected character field: %s in %s.".format(id,
                         m))
                     c(0): java.lang.Character
-                  }).asInstanceOf[java.lang.Object])
+                  }).asInstanceOf[Object])
               })
             }
-        }
-        case VCFHeaderLineType.Float => {
+        case VCFHeaderLineType.Float =>
           (m: Map[String, String]) =>
             {
               m.get(id).map(v => {
                 (id, v.split(",")
                   .map(f => {
                     f.toFloat: java.lang.Float
-                  }).asInstanceOf[java.lang.Object])
+                  }).asInstanceOf[Object])
               })
             }
-        }
-        case VCFHeaderLineType.Integer => {
+        case VCFHeaderLineType.Integer =>
           (m: Map[String, String]) =>
             {
               m.get(id).map(v => {
                 (id, v.split(",")
                   .map(i => {
                     i.toInt: java.lang.Integer
-                  }).asInstanceOf[java.lang.Object])
+                  }).asInstanceOf[Object])
               })
             }
-        }
-        case VCFHeaderLineType.String => {
+        case VCFHeaderLineType.String =>
           (m: Map[String, String]) =>
             {
               // don't need to force to the java type, as String in scala is
               // an alias for java.lang.String
-              m.get(id).map(v => (id, v.split(",").asInstanceOf[java.lang.Object]))
+              m.get(id).map(v => (id, v.split(",").asInstanceOf[Object]))
             }
-        }
       }
     }
   }
@@ -1804,24 +1741,22 @@ class VariantContextConverter(
   private def makeVariantExtractFn(
     headerLines: Seq[VCFHeaderLine]): (ADAMVariantContext) => HtsjdkVariantContext = {
 
-    val attributeFns: Iterable[(Map[String, String]) => Option[(String, java.lang.Object)]] = headerLines
+    val attributeFns: Iterable[(Map[String, String]) => Option[(String, Object)]] = headerLines
       .flatMap(hl => hl match {
-        case il: VCFInfoHeaderLine => {
+        case il: VCFInfoHeaderLine =>
 
           // get the id of this line
           val key = il.getID
 
           // filter out the lines that we already support
-          if (DefaultHeaderLines.infoHeaderLines
-            .find(_.getID == key)
-            .isDefined) {
+          if (DefaultHeaderLines.infoHeaderLines.exists(_.getID == key)) {
 
             None
           } else {
             try {
               Some(extractorFromInfoLine(il))
             } catch {
-              case t: Throwable => {
+              case t: Throwable =>
                 if (stringency == ValidationStringency.STRICT) {
                   throw t
                 } else {
@@ -1830,10 +1765,8 @@ class VariantContextConverter(
                   }
                   None
                 }
-              }
             }
           }
-        }
         case _ => None
       })
 
@@ -1871,30 +1804,28 @@ class VariantContextConverter(
       convertedWithAttrs.make()
     }
 
-    convert(_)
+    convert
   }
 
   private def makeGenotypeExtractFn(
     headerLines: Seq[VCFHeaderLine]): (Genotype) => HtsjdkGenotype = {
 
-    val attributeFns: Iterable[(Map[String, String]) => Option[(String, java.lang.Object)]] = headerLines
+    val attributeFns: Iterable[(Map[String, String]) => Option[(String, Object)]] = headerLines
       .flatMap(hl => hl match {
-        case fl: VCFFormatHeaderLine => {
+        case fl: VCFFormatHeaderLine =>
 
           // get the id of this line
           val key = fl.getID
 
           // filter out the lines that we already support
-          if (DefaultHeaderLines.formatHeaderLines
-            .find(_.getID == key)
-            .isDefined) {
+          if (DefaultHeaderLines.formatHeaderLines.exists(_.getID == key)) {
 
             None
           } else {
             try {
               Some(extractorFromFormatLine(fl))
             } catch {
-              case t: Throwable => {
+              case t: Throwable =>
                 if (stringency == ValidationStringency.STRICT) {
                   throw t
                 } else {
@@ -1903,10 +1834,8 @@ class VariantContextConverter(
                   }
                   None
                 }
-              }
             }
           }
-        }
         case _ => None
       })
 
@@ -1945,7 +1874,7 @@ class VariantContextConverter(
       gtWithAnnotations.make()
     }
 
-    convert(_)
+    convert
   }
 
   /**
@@ -1964,7 +1893,7 @@ class VariantContextConverter(
       Some(vcb.genotypes(vc.genotypes.map(g => genotypeExtractFn(g)))
         .make)
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         if (stringency == ValidationStringency.STRICT) {
           throw t
         } else {
@@ -1976,7 +1905,6 @@ class VariantContextConverter(
           }
           None
         }
-      }
     }
   }
 }

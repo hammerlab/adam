@@ -160,7 +160,7 @@ class ADAMContextSuite
     last.getName should === ("gn|BPY2C;ccds|CCDS44030;ens|ENSG00000185894;vega|OTTHUMG00000045199")
   }
 
-  sparkTest("can read a small .vcf file") {
+  test("can read a small .vcf file") {
     val path = testFile("small.vcf")
 
     val gts = sc.loadGenotypes(path)

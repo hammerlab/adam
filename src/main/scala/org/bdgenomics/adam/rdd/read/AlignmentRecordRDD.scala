@@ -779,37 +779,50 @@ case class AlignmentRecordRDD(
       })
 
     validationStringency match {
-      case STRICT | LENIENT =>
+      case STRICT | LENIENT ⇒
         val readIDsWithCounts: RDD[(String, Int)] = readsByID.mapValues(_.size)
         val unpairedReadIDsWithCounts: RDD[(String, Int)] = readIDsWithCounts.filter(_._2 != 2)
         maybePersist(unpairedReadIDsWithCounts)
 
         val numUnpairedReadIDsWithCounts: Long = unpairedReadIDsWithCounts.count()
         if (numUnpairedReadIDsWithCounts != 0) {
-          val readNameOccurrencesMap: collection.Map[Int, Long] = unpairedReadIDsWithCounts.map(_._2).countByValue()
+          val readNameOccurrencesMap: collection.Map[Int, Long] = unpairedReadIDsWithCounts.values.countByValue()
 
           val msg =
             List(
               s"Found $numUnpairedReadIDsWithCounts read names that don't occur exactly twice:",
-
-              readNameOccurrencesMap.take(100).map({
-                case (numOccurrences, numReadNames) => s"${numOccurrences}x:\t$numReadNames"
-              }).mkString("\t", "\n\t", if (readNameOccurrencesMap.size > 100) "\n\t…" else ""),
+              readNameOccurrencesMap
+                .take(100)
+                .map {
+                  case (numOccurrences, numReadNames) => s"${numOccurrences}x:\t$numReadNames"
+                }
+                .mkString(
+                  "\t",
+                  "\n\t",
+                  if (readNameOccurrencesMap.size > 100) "\n\t…" else ""
+                ),
               "",
-
               "Samples:",
               unpairedReadIDsWithCounts
                 .take(100)
                 .map(_._1)
-                .mkString("\t", "\n\t", if (numUnpairedReadIDsWithCounts > 100) "\n\t…" else "")
-            ).mkString("\n")
+                .mkString(
+                  "\t",
+                  "\n\t",
+                  if (numUnpairedReadIDsWithCounts > 100)
+                    "\n\t…"
+                  else
+                    ""
+                )
+            )
+            .mkString("\n")
 
           if (validationStringency == STRICT)
             throw new IllegalArgumentException(msg)
           else if (validationStringency == LENIENT)
             logError(msg)
         }
-      case SILENT =>
+      case SILENT ⇒
     }
 
     val pairedRecords: RDD[AlignmentRecord] = readsByID.filter(_._2.size == 2).map(_._2).flatMap(x => x)

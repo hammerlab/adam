@@ -30,14 +30,15 @@ object RichVariant {
    * @param genotype Genotype to extract variant from.
    * @return Returns a rich variant representing the variant that was genotyped.
    */
-  def genotypeToRichVariant(genotype: Genotype): RichVariant = {
-    val variant = Variant.newBuilder(genotype.variant)
-      .setContigName(genotype.getContigName)
-      .setStart(genotype.getStart)
-      .setEnd(genotype.getEnd)
-      .build()
-    RichVariant(variant)
-  }
+  def genotypeToRichVariant(genotype: Genotype): RichVariant =
+    RichVariant(
+      Variant
+        .newBuilder(genotype.variant)
+        .setContigName(genotype.getContigName)
+        .setStart(genotype.getStart)
+        .setEnd(genotype.getEnd)
+        .build()
+    )
 }
 
 /**

@@ -17,22 +17,13 @@
  */
 package org.bdgenomics.adam.rich
 
-import htsjdk.samtools.{
-  Cigar,
-  CigarElement,
-  CigarOperator,
-  TextCigarCodec
-}
-import org.bdgenomics.adam.models.{
-  Attribute,
-  MdTag,
-  ReferencePosition,
-  ReferenceRegion
-}
+import htsjdk.samtools.{ Cigar, CigarElement, CigarOperator, TextCigarCodec }
+import org.bdgenomics.adam.models.{ Attribute, MdTag, ReferencePosition, ReferenceRegion }
 import org.bdgenomics.adam.util.AttributeUtils
-import org.bdgenomics.formats.avro.{ AlignmentRecord, Strand }
+import org.bdgenomics.formats.avro.AlignmentRecord
+import org.bdgenomics.formats.avro.Strand.{ FORWARD, REVERSE }
+
 import scala.collection.JavaConversions._
-import scala.collection.immutable.NumericRange
 import scala.math.max
 
 object RichAlignmentRecord {
@@ -84,10 +75,9 @@ case class RichAlignmentRecord(record: AlignmentRecord) {
     }
   }
 
-  private def isClipped(el: CigarElement) = {
+  private def isClipped(el: CigarElement) =
     el.getOperator == CigarOperator.SOFT_CLIP ||
       el.getOperator == CigarOperator.HARD_CLIP
-  }
 
   /**
    * The position of the unclipped end if the read is mapped, None otherwise.
@@ -95,11 +85,17 @@ case class RichAlignmentRecord(record: AlignmentRecord) {
    * @note The unclipped position assumes that any clipped bases would've been
    *   aligned as an alignment match.
    */
-  lazy val unclippedEnd: Long = {
-    max(0L, samtoolsCigar.getCigarElements.reverse.takeWhile(isClipped).foldLeft(record.getEnd)({
-      (pos, cigarEl) => pos + cigarEl.getLength
-    }))
-  }
+  lazy val unclippedEnd: Long =
+    max(
+      0L,
+      samtoolsCigar
+        .getCigarElements
+        .reverse
+        .takeWhile(isClipped)
+        .foldLeft(record.getEnd)(
+          (pos, cigarEl) ⇒ pos + cigarEl.getLength
+        )
+    )
 
   /**
    * The position of the unclipped start if the read is mapped, None otherwise.
@@ -107,29 +103,37 @@ case class RichAlignmentRecord(record: AlignmentRecord) {
    * @note The unclipped position assumes that any clipped bases would've been
    *   aligned as an alignment match.
    */
-  lazy val unclippedStart: Long = {
-    max(0L, samtoolsCigar.getCigarElements.takeWhile(isClipped).foldLeft(record.getStart)({
-      (pos, cigarEl) => pos - cigarEl.getLength
-    }))
-  }
+  lazy val unclippedStart: Long =
+    max(
+      0L,
+      samtoolsCigar
+        .getCigarElements
+        .takeWhile(isClipped)
+        .foldLeft(record.getStart)(
+          (pos, cigarEl) => pos - cigarEl.getLength
+        )
+    )
 
   /**
    * @return The position of the five prime end of the read.
    */
-  def fivePrimePosition: Long = {
-    if (record.getReadNegativeStrand) unclippedEnd else unclippedStart
-  }
+  def fivePrimePosition: Long =
+    if (record.getReadNegativeStrand)
+      unclippedEnd
+    else
+      unclippedStart
 
   /**
    * @return The position of the five prime end of the read, wrapped as a
    *   reference position.
    */
   def fivePrimeReferencePosition: ReferencePosition = {
-    val strand = if (record.getReadNegativeStrand) {
-      Strand.REVERSE
-    } else {
-      Strand.FORWARD
-    }
+    val strand =
+      if (record.getReadNegativeStrand)
+        REVERSE
+      else
+        FORWARD
+
     ReferencePosition(record.getContigName, fivePrimePosition, strand)
   }
 

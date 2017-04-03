@@ -53,8 +53,7 @@ object RecordGroupDictionary {
  *
  * @param recordGroups A seq of record groups to popualate the dictionary.
  *
- * @throws IllegalArgumentError Throws an assertion error if there are multiple record
- *   groups with the same name.
+ * @throws IllegalArgumentException Throws an assertion error if there are multiple record groups with the same name.
  */
 case class RecordGroupDictionary(recordGroups: Seq[RecordGroup]) {
 
@@ -158,10 +157,10 @@ object RecordGroup {
       Option(samRGR.getFlowOrder),
       Option(samRGR.getKeySequence),
       Option(samRGR.getLibrary),
-      Option({
+      Option(
         // must explicitly reference as a java.lang.integer to avoid implicit conversion
         samRGR.getPredictedMedianInsertSize: java.lang.Integer
-      }).map(_.toInt),
+      ).map(_.toInt),
       Option(samRGR.getPlatform),
       Option(samRGR.getPlatformUnit)
     )
@@ -178,28 +177,28 @@ object RecordGroup {
    * @return Avro record converted into RecordGroup representation.
    */
   def fromAvro(rgm: RecordGroupMetadata): RecordGroup = {
-    require(rgm.getName != null, "Record group name is null in %s.".format(rgm))
-    require(rgm.getSample != null, "Record group sample is null in %s.".format(rgm))
+    require(rgm.getName != null, s"Record group name is null in $rgm.")
+    require(rgm.getSample != null, s"Record group sample is null in $rgm.")
 
-    new RecordGroup(rgm.getSample,
+    new RecordGroup(
+      rgm.getSample,
       rgm.getName,
       Option(rgm.getSequencingCenter),
       Option(rgm.getDescription),
-      Option({
+      Option(
         // must explicitly reference as a java.lang.integer to avoid implicit conversion
-        val l: java.lang.Long = rgm.getRunDateEpoch
-        l
-      }).map(_.toLong),
+        rgm.getRunDateEpoch: java.lang.Long
+      ).map(_.toLong),
       Option(rgm.getFlowOrder),
       Option(rgm.getKeySequence),
       Option(rgm.getLibrary),
-      Option({
+      Option(
         // must explicitly reference as a java.lang.integer to avoid implicit conversion
-        val i: java.lang.Integer = rgm.getPredictedMedianInsertSize
-        i
-      }).map(_.toInt),
+        rgm.getPredictedMedianInsertSize: java.lang.Integer
+      ).map(_.toInt),
       Option(rgm.getPlatform),
-      Option(rgm.getPlatformUnit))
+      Option(rgm.getPlatformUnit)
+    )
   }
 }
 
