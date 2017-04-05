@@ -27,6 +27,7 @@ deps ++= Seq(
   libs.value('loci),
   libs.value('log4j),
   libs.value('parquet_avro),
+  libs.value('paths),
   libs.value('spark_util),
   "com.netflix.servo" % "servo-core" % "0.10.0",
   "it.unimi.dsi" % "fastutil" % "6.6.5",
