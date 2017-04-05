@@ -19,6 +19,7 @@
 package org.bdgenomics.adam.util
 
 import htsjdk.samtools.ValidationStringency
+import htsjdk.samtools.ValidationStringency.{ LENIENT, STRICT }
 import htsjdk.samtools.reference.{ FastaSequenceIndex, IndexedFastaSequenceFile }
 import org.apache.spark.SparkContext
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
@@ -33,7 +34,7 @@ import org.hammerlab.paths.Path
  */
 case class IndexedFastaFile(sc: SparkContext,
                             path: Path,
-                            stringency: ValidationStringency = ValidationStringency.STRICT)
+                            stringency: ValidationStringency = STRICT)
     extends ReferenceFile with Logging {
 
   // Generate IndexedFastaSequenceFile from path and fai index
@@ -49,16 +50,15 @@ case class IndexedFastaFile(sc: SparkContext,
     try {
       SequenceDictionary(ref.getSequenceDictionary)
     } catch {
-      case e: Throwable => {
-        if (stringency == ValidationStringency.STRICT) {
+      case e: Throwable =>
+        if (stringency == STRICT) {
           throw e
         } else {
-          if (stringency == ValidationStringency.LENIENT) {
-            log.warn("Caught exception %s when loading FASTA sequence dictionary. Using empty dictionary instead.".format(e))
+          if (stringency == LENIENT) {
+            log.warn(s"Caught exception when loading FASTA sequence dictionary. Using empty dictionary instead:\n$e")
           }
           SequenceDictionary.empty
         }
-      }
     }
 
   /**
@@ -66,9 +66,9 @@ case class IndexedFastaFile(sc: SparkContext,
    * @param region The desired ReferenceRegion to extract.
    * @return The reference sequence at the desired locus.
    */
-  def extract(region: ReferenceRegion): String = {
-    ref.getSubsequenceAt(region.referenceName.name, region.start, region.end)
+  def extract(region: ReferenceRegion): String =
+    ref
+      .getSubsequenceAt(region.referenceName.name, region.start, region.end)
       .getBaseString
-  }
 }
 
