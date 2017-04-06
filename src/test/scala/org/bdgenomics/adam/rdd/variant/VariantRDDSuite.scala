@@ -213,7 +213,7 @@ class VariantRDDSuite
     val variants = sc.loadVariants(variantsPath)
     val variantContexts = variants.toVariantContextRDD
 
-    assert(variantContexts.sequences.containsRefName("1"))
+    assert(variantContexts.sequences.contains("1"))
     assert(variantContexts.samples.isEmpty)
 
     val vcs = variantContexts.rdd.collect

@@ -236,7 +236,7 @@ private[adam] object TranscriptEffectConverter extends Serializable with Logging
    *    reserved key "ANN" value
    */
   def convertToVcfInfoAnnValue(effects: Iterable[TranscriptEffect]): String = {
-    def toFraction(numerator: java.lang.Integer, denominator: java.lang.Integer): String = {
+    def toFraction(numerator: Integer, denominator: Integer): String = {
       val numOpt = Option(numerator)
       val denomOpt = Option(denominator)
 

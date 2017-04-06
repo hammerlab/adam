@@ -564,11 +564,11 @@ class ADAMContext(val sc: SparkContext)(implicit factory: Factory)
     val filteredFiles =
       bamFiles.filter {
         p ⇒
-          val pPath = p.getName()
-          pPath.endsWith(".bam") ||
-            pPath.endsWith(".cram") ||
-            pPath.endsWith(".sam") ||
-            pPath.startsWith("part-")
+          val extension = p.extension
+          extension == "bam" ||
+            extension == "cram" ||
+            extension == "sam" ||
+            p.basename.startsWith("part-")
       }
 
     require(filteredFiles.nonEmpty, s"Did not find any files at $path.")
@@ -582,14 +582,14 @@ class ADAMContext(val sc: SparkContext)(implicit factory: Factory)
             // below).
             sc.hadoopConfiguration.set(VALIDATION_STRINGENCY_PROPERTY, validationStringency.toString)
             val samHeader = readSAMHeaderFrom(fp, sc.hadoopConfiguration)
-            log.info("Loaded header from " + fp)
+            log.info(s"Loaded header from $fp")
             val sd = loadBamDictionary(samHeader)
             val rg = loadBamReadGroups(samHeader)
             Some((sd, rg))
           } catch {
             case e: Throwable =>
               log.error(
-                s"Loading failed for $fp:n${e.getMessage}\n\t${e.getStackTrace.take(25).mkString("\n\t")}"
+                s"Loading failed for $fp:\n${e.getMessage}\n\t${e.getStackTrace.take(25).mkString("\n\t")}"
               )
               None
           }
@@ -636,7 +636,9 @@ class ADAMContext(val sc: SparkContext)(implicit factory: Factory)
     val samRecordConverter = new SAMRecordConverter
 
     AlignmentRecordRDD(
-      records.values.map(r => samRecordConverter.convert(r.get)),
+      records
+        .values
+        .map(r => samRecordConverter.convert(r.get)),
       seqDict,
       readGroups
     )

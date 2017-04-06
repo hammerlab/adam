@@ -639,8 +639,7 @@ class VariantContextConverter(
   private[converters] def formatAllelicDepth(g: HtsjdkGenotype,
                                              gb: Genotype.Builder,
                                              gIdx: Int,
-                                             gIndices: Array[Int]): Genotype.Builder = {
-
+                                             gIndices: Array[Int]): Genotype.Builder =
     // AD is an array type field
     if (g.hasAD) {
       val ad = g.getAD
@@ -649,43 +648,40 @@ class VariantContextConverter(
     } else {
       gb
     }
-  }
 
   private[converters] def formatReadDepth(g: HtsjdkGenotype,
                                           gb: Genotype.Builder,
                                           gIdx: Int,
-                                          gIndices: Array[Int]): Genotype.Builder = {
-    if (g.hasDP) {
+                                          gIndices: Array[Int]): Genotype.Builder =
+    if (g.hasDP)
       gb.setReadDepth(g.getDP)
-    } else {
+    else
       gb
-    }
-  }
 
   private[converters] def formatMinReadDepth(g: HtsjdkGenotype,
                                              gb: Genotype.Builder,
                                              gIdx: Int,
-                                             gIndices: Array[Int]): Genotype.Builder = {
+                                             gIndices: Array[Int]): Genotype.Builder =
     Option(g.getExtendedAttribute("MIN_DP", null))
-      .map(attr => {
-        tryAndCatchStringCast(attr, attribute => {
-          gb.setMinReadDepth(attribute.asInstanceOf[java.lang.Integer])
-        }, attribute => {
-          gb.setMinReadDepth(attribute.toInt)
-        })
-      }).getOrElse(gb)
-  }
+      .map { attr ⇒
+        tryAndCatchStringCast(
+          attr,
+          attribute ⇒
+            gb.setMinReadDepth(attribute.asInstanceOf[Integer]),
+          attribute ⇒
+            gb.setMinReadDepth(attribute.toInt)
+        )
+      }
+      .getOrElse(gb)
 
   private[converters] def formatGenotypeQuality(g: HtsjdkGenotype,
                                                 gb: Genotype.Builder,
                                                 gIdx: Int,
-                                                gIndices: Array[Int]): Genotype.Builder = {
-    if (g.hasGQ) {
+                                                gIndices: Array[Int]): Genotype.Builder =
+    if (g.hasGQ)
       gb.setGenotypeQuality(g.getGQ)
-    } else {
+    else
       gb
-    }
-  }
 
   private[converters] def formatGenotypeLikelihoods(g: HtsjdkGenotype,
                                                     gb: Genotype.Builder,
@@ -747,14 +743,14 @@ class VariantContextConverter(
         tryAndCatchStringCast(
           attr,
           attribute => {
-            gb.setStrandBiasComponents(attribute.asInstanceOf[Array[java.lang.Integer]].toSeq)
+            gb.setStrandBiasComponents(attribute.asInstanceOf[Array[Integer]].toSeq)
           }, attribute => {
             val components = attribute.split(",")
             require(components.size == 4,
               "Strand bias components must have 4 entries. Saw %s in %s.".format(
                 attr, g))
 
-            gb.setStrandBiasComponents(components.map(e => e.toInt: java.lang.Integer)
+            gb.setStrandBiasComponents(components.map(e => e.toInt: Integer)
               .toSeq)
           })
       }).getOrElse(gb)
@@ -769,7 +765,7 @@ class VariantContextConverter(
       Option(g.getExtendedAttribute(VCFConstants.PHASE_SET_KEY))
         .map(attr => {
           tryAndCatchStringCast(attr, attribute => {
-            gb.setPhaseSetId(attribute.asInstanceOf[java.lang.Integer])
+            gb.setPhaseSetId(attribute.asInstanceOf[Integer])
           }, attribute => {
             gb.setPhaseSetId(attribute.toInt)
           })
@@ -778,7 +774,7 @@ class VariantContextConverter(
       Option(g.getExtendedAttribute(VCFConstants.PHASE_QUALITY_KEY))
         .map(attr => {
           tryAndCatchStringCast(attr, attribute => {
-            gb.setPhaseQuality(attribute.asInstanceOf[java.lang.Integer])
+            gb.setPhaseQuality(attribute.asInstanceOf[Integer])
           }, attribute => {
             gb.setPhaseQuality(attribute.toInt)
           })
@@ -937,7 +933,7 @@ class VariantContextConverter(
     Option(g.getExtendedAttribute("MQ0"))
       .map(attr => {
         tryAndCatchStringCast(attr, attribute => {
-          vcab.setMapq0Reads(attribute.asInstanceOf[java.lang.Integer])
+          vcab.setMapq0Reads(attribute.asInstanceOf[Integer])
         }, attribute => {
           vcab.setMapq0Reads(attribute.toInt)
         })
@@ -1019,7 +1015,7 @@ class VariantContextConverter(
 
   private def toInt(obj: Object): Int = {
     tryAndCatchStringCast(obj, o => {
-      o.asInstanceOf[java.lang.Integer]
+      o.asInstanceOf[Integer]
     }, o => o.toInt)
   }
 
@@ -1058,7 +1054,7 @@ class VariantContextConverter(
 
   private def toIntArray(obj: Object): Array[Int] = {
     tryAndCatchStringCast(obj, o => {
-      o.asInstanceOf[Array[java.lang.Integer]]
+      o.asInstanceOf[Array[Integer]]
         .map(i => i: Int)
     }, o => {
       splitAndCheckForEmptyArray(o).map(_.toInt)
@@ -1543,7 +1539,7 @@ class VariantContextConverter(
     }
 
     def toIntAndKey(s: String): (String, Object) = {
-      val javaInteger: java.lang.Integer = s.toInt
+      val javaInteger: Integer = s.toInt
 
       (id, javaInteger.asInstanceOf[Object])
     }
@@ -1619,7 +1615,7 @@ class VariantContextConverter(
               m.get(id).map(v => {
                 (id, v.split(",")
                   .map(i => {
-                    i.toInt: java.lang.Integer
+                    i.toInt: Integer
                   }).asInstanceOf[Object])
               })
             }
@@ -1655,7 +1651,7 @@ class VariantContextConverter(
     }
 
     def toIntAndKey(s: String): (String, Object) = {
-      val javaInteger: java.lang.Integer = s.toInt
+      val javaInteger: Integer = s.toInt
 
       (id, javaInteger.asInstanceOf[Object])
     }
@@ -1723,7 +1719,7 @@ class VariantContextConverter(
               m.get(id).map(v => {
                 (id, v.split(",")
                   .map(i => {
-                    i.toInt: java.lang.Integer
+                    i.toInt: Integer
                   }).asInstanceOf[Object])
               })
             }

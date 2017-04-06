@@ -148,14 +148,15 @@ case class SequenceDictionary(records: Vector[SequenceRecord] = Vector()) {
    * @param that Sequence dictionary to compare against.
    * @return True if each record in this dictionary exists in the other dictionary.
    */
-  def isCompatibleWith(that: SequenceDictionary): Boolean = {
-    for (record <- that.records) {
-      val myRecord = byName.get(record.name)
-      if (myRecord.exists(_ != record))
-        return false
-    }
-    true
-  }
+  def isCompatibleWith(that: SequenceDictionary): Boolean =
+    !that
+      .records
+      .exists(
+        record ⇒
+          byName
+            .get(record.name)
+            .exists(_ != record)
+      )
 
   /**
    * @param name The name of the contig to extract.
@@ -188,9 +189,13 @@ case class SequenceDictionary(records: Vector[SequenceRecord] = Vector()) {
    * @return A new sequence dictionary that contains a record per contig in each
    *   input dictionary.
    */
-  def ++(that: SequenceDictionary): SequenceDictionary = {
-    new SequenceDictionary(records ++ that.records.filter(r => !byName.contains(r.name)))
-  }
+  def ++(that: SequenceDictionary): SequenceDictionary =
+    new SequenceDictionary(
+      records ++
+        that
+          .records
+          .filter(r => !byName.contains(r.name))
+    )
 
   /**
    * Converts this ADAM style sequence dictionary into a SAM style sequence dictionary.
@@ -240,9 +245,8 @@ case class SequenceDictionary(records: Vector[SequenceRecord] = Vector()) {
     new SequenceDictionary(records.sorted)
   }
 
-  override def toString: String = {
-    records.map(_.toString).fold("SequenceDictionary{")(_ + "\n" + _) + "}"
-  }
+  override def toString: String =
+    s"SequenceDictionary(${records.mkString("\n\t", "\n\t", "\n")})"
 
   private[adam] def toAvro: Seq[Contig] = {
     records.map(_.toADAMContig)

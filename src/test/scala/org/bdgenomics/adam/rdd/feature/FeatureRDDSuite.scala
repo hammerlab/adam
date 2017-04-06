@@ -742,7 +742,7 @@ class FeatureRDDSuite
     val inputPath = testFile("Homo_sapiens.GRCh37.75.trun100.gtf")
     val features = sc.loadGtf(inputPath)
     // max(start,end) = 1 36081
-    assert(features.sequences.containsRefName("1"))
+    assert(features.sequences.contains("1"))
     assert(features.sequences.apply("1").isDefined)
     assert(features.sequences.apply("1").get.length >= 36081L)
   }
@@ -751,7 +751,7 @@ class FeatureRDDSuite
     val inputPath = testFile("dvl1.200.gff3")
     val features = sc.loadGff3(inputPath)
     // max(start, end) = 1 1356705
-    assert(features.sequences.containsRefName("1"))
+    assert(features.sequences.contains("1"))
     assert(features.sequences.apply("1").isDefined)
     assert(features.sequences.apply("1").get.length >= 1356705L)
   }
@@ -760,7 +760,7 @@ class FeatureRDDSuite
     val inputPath = testFile("dvl1.200.bed")
     val features = sc.loadBed(inputPath)
     // max(start, end) = 1 1358504
-    assert(features.sequences.containsRefName("1"))
+    assert(features.sequences.contains("1"))
     assert(features.sequences.apply("1").isDefined)
     assert(features.sequences.apply("1").get.length >= 1358504L)
   }
@@ -772,11 +772,11 @@ class FeatureRDDSuite
 @SQ	SN:chr1	LN:249250621
 @SQ	SN:chr2	LN:243199373
      */
-    assert(features.sequences.containsRefName("chr1"))
+    assert(features.sequences.contains("chr1"))
     assert(features.sequences.apply("chr1").isDefined)
     assert(features.sequences.apply("chr1").get.length >= 249250621L)
 
-    assert(features.sequences.containsRefName("chr2"))
+    assert(features.sequences.contains("chr2"))
     assert(features.sequences.apply("chr2").isDefined)
     assert(features.sequences.apply("chr2").get.length >= 243199373L)
   }
@@ -785,7 +785,7 @@ class FeatureRDDSuite
     val inputPath = testFile("wgEncodeOpenChromDnaseGm19238Pk.trunc10.narrowPeak")
     val features = sc.loadNarrowPeak(inputPath)
     // max(start, end) = chr1 794336
-    assert(features.sequences.containsRefName("chr1"))
+    assert(features.sequences.contains("chr1"))
     assert(features.sequences.apply("chr1").isDefined)
     assert(features.sequences.apply("chr1").get.length >= 794336L)
   }
