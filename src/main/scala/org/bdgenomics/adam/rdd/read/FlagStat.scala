@@ -90,7 +90,7 @@ private[read] object FlagStat {
 
   def b2i(boolean: Boolean) = if (boolean) 1 else 0
   def b(boolean: java.lang.Boolean) = Option(boolean).exists(x => x)
-  def i(int: java.lang.Integer): Int = Option(int).map(Integer2int).getOrElse(-1)
+  def i(int: Integer): Int = Option(int).map(Integer2int).getOrElse(-1)
 
   def apply(rdd: RDD[AlignmentRecord]) = {
     rdd.map {

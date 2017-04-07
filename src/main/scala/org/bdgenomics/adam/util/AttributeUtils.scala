@@ -45,7 +45,7 @@ object AttributeUtils {
       }
     } else {
       attr.value match {
-        case x: java.lang.Integer   => Attribute(attr.tag, TagType.Integer, x)
+        case x: Integer   => Attribute(attr.tag, TagType.Integer, x)
         case x: java.lang.Character => Attribute(attr.tag, TagType.Character, x)
         case x: java.lang.Float     => Attribute(attr.tag, TagType.Float, x)
         case x: java.lang.String    => Attribute(attr.tag, TagType.String, x)
@@ -133,10 +133,10 @@ object AttributeUtils {
       case TagType.ByteSequence                 => valueStr.map(c => java.lang.Byte.valueOf("" + c))
       case TagType.NumericByteSequence          => valueStr.split(",").map(c => java.lang.Byte.valueOf("" + c))
       case TagType.NumericShortSequence         => valueStr.split(",").map(c => java.lang.Short.valueOf("" + c))
-      case TagType.NumericIntSequence           => valueStr.split(",").map(c => java.lang.Integer.valueOf("" + c))
+      case TagType.NumericIntSequence           => valueStr.split(",").map(c => Integer.valueOf("" + c))
       case TagType.NumericUnsignedByteSequence  => valueStr.split(",").map(c => java.lang.Byte.valueOf("" + c))
       case TagType.NumericUnsignedShortSequence => valueStr.split(",").map(c => java.lang.Short.valueOf("" + c))
-      case TagType.NumericUnsignedIntSequence   => valueStr.split(",").map(c => java.lang.Integer.valueOf("" + c))
+      case TagType.NumericUnsignedIntSequence   => valueStr.split(",").map(c => Integer.valueOf("" + c))
       case TagType.NumericFloatSequence         => valueStr.split(",").map(c => java.lang.Float.valueOf("" + c))
     }
   }

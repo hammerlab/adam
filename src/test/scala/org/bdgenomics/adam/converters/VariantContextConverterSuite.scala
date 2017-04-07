@@ -229,7 +229,7 @@ class VariantContextConverterSuite
     val genotype = Genotype.newBuilder
       .setVariant(variant)
       .setSampleId("NA12878")
-      .setStrandBiasComponents(List(0, 2, 4, 6).map(i => i: java.lang.Integer))
+      .setStrandBiasComponents(List(0, 2, 4, 6).map(i => i: Integer))
       .setAlleles(List(GenotypeAllele.REF, GenotypeAllele.ALT))
       .setVariantCallingAnnotations(VariantCallingAnnotations.newBuilder()
         .setFisherStrandBiasPValue(3.0f)
@@ -263,7 +263,7 @@ class VariantContextConverterSuite
     val genotype = Genotype.newBuilder
       .setVariant(variant)
       .setSampleId("NA12878")
-      .setStrandBiasComponents(List(0, 2).map(i => i: java.lang.Integer))
+      .setStrandBiasComponents(List(0, 2).map(i => i: Integer))
       .setAlleles(List(GenotypeAllele.REF, GenotypeAllele.ALT))
       .setVariantCallingAnnotations(VariantCallingAnnotations.newBuilder()
         .setFisherStrandBiasPValue(3.0f)
@@ -282,7 +282,7 @@ class VariantContextConverterSuite
     val genotype = Genotype.newBuilder
       .setVariant(variant)
       .setSampleId("NA12878")
-      .setStrandBiasComponents(List(0, 2).map(i => i: java.lang.Integer))
+      .setStrandBiasComponents(List(0, 2).map(i => i: Integer))
       .setAlleles(List(GenotypeAllele.REF, GenotypeAllele.ALT))
       .setVariantCallingAnnotations(VariantCallingAnnotations.newBuilder()
         .setFisherStrandBiasPValue(3.0f)
@@ -565,8 +565,8 @@ class VariantContextConverterSuite
   }
 
   test("set phase set and extract going htsjdk->adam") {
-    val gt = buildGt(Map(("PS" -> (4: java.lang.Integer).asInstanceOf[java.lang.Object]),
-      ("PQ" -> (10: java.lang.Integer).asInstanceOf[java.lang.Object])),
+    val gt = buildGt(Map(("PS" -> (4: Integer).asInstanceOf[java.lang.Object]),
+      ("PQ" -> (10: Integer).asInstanceOf[java.lang.Object])),
       converter.formatPhaseInfo,
       fns = Iterable((gb: GenotypeBuilder) => {
         gb.phased(true)
@@ -627,7 +627,7 @@ class VariantContextConverterSuite
   }
 
   test("extract min gt read depth going htsjdk->adam") {
-    val gt = buildGt(Map(("MIN_DP" -> (20: java.lang.Integer).asInstanceOf[java.lang.Object])),
+    val gt = buildGt(Map(("MIN_DP" -> (20: Integer).asInstanceOf[java.lang.Object])),
       converter.formatMinReadDepth,
       fns = Iterable.empty)
 
@@ -688,7 +688,7 @@ class VariantContextConverterSuite
 
   test("extract strand bias info going htsjdk->adam") {
     val gt = buildGt(Map(("SB" -> Array(10, 12, 14, 16)
-      .map(i => i: java.lang.Integer))),
+      .map(i => i: Integer))),
       converter.formatStrandBiasComponents,
       fns = Iterable.empty)
 
@@ -802,7 +802,7 @@ class VariantContextConverterSuite
   }
 
   test("extract mq0 going htsjdk->adam") {
-    val vca = buildVca(Map(("MQ0" -> (100: java.lang.Integer).asInstanceOf[java.lang.Object])),
+    val vca = buildVca(Map(("MQ0" -> (100: Integer).asInstanceOf[java.lang.Object])),
       converter.formatMapQ0,
       fns = Iterable.empty)
 
@@ -879,7 +879,7 @@ class VariantContextConverterSuite
 
     assert(g.hasExtendedAttribute("MIN_DP"))
     val attr = g.getExtendedAttribute("MIN_DP")
-      .asInstanceOf[java.lang.Integer]
+      .asInstanceOf[Integer]
     assert(attr === 1234)
   }
 
@@ -934,7 +934,7 @@ class VariantContextConverterSuite
     intercept[IllegalArgumentException] {
       val g = converter.extractStrandBiasComponents(Genotype.newBuilder
         .setStrandBiasComponents(Seq(0, 10)
-          .map(i => i: java.lang.Integer))
+          .map(i => i: Integer))
         .build, newGb)
     }
   }
@@ -942,7 +942,7 @@ class VariantContextConverterSuite
   test("extract strand bias going adam->htsjdk") {
     val g = converter.extractStrandBiasComponents(Genotype.newBuilder
       .setStrandBiasComponents(Seq(0, 10, 5, 3)
-        .map(i => i: java.lang.Integer))
+        .map(i => i: Integer))
       .build, newGb)
       .make
 
@@ -991,7 +991,7 @@ class VariantContextConverterSuite
 
     assert(g.isPhased)
     assert(g.hasExtendedAttribute("PS"))
-    assert(g.getExtendedAttribute("PS").asInstanceOf[java.lang.Integer] === 54321)
+    assert(g.getExtendedAttribute("PS").asInstanceOf[Integer] === 54321)
     assert(!g.hasExtendedAttribute("PQ"))
   }
 
@@ -1005,7 +1005,7 @@ class VariantContextConverterSuite
     assert(g.isPhased)
     assert(!g.hasExtendedAttribute("PS"))
     assert(g.hasExtendedAttribute("PQ"))
-    assert(g.getExtendedAttribute("PQ").asInstanceOf[java.lang.Integer] === 65)
+    assert(g.getExtendedAttribute("PQ").asInstanceOf[Integer] === 65)
   }
 
   test("phased going adam->htsjdk") {
@@ -1018,9 +1018,9 @@ class VariantContextConverterSuite
 
     assert(g.isPhased)
     assert(g.hasExtendedAttribute("PS"))
-    assert(g.getExtendedAttribute("PS").asInstanceOf[java.lang.Integer] === 4444)
+    assert(g.getExtendedAttribute("PS").asInstanceOf[Integer] === 4444)
     assert(g.hasExtendedAttribute("PS"))
-    assert(g.getExtendedAttribute("PQ").asInstanceOf[java.lang.Integer] === 10)
+    assert(g.getExtendedAttribute("PQ").asInstanceOf[Integer] === 10)
   }
 
   def emptyVca = VariantCallingAnnotations.newBuilder.build
@@ -1139,7 +1139,7 @@ class VariantContextConverterSuite
       .make
 
     assert(g.hasExtendedAttribute("MQ0"))
-    assert(g.getExtendedAttribute("MQ0").asInstanceOf[java.lang.Integer] === 5)
+    assert(g.getExtendedAttribute("MQ0").asInstanceOf[Integer] === 5)
   }
 
   def makeVariant(variantAttributes: Map[String, java.lang.Object],
@@ -1438,16 +1438,16 @@ class VariantContextConverterSuite
   }
 
   test("single allele count going htsjdk->adam") {
-    val acList: java.util.List[java.lang.Integer] = List(
-      10).map(i => i: java.lang.Integer)
+    val acList: java.util.List[Integer] = List(
+      10).map(i => i: Integer)
     val va = buildVariantAnnotation(Map(("AC", acList)),
       converter.formatAlleleCount)
     assert(va.getAlleleCount === 10)
   }
 
   test("multiple allele counts going htsjdk->adam") {
-    val acList: java.util.List[java.lang.Integer] = List(
-      10, 13, 16).map(i => i: java.lang.Integer)
+    val acList: java.util.List[Integer] = List(
+      10, 13, 16).map(i => i: Integer)
     val va = buildVariantAnnotation(Map(("AC", acList)),
       converter.formatAlleleCount,
       idx = 2)
@@ -1506,8 +1506,8 @@ class VariantContextConverterSuite
   }
 
   test("single read depth going htsjdk->adam") {
-    val acList: java.util.List[java.lang.Integer] = List(
-      5, 10).map(i => i: java.lang.Integer)
+    val acList: java.util.List[Integer] = List(
+      5, 10).map(i => i: Integer)
     val va = buildVariantAnnotation(Map(("AD", acList)),
       converter.formatReadDepth)
     assert(va.getReferenceReadDepth === 5)
@@ -1515,8 +1515,8 @@ class VariantContextConverterSuite
   }
 
   test("multiple read depths going htsjdk->adam") {
-    val acList: java.util.List[java.lang.Integer] = List(
-      5, 10, 13, 16).map(i => i: java.lang.Integer)
+    val acList: java.util.List[Integer] = List(
+      5, 10, 13, 16).map(i => i: Integer)
     val va = buildVariantAnnotation(Map(("AD", acList)),
       converter.formatReadDepth,
       idx = 2)
@@ -1532,8 +1532,8 @@ class VariantContextConverterSuite
   }
 
   test("single forward read depth going htsjdk->adam") {
-    val acList: java.util.List[java.lang.Integer] = List(
-      5, 10).map(i => i: java.lang.Integer)
+    val acList: java.util.List[Integer] = List(
+      5, 10).map(i => i: Integer)
     val va = buildVariantAnnotation(Map(("ADF", acList)),
       converter.formatForwardReadDepth)
     assert(va.getReferenceForwardReadDepth === 5)
@@ -1541,8 +1541,8 @@ class VariantContextConverterSuite
   }
 
   test("multiple forward read depths going htsjdk->adam") {
-    val acList: java.util.List[java.lang.Integer] = List(
-      5, 10, 13, 16).map(i => i: java.lang.Integer)
+    val acList: java.util.List[Integer] = List(
+      5, 10, 13, 16).map(i => i: Integer)
     val va = buildVariantAnnotation(Map(("ADF", acList)),
       converter.formatForwardReadDepth,
       idx = 2)
@@ -1558,8 +1558,8 @@ class VariantContextConverterSuite
   }
 
   test("single reverse read depth going htsjdk->adam") {
-    val acList: java.util.List[java.lang.Integer] = List(
-      5, 10).map(i => i: java.lang.Integer)
+    val acList: java.util.List[Integer] = List(
+      5, 10).map(i => i: Integer)
     val va = buildVariantAnnotation(Map(("ADR", acList)),
       converter.formatReverseReadDepth)
     assert(va.getReferenceReverseReadDepth === 5)
@@ -1567,8 +1567,8 @@ class VariantContextConverterSuite
   }
 
   test("multiple reverse read depths going htsjdk->adam") {
-    val acList: java.util.List[java.lang.Integer] = List(
-      5, 10, 13, 16).map(i => i: java.lang.Integer)
+    val acList: java.util.List[Integer] = List(
+      5, 10, 13, 16).map(i => i: Integer)
     val va = buildVariantAnnotation(Map(("ADR", acList)),
       converter.formatReverseReadDepth,
       idx = 2)
@@ -2252,7 +2252,7 @@ class VariantContextConverterSuite
     assert(vc.hasGenotypes)
     val gt = vc.getGenotype("sample")
     assert(gt.hasExtendedAttribute("FOUR_INTS"))
-    val fourInts = gt.getExtendedAttribute("FOUR_INTS").asInstanceOf[Array[java.lang.Integer]]
+    val fourInts = gt.getExtendedAttribute("FOUR_INTS").asInstanceOf[Array[Integer]]
     assert(fourInts.size === 4)
     assert(fourInts(0) === 5)
     assert(fourInts(1) === 10)
@@ -2282,7 +2282,7 @@ class VariantContextConverterSuite
     assert(vc.hasGenotypes)
     val gt = vc.getGenotype("sample")
     assert(gt.hasExtendedAttribute("A_INT"))
-    val aInt = gt.getExtendedAttribute("A_INT").asInstanceOf[Array[java.lang.Integer]]
+    val aInt = gt.getExtendedAttribute("A_INT").asInstanceOf[Array[Integer]]
     assert(aInt.size === 1)
     assert(aInt(0) === 42)
   }
@@ -2309,7 +2309,7 @@ class VariantContextConverterSuite
     assert(vc.hasGenotypes)
     val gt = vc.getGenotype("sample")
     assert(gt.hasExtendedAttribute("R_INT"))
-    val rInt = gt.getExtendedAttribute("R_INT").asInstanceOf[Array[java.lang.Integer]]
+    val rInt = gt.getExtendedAttribute("R_INT").asInstanceOf[Array[Integer]]
     assert(rInt.size === 2)
     assert(rInt(0) === 5)
     assert(rInt(1) === 10)

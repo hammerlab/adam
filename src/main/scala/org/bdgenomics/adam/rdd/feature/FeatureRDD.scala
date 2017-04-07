@@ -60,16 +60,16 @@ private[adam] class FeatureArraySerializer extends IntervalArraySerializer[Refer
 }
 
 private trait FeatureOrdering[T <: Feature] extends Ordering[T] {
-  def allowNull(s: java.lang.String): java.lang.Integer = {
+  def allowNull(s: java.lang.String): Integer = {
     if (s == null) {
       return null
     }
-    java.lang.Integer.parseInt(s)
+    Integer.parseInt(s)
   }
 
   def compare(x: Feature, y: Feature) = {
     val doubleNullsLast: Comparator[java.lang.Double] = com.google.common.collect.Ordering.natural().nullsLast()
-    val intNullsLast: Comparator[java.lang.Integer] = com.google.common.collect.Ordering.natural().nullsLast()
+    val intNullsLast: Comparator[Integer] = com.google.common.collect.Ordering.natural().nullsLast()
     val strandNullsLast: Comparator[Strand] = com.google.common.collect.Ordering.natural().nullsLast()
     val stringNullsLast: Comparator[java.lang.String] = com.google.common.collect.Ordering.natural().nullsLast()
     // use ComparisonChain to safely handle nulls, as Feature is a java object
@@ -241,7 +241,9 @@ object FeatureRDD {
  * @param sequences The reference genome this data is aligned to.
  */
 case class FeatureRDD(rdd: RDD[Feature],
-                      sequences: SequenceDictionary) extends AvroGenomicRDD[Feature, FeatureRDD] with Logging {
+                      sequences: SequenceDictionary)
+  extends AvroGenomicRDD[Feature, FeatureRDD]
+    with Logging {
 
   protected def buildTree(rdd: RDD[(ReferenceRegion, Feature)])(
     implicit tTag: ClassTag[Feature]): IntervalArray[ReferenceRegion, Feature] = {

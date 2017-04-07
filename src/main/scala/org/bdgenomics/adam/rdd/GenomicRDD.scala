@@ -956,8 +956,8 @@ abstract class AvroGenomicRDD[T <% IndexedRecord: Manifest, U <: AvroGenomicRDD[
    * @param disableDictionaryEncoding Whether or not to disable bit-packing.
    */
   def saveAsParquet(path: Path,
-                    blockSize: java.lang.Integer,
-                    pageSize: java.lang.Integer,
+                    blockSize: Integer,
+                    pageSize: Integer,
                     compressCodec: CompressionCodecName,
                     disableDictionaryEncoding: java.lang.Boolean) {
     saveAsParquet(

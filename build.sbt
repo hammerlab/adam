@@ -8,9 +8,7 @@ addSparkDeps
 publishTestJar
 enableScalariform
 
-hadoopVersion := "2.7.3"
-
-testDeps += "org.mockito" % "mockito-core" % "1.10.19"
+testDeps += "org.mockito" % "mockito-core" % "2.6.4"
 
 testJarTestDeps += (libs.value('bdg_utils_misc) exclude("org.apache.spark", "*"))
 
@@ -27,10 +25,10 @@ deps ++= Seq(
   libs.value('loci),
   libs.value('log4j),
   libs.value('parquet_avro),
+  libs.value('paths),
   libs.value('spark_util),
-  "com.netflix.servo" % "servo-core" % "0.10.0",
   "it.unimi.dsi" % "fastutil" % "6.6.5",
-  "org.apache.avro" % "avro" % "1.8.0",
+  "org.apache.avro" % "avro" % "1.8.1",
   "org.apache.httpcomponents" % "httpclient" % "4.5.2",
   "org.apache.parquet" % "parquet-scala_2.10" % "1.8.1" exclude("org.scala-lang", "scala-library")
 )

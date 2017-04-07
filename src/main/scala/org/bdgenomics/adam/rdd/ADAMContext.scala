@@ -385,7 +385,7 @@ class ADAMContext(val sc: SparkContext)(implicit factory: Factory)
     }
 
     val records = sc.newAPIHadoopFile(
-      path.toString,
+      path.uri.toString,
       classOf[ParquetInputFormat[T]],
       classOf[Void],
       manifest[T].runtimeClass.asInstanceOf[Class[T]],
@@ -536,7 +536,7 @@ class ADAMContext(val sc: SparkContext)(implicit factory: Factory)
         } catch {
           case e: Throwable ⇒
             log.error(
-              s"Loading header failed for $fp:n${e.getMessage}\n\t${e.getStackTrace.take(25).map(_.toString).mkString("\n\t")}"
+              s"Loading header failed for $fp:n${e.getMessage}\n\t${e.getStackTrace.take(25).mkString("\n\t")}"
             )
             false
         }
@@ -564,11 +564,11 @@ class ADAMContext(val sc: SparkContext)(implicit factory: Factory)
     val filteredFiles =
       bamFiles.filter {
         p ⇒
-          val pPath = p.getName()
-          pPath.endsWith(".bam") ||
-            pPath.endsWith(".cram") ||
-            pPath.endsWith(".sam") ||
-            pPath.startsWith("part-")
+          val extension = p.extension
+          extension == "bam" ||
+            extension == "cram" ||
+            extension == "sam" ||
+            p.basename.startsWith("part-")
       }
 
     require(filteredFiles.nonEmpty, s"Did not find any files at $path.")
@@ -582,14 +582,14 @@ class ADAMContext(val sc: SparkContext)(implicit factory: Factory)
             // below).
             sc.hadoopConfiguration.set(VALIDATION_STRINGENCY_PROPERTY, validationStringency.toString)
             val samHeader = readSAMHeaderFrom(fp, sc.hadoopConfiguration)
-            log.info("Loaded header from " + fp)
+            log.info(s"Loaded header from $fp")
             val sd = loadBamDictionary(samHeader)
             val rg = loadBamReadGroups(samHeader)
             Some((sd, rg))
           } catch {
             case e: Throwable =>
               log.error(
-                s"Loading failed for $fp:n${e.getMessage}\n\t${e.getStackTrace.take(25).map(_.toString).mkString("\n\t")}"
+                s"Loading failed for $fp:\n${e.getMessage}\n\t${e.getStackTrace.take(25).mkString("\n\t")}"
               )
               None
           }
@@ -613,7 +613,7 @@ class ADAMContext(val sc: SparkContext)(implicit factory: Factory)
           filteredFiles.map(
             p ⇒
               sc.newAPIHadoopFile(
-                p.toString,
+                p.uri.toString,
                 classOf[AnySAMInputFormat],
                 classOf[LongWritable],
                 classOf[SAMRecordWritable],
@@ -623,7 +623,7 @@ class ADAMContext(val sc: SparkContext)(implicit factory: Factory)
         )
       else
         sc.newAPIHadoopFile(
-          path.toString,
+          path.uri.toString,
           classOf[AnySAMInputFormat],
           classOf[LongWritable],
           classOf[SAMRecordWritable],
@@ -636,7 +636,9 @@ class ADAMContext(val sc: SparkContext)(implicit factory: Factory)
     val samRecordConverter = new SAMRecordConverter
 
     AlignmentRecordRDD(
-      records.values.map(r => samRecordConverter.convert(r.get)),
+      records
+        .values
+        .map(r => samRecordConverter.convert(r.get)),
       seqDict,
       readGroups
     )
@@ -683,10 +685,19 @@ class ADAMContext(val sc: SparkContext)(implicit factory: Factory)
     val conf = getConfiguration(job)
     BAMInputFormat.setIntervals(conf, loci.toHtsJDKIntervals)
 
-    val records = sc.union(bamFiles.map(p => {
-      sc.newAPIHadoopFile(p.toString, classOf[BAMInputFormat], classOf[LongWritable],
-        classOf[SAMRecordWritable], conf)
-    }))
+    val records =
+      sc.union(
+        bamFiles.map(
+          p ⇒
+            sc.newAPIHadoopFile(
+              p.uri.toString,
+              classOf[BAMInputFormat],
+              classOf[LongWritable],
+              classOf[SAMRecordWritable],
+              conf
+            )
+        )
+      )
 
     if (Metrics.isRecording)
       records.instrument()
@@ -695,7 +706,8 @@ class ADAMContext(val sc: SparkContext)(implicit factory: Factory)
     val samRecordConverter = new SAMRecordConverter
     AlignmentRecordRDD(
       records
-        .map(p => samRecordConverter.convert(p._2.get))
+        .values
+        .map(r ⇒ samRecordConverter.convert(r.get))
         .filter(r =>
           ReferenceRegion
             .opt(r)
@@ -854,7 +866,7 @@ class ADAMContext(val sc: SparkContext)(implicit factory: Factory)
 
     val job = HadoopUtil.newJob(sc)
     val records = sc.newAPIHadoopFile(
-      path.toString,
+      path.uri.toString,
       classOf[InterleavedFastqInputFormat],
       classOf[Void],
       classOf[Text],
@@ -970,7 +982,7 @@ class ADAMContext(val sc: SparkContext)(implicit factory: Factory)
 
     val job = HadoopUtil.newJob(sc)
     val records = sc.newAPIHadoopFile(
-      path.toString,
+      path.uri.toString,
       classOf[SingleFastqInputFormat],
       classOf[Void],
       classOf[Text],
@@ -1024,7 +1036,7 @@ class ADAMContext(val sc: SparkContext)(implicit factory: Factory)
     }
 
     sc.newAPIHadoopFile(
-      path.toString,
+      path.uri.toString,
       classOf[VCFInputFormat],
       classOf[LongWritable],
       classOf[VariantContextWritable],
@@ -1163,7 +1175,7 @@ class ADAMContext(val sc: SparkContext)(implicit factory: Factory)
     fragmentLength: Long): NucleotideContigFragmentRDD = {
     val fastaData: RDD[(LongWritable, Text)] =
       sc.newAPIHadoopFile(
-        path.toString,
+        path.uri.toString,
         classOf[TextInputFormat],
         classOf[LongWritable],
         classOf[Text]
@@ -1196,7 +1208,7 @@ class ADAMContext(val sc: SparkContext)(implicit factory: Factory)
     val job = HadoopUtil.newJob(sc)
     val records =
       sc.newAPIHadoopFile(
-        path.toString,
+        path.uri.toString,
         classOf[InterleavedFastqInputFormat],
         classOf[Void],
         classOf[Text],
@@ -1301,7 +1313,7 @@ class ADAMContext(val sc: SparkContext)(implicit factory: Factory)
   }
 
   def textFile(path: Path, minPartitionsOpt: Option[Int]): RDD[String] =
-    sc.textFile(path.toString(), minPartitionsOpt.getOrElse(sc.defaultParallelism))
+    sc.textFile(path.uri.toString(), minPartitionsOpt.getOrElse(sc.defaultParallelism))
 
   /**
    * Loads features stored in BED6/12 format.

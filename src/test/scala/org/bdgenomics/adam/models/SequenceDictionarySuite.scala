@@ -58,12 +58,12 @@ class SequenceDictionarySuite
       val refseq = chr1.getAttribute("REFSEQ")
       refseq should ===("NC_000001.10")
 
-      assert(asd.containsRefName("1"))
-      assert(!asd.containsRefName("2"))
+      assert(asd.contains("1"))
+      assert(!asd.contains("2"))
     }
 
     test("merge into existing dictionary") {
-      assert(asd.containsRefName("1"))
+      assert(asd.contains("1"))
       val chr1 = asd("1").get
 
       val myDict = SequenceDictionary(record(chr1.name, chr1.length, md5 = chr1.md5))
@@ -147,8 +147,8 @@ class SequenceDictionarySuite
     val str0: String = "chr0"
     val str1: java.lang.String = "chr1"
 
-    assert(dict.containsRefName(str0))
-    assert(dict.containsRefName(str1))
+    assert(dict.contains(str0))
+    assert(dict.contains(str1))
   }
 
   test("Apply on name works correctly for different String types") {
@@ -216,8 +216,8 @@ class SequenceDictionarySuite
     seq.get(1).getSequenceName should === ("2")
     seq.get(2).getSequenceName should === ("3")
     seq.get(3).getSequenceName should === ("4")
-    seq.get(4).getSequenceName should === ("MT")
-    seq.get(5).getSequenceName should === ("X")
+    seq.get(4).getSequenceName should === ("X")
+    seq.get(5).getSequenceName should === ("MT")
   }
 
   test("load sequence dictionary from VCF file") {

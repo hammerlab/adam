@@ -290,20 +290,20 @@ class AlignmentRecordRDDSuite
   test("convert malformed FASTQ (no quality scores) => SAM => well-formed FASTQ => SAM") {
     val noqualPath = testFile("fastq_noqual.fq")
 
-    //read FASTQ (malformed)
+    // read FASTQ (malformed)
     val rddA = sc.loadFastq(noqualPath, None, None, LENIENT)
 
     val noqualAPath = tmpLocation(".sam")
 
-    //write SAM (fixed and now well-formed)
+    // write SAM (fixed and now well-formed)
     rddA.saveAsSam(noqualAPath)
 
-    //read SAM
+    // read SAM
     val rddB = sc.loadAlignments(noqualAPath)
 
     val noqualBPath = tmpLocation(".fastq")
 
-    //write FASTQ (well-formed)
+    // write FASTQ (well-formed)
     rddB.saveAsFastq(noqualBPath)
 
     //read FASTQ (well-formed)

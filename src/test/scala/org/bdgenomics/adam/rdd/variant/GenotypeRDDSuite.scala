@@ -210,7 +210,7 @@ class GenotypeRDDSuite extends ADAMFunSuite {
     val genotypes = sc.loadGenotypes(genotypesPath)
     val variantContexts = genotypes.toVariantContextRDD
 
-    assert(variantContexts.sequences.containsRefName("1"))
+    assert(variantContexts.sequences.contains("1"))
     assert(variantContexts.samples.nonEmpty)
 
     val vcs = variantContexts.rdd.collect

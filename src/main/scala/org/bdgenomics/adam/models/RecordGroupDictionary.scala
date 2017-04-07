@@ -159,7 +159,7 @@ object RecordGroup {
       Option(samRGR.getLibrary),
       Option(
         // must explicitly reference as a java.lang.integer to avoid implicit conversion
-        samRGR.getPredictedMedianInsertSize: java.lang.Integer
+        samRGR.getPredictedMedianInsertSize: Integer
       ).map(_.toInt),
       Option(samRGR.getPlatform),
       Option(samRGR.getPlatformUnit)
@@ -194,7 +194,7 @@ object RecordGroup {
       Option(rgm.getLibrary),
       Option(
         // must explicitly reference as a java.lang.integer to avoid implicit conversion
-        rgm.getPredictedMedianInsertSize: java.lang.Integer
+        rgm.getPredictedMedianInsertSize: Integer
       ).map(_.toInt),
       Option(rgm.getPlatform),
       Option(rgm.getPlatformUnit)
@@ -302,7 +302,7 @@ case class RecordGroup(
     library.foreach(rgr.setLibrary)
     predictedMedianInsertSize.foreach(is => {
       // force implicit conversion
-      val insertSize: java.lang.Integer = is
+      val insertSize: Integer = is
       rgr.setPredictedMedianInsertSize(insertSize)
     })
     platform.foreach(rgr.setPlatform)
