@@ -8,8 +8,6 @@ addSparkDeps
 publishTestJar
 enableScalariform
 
-hadoopVersion := "2.7.3"
-
 testDeps += "org.mockito" % "mockito-core" % "2.6.4"
 
 testJarTestDeps += (libs.value('bdg_utils_misc) exclude("org.apache.spark", "*"))
