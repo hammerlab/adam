@@ -190,31 +190,37 @@ class ADAMContextSuite
   test("can read a gzipped .vcf file") {
     val path = testFile("test.vcf.gz")
     val vcs = sc.loadVcf(path)
-    vcs.rdd.count should === (6)
+    assert(vcs.rdd.count === 7)
+  }
+
+  test("can read a vcf file with an empty alt") {
+    val path = testFile("test.vcf")
+    val vcs = sc.loadVariants(path)
+    assert(vcs.rdd.count === 7)
   }
 
   test("can read a BGZF gzipped .vcf file with .gz file extension") {
     val path = testFile("test.vcf.bgzf.gz")
     val vcs = sc.loadVcf(path)
-    vcs.rdd.count should === (6)
+    assert(vcs.rdd.count === 7)
   }
 
   test("can read a BGZF gzipped .vcf file with .bgz file extension") {
     val path = testFile("test.vcf.bgz")
     val vcs = sc.loadVcf(path)
-    vcs.rdd.count should === (6)
+    assert(vcs.rdd.count === 7)
   }
 
   ignore("can read an uncompressed BCFv2.2 file") { // see https://github.com/samtools/htsjdk/issues/507
     val path = testFile("test.uncompressed.bcf")
     val vcs = sc.loadVcf(path)
-    vcs.rdd.count should === (6)
+    assert(vcs.rdd.count === 7)
   }
 
   ignore("can read a BGZF compressed BCFv2.2 file") { // see https://github.com/samtools/htsjdk/issues/507
     val path = testFile("test.compressed.bcf")
     val vcs = sc.loadVcf(path)
-    vcs.rdd.count should === (6)
+    assert(vcs.rdd.count === 7)
   }
 
   test("loadIndexedVcf with 1 ReferenceRegion") {
@@ -401,7 +407,7 @@ class ADAMContextSuite
     val path = testFile("bqsr1.vcf").parent / "*.vcf"
 
     val variants = sc.loadVcf(path).toVariantRDD
-    assert(variants.rdd.count === 715)
+    assert(variants.rdd.count === 722)
   }
 
   test("load vcf from a directory") {
