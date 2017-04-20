@@ -128,6 +128,7 @@ case class VariantContextRDD(rdd: RDD[VariantContext],
   def saveAsVcf(path: Path,
                 asSingleFile: Boolean = false,
                 stringency: ValidationStringency = LENIENT)(implicit factory: Factory) {
+
     val vcfFormat = inferFromFilePath(path.toString)
     assert(vcfFormat == VCF, "BCF not yet supported")  // TODO: Add BCF support
 
@@ -152,9 +153,12 @@ case class VariantContextRDD(rdd: RDD[VariantContext],
       }
 
     // make header
-    val header = new VCFHeader(
-      headerLines.toSet,
-      samples.map(_.getSampleId))
+    val header =
+      new VCFHeader(
+        headerLines.toSet,
+        samples.map(_.getSampleId)
+      )
+
     header.setSequenceDictionary(sequences.toSAMSequenceDictionary)
 
     // write header
@@ -162,7 +166,6 @@ case class VariantContextRDD(rdd: RDD[VariantContext],
 
     // configure things for saving to disk
     val conf = rdd.context.hadoopConfiguration
-//    val fs = headPath.getFileSystem(conf)
 
     // write vcf header
     VCFHeaderUtils.write(

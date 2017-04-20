@@ -707,11 +707,11 @@ class AlignmentRecordRDDSuite
 
     val pipedRdd: AlignmentRecordRDD =
       ardd.pipe(
-        s"/bin/bash $scriptPath",
+        s"/bin/bash ${scriptPath.path}",
         environment =
           Map(
-            "INPUT_PATH" → smallSam.toString,
-            "OUTPUT_PATH" → writePath.toString
+            "INPUT_PATH" → smallSam.path.toString,
+            "OUTPUT_PATH" → writePath.path.toString
           )
       )
 

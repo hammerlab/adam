@@ -41,7 +41,7 @@ class FragmentRDDSuite extends ADAMFunSuite {
     val pipedRdd: AlignmentRecordRDD =
       ardd.pipe(
         "python $0",
-        files = Seq(scriptPath.toString)
+        files = Seq(scriptPath.path.toString)
       )
 
     val newRecords = pipedRdd.rdd.count

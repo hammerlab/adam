@@ -17,17 +17,11 @@
  */
 package org.bdgenomics.adam.rdd.read
 
-import htsjdk.samtools.SAMFileHeader
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.mapreduce.{ OutputFormat, RecordWriter, TaskAttemptContext }
 import org.apache.spark.rdd.InstrumentedOutputFormat
 import org.bdgenomics.adam.instrumentation.Timers
-import org.seqdoop.hadoop_bam.{
-  KeyIgnoringAnySAMOutputFormat,
-  KeyIgnoringSAMRecordWriter,
-  SAMFormat,
-  SAMRecordWritable
-}
+import org.seqdoop.hadoop_bam.{ KeyIgnoringAnySAMOutputFormat, KeyIgnoringSAMRecordWriter, SAMFormat, SAMRecordWritable }
 
 class ADAMSAMOutputFormat[K]
     extends KeyIgnoringAnySAMOutputFormat[K](SAMFormat.valueOf("SAM")) with Serializable {
@@ -44,10 +38,12 @@ class ADAMSAMOutputFormat[K]
     readSAMHeaderFrom(path, conf)
 
     // now that we have the header set, we need to make a record reader
-    return new KeyIgnoringSAMRecordWriter(getDefaultWorkFile(context, ""),
+    new KeyIgnoringSAMRecordWriter(
+      getDefaultWorkFile(context, ""),
       header,
       true,
-      context)
+      context
+    )
   }
 }
 
@@ -71,10 +67,12 @@ class ADAMSAMOutputFormatHeaderLess[K]
     readSAMHeaderFrom(path, conf)
 
     // now that we have the header set, we need to make a record reader
-    return new KeyIgnoringSAMRecordWriter(getDefaultWorkFile(context, ""),
+    new KeyIgnoringSAMRecordWriter(
+      getDefaultWorkFile(context, ""),
       header,
       false,
-      context)
+      context
+    )
   }
 }
 

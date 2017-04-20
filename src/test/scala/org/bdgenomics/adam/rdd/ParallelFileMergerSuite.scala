@@ -54,18 +54,23 @@ class ParallelFileMergerSuite
   }
 
   test("get the size of several files") {
-    val files = Seq(testFile("unmapped.sam"),
-      testFile("small.sam"))
+    val files =
+      Seq(
+        testFile("unmapped.sam"),
+        testFile("small.sam")
+      )
       .map(new Path(_))
+
     val fileSizes = Seq(29408, 3093)
 
     val fs = FileSystem.get(sc.hadoopConfiguration)
     val (size, sizes) = getFullSize(fs, files)
 
     assert(size === fileSizes.sum.toLong)
+
     sizes.map(_._2)
       .zip(fileSizes)
-      .foreach(p => assert(p._1 === p._2))
+      .foreach(p ⇒ assert(p._1 === p._2))
   }
 
   test("block size must be positive and non-zero when trying to merge files") {
@@ -81,13 +86,18 @@ class ParallelFileMergerSuite
   }
 
   test("if two files are both below the block size, they should merge into one shard") {
-    val files = Seq(testFile("unmapped.sam"),
-      testFile("small.sam"))
+    val files =
+      Seq(
+        testFile("unmapped.sam"),
+        testFile("small.sam")
+      )
       .map(new Path(_))
 
     val fs = FileSystem.get(sc.hadoopConfiguration)
-    val fileSizesMap = files.map(f => (f, fs.getFileStatus(f).getLen().toInt))
-      .toMap
+    val fileSizesMap =
+      files
+        .map(f ⇒ (f, fs.getFileStatus(f).getLen().toInt))
+        .toMap
 
     val (_, filesWithSizes) = getFullSize(fs, files)
     val merges = generateMerges(Int.MaxValue, filesWithSizes)
@@ -95,7 +105,7 @@ class ParallelFileMergerSuite
     val (index, paths) = merges.head
     assert(index === 0)
     assert(paths.size === 2)
-    paths.foreach(t => {
+    paths.foreach { t ⇒
       val (file, start, end) = t
       val path = new Path(file)
       assert(start === 0)
@@ -103,21 +113,24 @@ class ParallelFileMergerSuite
 
       val fileSize = fileSizesMap(path)
       assert(end === fileSize - 1)
-    })
+    }
   }
 
   test("merge two files where one is greater than the block size") {
 
     // unmapped.sam -> slightly under 29k
     // small.sam -> 3k
-    val files = Seq(testFile("unmapped.sam"),
-      testFile("small.sam"))
-      .map(new Path(_))
+    val files =
+    Seq(
+      testFile("unmapped.sam"),
+      testFile("small.sam")
+    )
+    .map(new Path(_))
 
     val fs = FileSystem.get(sc.hadoopConfiguration)
     val fileSizesMap =
       files
-        .map(f => (f, fs.getFileStatus(f).getLen().toInt))
+        .map(f ⇒ (f, fs.getFileStatus(f).getLen().toInt))
         .toMap
 
     val (_, filesWithSizes) = getFullSize(fs, files)

@@ -38,7 +38,7 @@ class ADAMVCFOutputFormat[K]
     val path = new Path(conf.get(HEADER_PATH_KEY))
 
     // read the header file
-    readHeaderFrom(path, FileSystem.get(conf))
+    readHeaderFrom(path, path.getFileSystem(conf))
 
     // return record writer
     new KeyIgnoringVCFRecordWriter[K](
@@ -70,7 +70,7 @@ class ADAMHeaderlessVCFOutputFormat[K]
     val path = new Path(conf.get(HEADER_PATH_KEY))
 
     // read the header file
-    readHeaderFrom(path, FileSystem.get(conf))
+    readHeaderFrom(path, path.getFileSystem(conf))
 
     // return record writer
     new KeyIgnoringVCFRecordWriter[K](
