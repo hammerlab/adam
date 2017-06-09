@@ -217,7 +217,7 @@ class AlignmentRecordRDDSuite
   test("round trip with single CRAM file produces equivalent Read values") {
     val readsPath = testFile("artificial.cram")
     val referencePath = resourceUrl("artificial.fa").toString
-    sc.hadoopConfiguration.set(REFERENCE_SOURCE_PATH_PROPERTY,
+    hadoopConf.set(REFERENCE_SOURCE_PATH_PROPERTY,
       referencePath)
 
     val ardd = sc.loadBam(readsPath)
@@ -250,7 +250,7 @@ class AlignmentRecordRDDSuite
   test("round trip with sharded CRAM file produces equivalent Read values") {
     val readsPath = testFile("artificial.cram")
     val referencePath = resourceUrl("artificial.fa").toString
-    sc.hadoopConfiguration.set(REFERENCE_SOURCE_PATH_PROPERTY,
+    hadoopConf.set(REFERENCE_SOURCE_PATH_PROPERTY,
       referencePath)
 
     val ardd = sc.loadBam(readsPath)

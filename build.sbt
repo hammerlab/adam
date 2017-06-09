@@ -2,7 +2,7 @@ organization := "org.hammerlab.adam"
 
 name := sparkName("core")
 
-version := "0.23.1-SNAPSHOT"
+version := "0.23.1"
 
 addSparkDeps
 publishTestJar
@@ -20,7 +20,7 @@ deps ++= Seq(
   libs.value('bdg_utils_metrics),
   libs.value('bdg_utils_misc),
   libs.value('commons_io),
-  libs.value('hadoop_bam),
+  "org.seqdoop" % "hadoop-bam" % "7.8.0" exclude("org.apache.hadoop", "hadoop-client"),
   libs.value('htsjdk),
   libs.value('loci),
   libs.value('log4j),

@@ -21,7 +21,7 @@ import org.apache.hadoop.fs.{ FileSystem, Path }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.ParallelFileMerger._
 import org.bdgenomics.adam.util.ADAMFunSuite
-import org.seqdoop.hadoop_bam.CRAMInputFormat
+import org.seqdoop.hadoop_bam.CRAMInputFormat.REFERENCE_SOURCE_PATH_PROPERTY
 
 class ParallelFileMergerSuite
   extends ADAMFunSuite {
@@ -63,7 +63,7 @@ class ParallelFileMergerSuite
 
     val fileSizes = Seq(29408, 3093)
 
-    val fs = FileSystem.get(sc.hadoopConfiguration)
+    val fs = FileSystem.get(hadoopConf)
     val (size, sizes) = getFullSize(fs, files)
 
     assert(size === fileSizes.sum.toLong)
@@ -93,7 +93,7 @@ class ParallelFileMergerSuite
       )
       .map(new Path(_))
 
-    val fs = FileSystem.get(sc.hadoopConfiguration)
+    val fs = FileSystem.get(hadoopConf)
     val fileSizesMap =
       files
         .map(f ⇒ (f, fs.getFileStatus(f).getLen().toInt))
@@ -127,7 +127,7 @@ class ParallelFileMergerSuite
     )
     .map(new Path(_))
 
-    val fs = FileSystem.get(sc.hadoopConfiguration)
+    val fs = FileSystem.get(hadoopConf)
     val fileSizesMap =
       files
         .map(f ⇒ (f, fs.getFileStatus(f).getLen().toInt))
@@ -173,7 +173,7 @@ class ParallelFileMergerSuite
     reads.transform(_.repartition(4))
       .saveAsSam(outPath, asSingleFile = true, deferMerging = true)
 
-    val fs = FileSystem.get(sc.hadoopConfiguration)
+    val fs = FileSystem.get(hadoopConf)
     val filesToMerge = (Seq(outPath + "_head") ++ (0 until 4).map(i => {
       (outPath + "_tail") / "part-r-0000%d".format(i)
     })).map(new Path(_))
@@ -182,7 +182,7 @@ class ParallelFileMergerSuite
     mergePaths(
       outPath,
       filesToMerge,
-      sc.broadcast(sc.hadoopConfiguration),
+      sc.broadcast(hadoopConf),
       false,
       false
     )
@@ -199,7 +199,7 @@ class ParallelFileMergerSuite
     reads.transform(_.repartition(4))
       .saveAsSam(outPath, asSingleFile = true, deferMerging = true)
 
-    val fs = FileSystem.get(sc.hadoopConfiguration)
+    val fs = FileSystem.get(hadoopConf)
     val filesToMerge = (Seq(outPath + "_head") ++ (0 until 4).map(i => {
       (outPath + "_tail") / "part-r-0000%d".format(i)
     })).map(new Path(_))
@@ -208,7 +208,7 @@ class ParallelFileMergerSuite
     mergePaths(
       outPath,
       filesToMerge,
-      sc.broadcast(sc.hadoopConfiguration),
+      sc.broadcast(hadoopConf),
       true,
       false
     )
@@ -220,15 +220,17 @@ class ParallelFileMergerSuite
 
   test("merge a sharded cram file") {
     val referencePath = resourceUrl("artificial.fa").toString
-    sc.hadoopConfiguration.set(CRAMInputFormat.REFERENCE_SOURCE_PATH_PROPERTY,
-      referencePath)
+    hadoopConf.set(
+      REFERENCE_SOURCE_PATH_PROPERTY,
+      referencePath
+    )
     val reads = sc.loadAlignments(testFile("artificial.cram"))
     val outPath = tmpFile("out.cram")
 
     reads.transform(_.repartition(4))
       .saveAsSam(outPath, isSorted = true, asSingleFile = true, deferMerging = true)
 
-    val fs = FileSystem.get(sc.hadoopConfiguration)
+    val fs = FileSystem.get(hadoopConf)
     val filesToMerge = (Seq(outPath + "_head") ++ (0 until 4).map(i => {
       (outPath + "_tail") / "part-r-0000%d".format(i)
     })).map(new Path(_))
@@ -237,7 +239,7 @@ class ParallelFileMergerSuite
     mergePaths(
       outPath,
       filesToMerge,
-      sc.broadcast(sc.hadoopConfiguration),
+      sc.broadcast(hadoopConf),
       false,
       true
     )
