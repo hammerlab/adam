@@ -29,7 +29,10 @@ import org.hammerlab.test.resources.{ File, Url }
 import org.scalactic.TypeCheckedTripleEquals
 
 abstract class ADAMFunSuite
-  extends KryoSparkSuite(classOf[ADAMKryoRegistrator], referenceTracking = true)
+  extends KryoSparkSuite(
+    classOf[ADAMKryoRegistrator],
+    referenceTracking = true
+  )
     with ContigNameCanEqualString
     with LocusCanEqualInt
     with ClearContigNames

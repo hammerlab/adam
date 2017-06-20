@@ -25,7 +25,7 @@ class FragmentRDDSuite extends ADAMFunSuite {
 
   test("don't lose any reads when piping interleaved fastq to sam") {
     // write suffixes at end of reads
-    sc.hadoopConfiguration.setBoolean(InterleavedFASTQInFormatter.WRITE_SUFFIXES, true)
+    hadoopConf.setBoolean(InterleavedFASTQInFormatter.WRITE_SUFFIXES, true)
 
     val fragmentsPath = testFile("interleaved_fastq_sample1.ifq")
     val ardd = sc.loadFragments(fragmentsPath)
@@ -41,7 +41,7 @@ class FragmentRDDSuite extends ADAMFunSuite {
     val pipedRdd: AlignmentRecordRDD =
       ardd.pipe(
         "python $0",
-        files = Seq(scriptPath.toString)
+        files = Seq(scriptPath.path.toString)
       )
 
     val newRecords = pipedRdd.rdd.count

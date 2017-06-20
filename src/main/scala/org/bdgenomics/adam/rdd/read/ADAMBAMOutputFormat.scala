@@ -47,10 +47,12 @@ class ADAMBAMOutputFormat[K]
     readSAMHeaderFrom(path, conf)
 
     // now that we have the header set, we need to make a record reader
-    return new KeyIgnoringBAMRecordWriter[K](getDefaultWorkFile(context, ""),
+    new KeyIgnoringBAMRecordWriter[K](
+      getDefaultWorkFile(context, ""),
       header,
       true,
-      context)
+      context
+    )
   }
 }
 
@@ -84,10 +86,12 @@ class ADAMBAMOutputFormatHeaderLess[K]
     readSAMHeaderFrom(path, conf)
 
     // now that we have the header set, we need to make a record reader
-    return new KeyIgnoringBAMRecordWriter[K](getDefaultWorkFile(context, ""),
+    new KeyIgnoringBAMRecordWriter[K](
+      getDefaultWorkFile(context, ""),
       header,
       false,
-      context)
+      context
+    )
   }
 }
 
