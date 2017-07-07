@@ -48,7 +48,7 @@ class SingleFastqInputFormatSuite extends ADAMFunSuite {
         testOutput.append("<<<fastq record end<<<\n")
       })
 
-      assert(testOutput.toString.trim == expectedOutputData)
+      assert(testOutput.toString == expectedOutputData)
     }
   }
 }

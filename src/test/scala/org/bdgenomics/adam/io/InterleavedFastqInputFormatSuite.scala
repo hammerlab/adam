@@ -47,7 +47,7 @@ class InterleavedFastqInputFormatSuite extends ADAMFunSuite {
         testOutput.append("<<<interleaved fastq record end<<<\n")
       })
 
-      assert(testOutput.toString().trim == expectedOutputData)
+      assert(testOutput.toString() == expectedOutputData)
     }
   }
 }
