@@ -11,6 +11,7 @@ enableScalariform
 testDeps += "org.mockito" % "mockito-core" % "2.6.4"
 
 testUtilsVersion := "1.2.4-SNAPSHOT"
+sparkTestsVersion := "2.1.0-SNAPSHOT"
 
 testJarTestDeps += (libs.value('bdg_utils_misc) exclude("org.apache.spark", "*"))
 
@@ -22,7 +23,7 @@ deps ++= Seq(
   libs.value('bdg_utils_metrics),
   libs.value('bdg_utils_misc),
   libs.value('commons_io),
-  "org.seqdoop" % "hadoop-bam" % "7.8.0" exclude("org.apache.hadoop", "hadoop-client"),
+  "org.hammerlab" % "hadoop-bam" % "7.8.1-SNAPSHOT" exclude("org.apache.hadoop", "hadoop-client"),
   libs.value('htsjdk),
   libs.value('loci).copy(revision = "2.0.0-SNAPSHOT"),
   libs.value('log4j),

@@ -29,7 +29,7 @@ import org.bdgenomics.adam.rdd.variant.{ VCFOutFormatter, VariantContextRDD }
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro._
 import org.hammerlab.genomics.reference.test.LociConversions.intToLocus
-import org.hammerlab.test.matchers.seqs.SeqMatcher.seqMatch
+import org.hammerlab.test.matchers.seqs.ArrMatcher.arrMatch
 import org.seqdoop.hadoop_bam.CRAMInputFormat.REFERENCE_SOURCE_PATH_PROPERTY
 import org.seqdoop.hadoop_bam.SAMFormat.{ BAM, CRAM, SAM }
 
@@ -754,9 +754,8 @@ class AlignmentRecordRDDSuite
       .map {
         case (ar, f) ⇒
           ar.getReadName → s"${f.getContigName}:${f.getStart}-${f.getEnd}"
-      }
-      .toSeq should seqMatch(
-      Array(
+      } should arrMatch(
+      Seq(
         "simread:1:14397233:false" → "1:14397230-26472788",
         "simread:1:20101800:true"  → "1:14397230-26472788",
         "simread:1:26472783:false" → "1:14397230-26472788",

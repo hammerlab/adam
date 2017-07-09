@@ -91,8 +91,10 @@ class ADAMContextSuite
   test("can read a small .CRAM file") {
     val path = testFile("artificial.cram")
     val referencePath = resourceUrl("artificial.fa").toString
-    hadoopConf.set(REFERENCE_SOURCE_PATH_PROPERTY,
-      referencePath)
+    hadoopConf.set(
+      REFERENCE_SOURCE_PATH_PROPERTY,
+      referencePath
+    )
     val reads: RDD[AlignmentRecord] = sc.loadAlignments(path).rdd
     reads.count() should === (10)
   }
