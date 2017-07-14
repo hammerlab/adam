@@ -31,7 +31,7 @@ import scala.collection.JavaConverters._
 /**
  * Helper class for converting SAMRecords into AlignmentRecords.
  */
-private[adam] class SAMRecordConverter extends Serializable with Logging {
+class SAMRecordConverter extends Serializable with Logging {
 
   /**
    * Returns true if a tag should not be kept in the attributes field.
