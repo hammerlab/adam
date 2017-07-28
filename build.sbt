@@ -10,12 +10,12 @@ enableScalariform
 
 testDeps += ("org.mockito" ^ "mockito-core") ^ "2.6.4"
 
-testUtilsVersion := "1.2.4-SNAPSHOT"
-sparkTestsVersion := "2.1.0-SNAPSHOT"
+testUtilsVersion := "1.3.0"
+sparkTestsVersion := "2.1.1"
 
 deps ++= Seq(
   bdg_formats,
-  bdg_utils_cli ^ "0.2.15",
+  bdg_utils_cli ^ "0.2.16-SNAPSHOT",
   bdg_utils_intervalrdd,
   bdg_utils_io,
   bdg_utils_metrics,
@@ -23,7 +23,7 @@ deps ++= Seq(
   commons_io,
   hadoop_bam ^ "7.8.1-SNAPSHOT",
   htsjdk,
-  loci ^ "2.0.0-SNAPSHOT",
+  loci ^ "2.0.1",
   log4j,
   parquet_avro,
   paths ^ "1.1.1-SNAPSHOT",
@@ -34,6 +34,6 @@ deps ++= Seq(
   ("org.apache.parquet" ^ "parquet-scala_2.10" ^ "1.8.1") - scala_lang
 )
 
-compileAndTestDeps += (reference % "1.3.1-SNAPSHOT" - htsjdk)
+compileAndTestDeps += (reference % "1.4.0-SNAPSHOT" - htsjdk)
 
-testTestDeps += (bdg_utils_misc - spark)
+testTestDeps += bdg_utils_misc

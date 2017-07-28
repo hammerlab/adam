@@ -17,17 +17,13 @@
  */
 package org.bdgenomics.adam.serialization
 
-import com.esotericsoftware.kryo.io.{
-  Input,
-  KryoDataInput,
-  KryoDataOutput,
-  Output
-}
+import com.esotericsoftware.kryo.io.{ Input, KryoDataInput, KryoDataOutput, Output }
 import com.esotericsoftware.kryo.{ Kryo, Serializer }
 import it.unimi.dsi.fastutil.io.{ FastByteArrayInputStream, FastByteArrayOutputStream }
 import org.apache.avro.io.{ BinaryDecoder, BinaryEncoder, DecoderFactory, EncoderFactory }
 import org.apache.avro.specific.{ SpecificDatumReader, SpecificDatumWriter, SpecificRecord }
 import org.apache.hadoop.io.Writable
+import org.apache.spark.internal.io.FileCommitProtocol.TaskCommitMessage
 import org.apache.spark.serializer.KryoRegistrator
 import org.hammerlab.genomics.loci.set.Registrar
 import org.hammerlab.genomics.reference
@@ -387,5 +383,8 @@ class ADAMKryoRegistrator extends KryoRegistrator {
 
     new Registrar().registerClasses(kryo)
     new reference.Registrar().registerClasses(kryo)
+
+    // https://issues.apache.org/jira/browse/SPARK-21569
+    kryo.register(classOf[TaskCommitMessage])
   }
 }
