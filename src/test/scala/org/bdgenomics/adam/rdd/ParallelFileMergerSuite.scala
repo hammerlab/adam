@@ -182,7 +182,7 @@ class ParallelFileMergerSuite
     mergePaths(
       outPath,
       filesToMerge,
-      sc.broadcast(hadoopConf),
+      sc.broadcast(ctx),
       false,
       false
     )

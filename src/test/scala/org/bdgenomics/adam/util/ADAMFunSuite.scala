@@ -22,6 +22,7 @@ import java.net.URL
 import htsjdk.samtools.util.Log
 import org.bdgenomics.adam.serialization.ADAMKryoRegistrator
 import org.hammerlab.genomics.reference.test.{ ClearContigNames, ContigNameCanEqualString, LocusCanEqualInt }
+import org.hammerlab.hadoop.Configuration
 import org.hammerlab.paths.Path
 import org.hammerlab.spark.test.suite.KryoSparkSuite
 import org.hammerlab.test.matchers.files.FileMatcher.fileMatch
@@ -30,7 +31,6 @@ import org.scalactic.TypeCheckedTripleEquals
 
 abstract class ADAMFunSuite
   extends KryoSparkSuite(
-    classOf[ADAMKryoRegistrator],
     referenceTracking = true
   )
     with ContigNameCanEqualString
@@ -38,8 +38,12 @@ abstract class ADAMFunSuite
     with ClearContigNames
     with TypeCheckedTripleEquals {
 
+  register(new ADAMKryoRegistrator)
+
   // added to resolve #1280
   Log.setGlobalLogLevel(Log.LogLevel.ERROR)
+
+  def hadoopConf: Configuration = ctx
 
   def resourceUrl(path: String): URL = Url(path)
 
