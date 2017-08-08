@@ -10,9 +10,6 @@ enableScalariform
 
 testDeps += ("org.mockito" ^ "mockito-core") ^ "2.6.4"
 
-testUtilsVersion := "1.3.0"
-sparkTestsVersion := "2.1.1"
-
 deps ++= Seq(
   bdg_formats,
   bdg_utils_cli ^ "0.3.0",
