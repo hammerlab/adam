@@ -38,8 +38,8 @@ class ReferencePositionSuite
 
     val refPos = ReferencePosition(read)
 
-    refPos.referenceName should === ("chr1")
-    refPos.pos should === (1L)
+    ==(refPos.referenceName, "chr1")
+    ==(refPos.pos, 1L)
   }
 
   test("create reference position from variant") {
@@ -52,8 +52,8 @@ class ReferencePositionSuite
 
     val refPos = ReferencePosition(variant)
 
-    refPos.referenceName should === ("chr10")
-    refPos.pos should === (10L)
+    ==(refPos.referenceName, "chr10")
+    ==(refPos.pos, 10L)
   }
 
   test("create reference position from genotype") {
@@ -73,7 +73,7 @@ class ReferencePositionSuite
 
     val refPos = ReferencePosition(genotype)
 
-    refPos.referenceName should === ("chr10")
-    refPos.pos should === (100L)
+    ==(refPos.referenceName, "chr10")
+    ==(refPos.pos, 100L)
   }
 }

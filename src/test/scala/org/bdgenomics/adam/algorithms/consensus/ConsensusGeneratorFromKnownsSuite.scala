@@ -53,11 +53,11 @@ class ConsensusGeneratorFromKnownsSuite extends ADAMFunSuite {
       .setContigName("2")
       .build
     val consensuses = c.findConsensus(Iterable(new RichAlignmentRecord(read)))
-    assert(consensuses.size === 1)
-    assert(consensuses.head.consensus === "")
-    assert(consensuses.head.index.referenceName === "2")
-    assert(consensuses.head.index.start === 19190L)
-    assert(consensuses.head.index.end === 19192L)
+    ==(consensuses.size, 1)
+    ==(consensuses.head.consensus, "")
+    ==(consensuses.head.index.referenceName, "2")
+    ==(consensuses.head.index.start, 19190L)
+    ==(consensuses.head.index.end, 19192L)
   }
 }
 

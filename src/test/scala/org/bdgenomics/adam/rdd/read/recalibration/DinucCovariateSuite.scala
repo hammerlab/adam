@@ -26,28 +26,28 @@ class DinucCovariateSuite extends FunSuite {
 
   test("computing dinucleotide pairs for a single base sequence should return (N,N)") {
     val dinucs = dc.fwdDinucs("A")
-    assert(dinucs.size === 1)
-    assert(dinucs(0) === ('N', 'N'))
+    ==(dinucs.size, 1)
+    ==(dinucs(0), ('N', 'N'))
   }
 
   test("compute dinucleotide pairs for a string of all valid bases") {
     val dinucs = dc.fwdDinucs("AGCGT")
-    assert(dinucs.size === 5)
-    assert(dinucs(0) === ('N', 'N'))
-    assert(dinucs(1) === ('A', 'G'))
-    assert(dinucs(2) === ('G', 'C'))
-    assert(dinucs(3) === ('C', 'G'))
-    assert(dinucs(4) === ('G', 'T'))
+    ==(dinucs.size, 5)
+    ==(dinucs(0), ('N', 'N'))
+    ==(dinucs(1), ('A', 'G'))
+    ==(dinucs(2), ('G', 'C'))
+    ==(dinucs(3), ('C', 'G'))
+    ==(dinucs(4), ('G', 'T'))
   }
 
   test("compute dinucleotide pairs for a string with an N") {
     val dinucs = dc.fwdDinucs("AGNGT")
-    assert(dinucs.size === 5)
-    assert(dinucs(0) === ('N', 'N'))
-    assert(dinucs(1) === ('A', 'G'))
-    assert(dinucs(2) === ('N', 'N'))
-    assert(dinucs(3) === ('N', 'N'))
-    assert(dinucs(4) === ('G', 'T'))
+    ==(dinucs.size, 5)
+    ==(dinucs(0), ('N', 'N'))
+    ==(dinucs(1), ('A', 'G'))
+    ==(dinucs(2), ('N', 'N'))
+    ==(dinucs(3), ('N', 'N'))
+    ==(dinucs(4), ('G', 'T'))
   }
 
   test("compute covariates for a read on the negative strand") {
@@ -61,15 +61,15 @@ class DinucCovariateSuite extends FunSuite {
       .setCigar("8M")
       .build
     val covariates = dc.compute(read)
-    assert(covariates.size === 8)
-    assert(covariates(0) === ('C', 'T'))
-    assert(covariates(1) === ('G', 'C'))
-    assert(covariates(2) === ('G', 'G'))
-    assert(covariates(3) === ('A', 'G'))
-    assert(covariates(4) === ('N', 'N'))
-    assert(covariates(5) === ('N', 'N'))
-    assert(covariates(6) === ('A', 'C'))
-    assert(covariates(7) === ('N', 'N'))
+    ==(covariates.size, 8)
+    ==(covariates(0), ('C', 'T'))
+    ==(covariates(1), ('G', 'C'))
+    ==(covariates(2), ('G', 'G'))
+    ==(covariates(3), ('A', 'G'))
+    ==(covariates(4), ('N', 'N'))
+    ==(covariates(5), ('N', 'N'))
+    ==(covariates(6), ('A', 'C'))
+    ==(covariates(7), ('N', 'N'))
   }
 
   test("compute covariates for a read on the positive strand") {
@@ -83,14 +83,14 @@ class DinucCovariateSuite extends FunSuite {
       .setCigar("8M")
       .build
     val covariates = dc.compute(read)
-    assert(covariates.size === 8)
-    assert(covariates(0) === ('N', 'N'))
-    assert(covariates(1) === ('A', 'C'))
-    assert(covariates(2) === ('N', 'N'))
-    assert(covariates(3) === ('N', 'N'))
-    assert(covariates(4) === ('A', 'G'))
-    assert(covariates(5) === ('G', 'G'))
-    assert(covariates(6) === ('G', 'C'))
-    assert(covariates(7) === ('C', 'T'))
+    ==(covariates.size, 8)
+    ==(covariates(0), ('N', 'N'))
+    ==(covariates(1), ('A', 'C'))
+    ==(covariates(2), ('N', 'N'))
+    ==(covariates(3), ('N', 'N'))
+    ==(covariates(4), ('A', 'G'))
+    ==(covariates(5), ('G', 'G'))
+    ==(covariates(6), ('G', 'C'))
+    ==(covariates(7), ('C', 'T'))
   }
 }

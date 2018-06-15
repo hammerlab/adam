@@ -64,32 +64,32 @@ class FeatureRDDSuite
     val firstGtfRecord = FeatureRDD.toGtf(features.rdd.first)
 
     val gtfSplitTabs = firstGtfRecord.split('\t')
-    assert(gtfSplitTabs.length === 9)
-    assert(gtfSplitTabs(0) === "1")
-    assert(gtfSplitTabs(1) === "pseudogene")
-    assert(gtfSplitTabs(2) === "gene")
-    assert(gtfSplitTabs(3) === "11869")
-    assert(gtfSplitTabs(4) === "14412")
-    assert(gtfSplitTabs(5) === ".")
-    assert(gtfSplitTabs(6) === "+")
-    assert(gtfSplitTabs(7) === ".")
+    ==(gtfSplitTabs.length, 9)
+    ==(gtfSplitTabs(0), "1")
+    ==(gtfSplitTabs(1), "pseudogene")
+    ==(gtfSplitTabs(2), "gene")
+    ==(gtfSplitTabs(3), "11869")
+    ==(gtfSplitTabs(4), "14412")
+    ==(gtfSplitTabs(5), ".")
+    ==(gtfSplitTabs(6), "+")
+    ==(gtfSplitTabs(7), ".")
 
     val gtfAttributes = gtfSplitTabs(8).split(";").map(_.trim)
-    assert(gtfAttributes.length === 4)
-    assert(gtfAttributes(0) === "gene_id \"ENSG00000223972\"")
-    assert(gtfAttributes(1) === "gene_biotype \"pseudogene\"")
+    ==(gtfAttributes.length, 4)
+    ==(gtfAttributes(0), "gene_id \"ENSG00000223972\"")
+    ==(gtfAttributes(1), "gene_biotype \"pseudogene\"")
     // gene name/source move to the end
-    assert(gtfAttributes(2) === "gene_name \"DDX11L1\"")
-    assert(gtfAttributes(3) === "gene_source \"ensembl_havana\"")
+    ==(gtfAttributes(2), "gene_name \"DDX11L1\"")
+    ==(gtfAttributes(3), "gene_source \"ensembl_havana\"")
 
     val outputPath = tmpLocation(".gtf")
     features.saveAsGtf(outputPath, asSingleFile = true)
     val reloadedFeatures = sc.loadGtf(outputPath)
-    assert(reloadedFeatures.rdd.count === features.rdd.count)
+    ==(reloadedFeatures.rdd.count, features.rdd.count)
     val zippedFeatures = reloadedFeatures.rdd.zip(features.rdd).collect
-    zippedFeatures.foreach(p => {
-      assert(p._1 === p._2)
-    })
+    zippedFeatures.foreach { p ⇒
+      p._1 should be(p._2)
+    }
   }
 
   test("save GTF as GFF3 format") {
@@ -98,7 +98,7 @@ class FeatureRDDSuite
     val outputPath = tmpLocation(".gff3")
     features.saveAsGff3(outputPath)
     val reloadedFeatures = sc.loadGff3(outputPath)
-    assert(features.rdd.count === reloadedFeatures.rdd.count)
+    ==(features.rdd.count, reloadedFeatures.rdd.count)
   }
 
   test("save GTF as BED format") {
@@ -107,7 +107,7 @@ class FeatureRDDSuite
     val outputPath = tmpLocation(".bed")
     features.saveAsBed(outputPath)
     val reloadedFeatures = sc.loadBed(outputPath)
-    assert(features.rdd.count === reloadedFeatures.rdd.count)
+    ==(features.rdd.count, reloadedFeatures.rdd.count)
   }
 
   test("save GTF as IntervalList format") {
@@ -116,7 +116,7 @@ class FeatureRDDSuite
     val outputPath = tmpLocation(".interval_list")
     features.saveAsIntervalList(outputPath)
     val reloadedFeatures = sc.loadIntervalList(outputPath)
-    assert(features.rdd.count === reloadedFeatures.rdd.count)
+    ==(features.rdd.count, reloadedFeatures.rdd.count)
   }
 
   test("save GTF as NarrowPeak format") {
@@ -125,7 +125,7 @@ class FeatureRDDSuite
     val outputPath = tmpLocation(".narrowPeak")
     features.saveAsNarrowPeak(outputPath)
     val reloadedFeatures = sc.loadNarrowPeak(outputPath)
-    assert(features.rdd.count === reloadedFeatures.rdd.count)
+    ==(features.rdd.count, reloadedFeatures.rdd.count)
   }
 
   test("save GFF3 as GTF format") {
@@ -134,7 +134,7 @@ class FeatureRDDSuite
     val outputPath = tmpLocation(".gtf")
     features.saveAsGtf(outputPath)
     val reloadedFeatures = sc.loadGtf(outputPath)
-    assert(features.rdd.count === reloadedFeatures.rdd.count)
+    ==(features.rdd.count, reloadedFeatures.rdd.count)
   }
 
   test("save GFF3 as BED format") {
@@ -143,7 +143,7 @@ class FeatureRDDSuite
     val outputPath = tmpLocation(".bed")
     features.saveAsBed(outputPath)
     val reloadedFeatures = sc.loadBed(outputPath)
-    assert(features.rdd.count === reloadedFeatures.rdd.count)
+    ==(features.rdd.count, reloadedFeatures.rdd.count)
   }
 
   test("save GFF3 as IntervalList format") {
@@ -152,7 +152,7 @@ class FeatureRDDSuite
     val outputPath = tmpLocation(".interval_list")
     features.saveAsIntervalList(outputPath)
     val reloadedFeatures = sc.loadIntervalList(outputPath)
-    assert(features.rdd.count === reloadedFeatures.rdd.count)
+    ==(features.rdd.count, reloadedFeatures.rdd.count)
   }
 
   test("save GFF3 as NarrowPeak format") {
@@ -161,7 +161,7 @@ class FeatureRDDSuite
     val outputPath = tmpLocation(".narrowPeak")
     features.saveAsNarrowPeak(outputPath)
     val reloadedFeatures = sc.loadNarrowPeak(outputPath)
-    assert(features.rdd.count === reloadedFeatures.rdd.count)
+    ==(features.rdd.count, reloadedFeatures.rdd.count)
   }
 
   test("round trip GFF3 format") {
@@ -172,26 +172,26 @@ class FeatureRDDSuite
 
     val feature = expected.rdd.first
     val gff3Columns = FeatureRDD.toGff3(feature).split('\t')
-    assert(gff3Columns.length === 9)
-    assert(gff3Columns(0) === "1")
-    assert(gff3Columns(1) === "Ensembl")
-    assert(gff3Columns(2) === "gene")
-    assert(gff3Columns(3) === "1331314")
-    assert(gff3Columns(4) === "1335306")
-    assert(gff3Columns(5) === ".")
-    assert(gff3Columns(6) === "+")
-    assert(gff3Columns(7) === ".")
+    ==(gff3Columns.length, 9)
+    ==(gff3Columns(0), "1")
+    ==(gff3Columns(1), "Ensembl")
+    ==(gff3Columns(2), "gene")
+    ==(gff3Columns(3), "1331314")
+    ==(gff3Columns(4), "1335306")
+    ==(gff3Columns(5), ".")
+    ==(gff3Columns(6), "+")
+    ==(gff3Columns(7), ".")
     val attrs = gff3Columns(8).split(';')
-    assert(attrs.length === 3)
-    assert(attrs(0) === "ID=ENSG00000169962")
-    assert(attrs(1) === "Name=ENSG00000169962")
-    assert(attrs(2) === "biotype=protein_coding")
+    ==(attrs.length, 3)
+    ==(attrs(0), "ID=ENSG00000169962")
+    ==(attrs(1), "Name=ENSG00000169962")
+    ==(attrs(2), "biotype=protein_coding")
 
     val actual = sc.loadGff3(outputPath)
     val pairs = expected.rdd.collect.zip(actual.rdd.collect)
-    pairs.foreach(p => {
-      assert(p._1 === p._2)
-    })
+    pairs.foreach { p ⇒
+      p._1 should be(p._2)
+    }
   }
 
   test("save BED as GTF format") {
@@ -200,7 +200,7 @@ class FeatureRDDSuite
     val outputPath = tmpLocation(".gtf")
     features.saveAsGtf(outputPath)
     val reloadedFeatures = sc.loadGtf(outputPath)
-    assert(features.rdd.count === reloadedFeatures.rdd.count)
+    ==(features.rdd.count, reloadedFeatures.rdd.count)
   }
 
   test("save BED as GFF3 format") {
@@ -209,7 +209,7 @@ class FeatureRDDSuite
     val outputPath = tmpLocation(".gff3")
     features.saveAsGff3(outputPath)
     val reloadedFeatures = sc.loadGff3(outputPath)
-    assert(features.rdd.count === reloadedFeatures.rdd.count)
+    ==(features.rdd.count, reloadedFeatures.rdd.count)
   }
 
   test("save BED as IntervalList format") {
@@ -218,7 +218,7 @@ class FeatureRDDSuite
     val outputPath = tmpLocation(".interval_list")
     features.saveAsIntervalList(outputPath)
     val reloadedFeatures = sc.loadIntervalList(outputPath)
-    assert(features.rdd.count === reloadedFeatures.rdd.count)
+    ==(features.rdd.count, reloadedFeatures.rdd.count)
   }
 
   test("save BED as NarrowPeak format") {
@@ -227,7 +227,7 @@ class FeatureRDDSuite
     val outputPath = tmpLocation(".narrowPeak")
     features.saveAsNarrowPeak(outputPath)
     val reloadedFeatures = sc.loadNarrowPeak(outputPath)
-    assert(features.rdd.count === reloadedFeatures.rdd.count)
+    ==(features.rdd.count, reloadedFeatures.rdd.count)
   }
 
   test("round trip BED format") {
@@ -238,19 +238,19 @@ class FeatureRDDSuite
 
     val feature = expected.rdd.first
     val bedCols = FeatureRDD.toBed(feature).split('\t')
-    assert(bedCols.length === 6)
-    assert(bedCols(0) === "1")
-    assert(bedCols(1) === "1331345")
-    assert(bedCols(2) === "1331536")
-    assert(bedCols(3) === "106624")
-    assert(bedCols(4) === "13.53")
-    assert(bedCols(5) === "+")
+    ==(bedCols.length, 6)
+    ==(bedCols(0), "1")
+    ==(bedCols(1), "1331345")
+    ==(bedCols(2), "1331536")
+    ==(bedCols(3), "106624")
+    ==(bedCols(4), "13.53")
+    ==(bedCols(5), "+")
 
     val actual = sc.loadBed(outputPath)
     val pairs = expected.rdd.collect.zip(actual.rdd.collect)
-    pairs.foreach(p => {
-      assert(p._1 === p._2)
-    })
+    pairs.foreach { p ⇒
+      p._1 should be(p._2)
+    }
   }
 
   test("save IntervalList as GTF format") {
@@ -259,7 +259,7 @@ class FeatureRDDSuite
     val outputPath = tmpLocation(".gtf")
     features.saveAsGtf(outputPath)
     val reloadedFeatures = sc.loadGtf(outputPath)
-    assert(features.rdd.count === reloadedFeatures.rdd.count)
+    ==(features.rdd.count, reloadedFeatures.rdd.count)
   }
 
   test("save IntervalList as GFF3 format") {
@@ -268,7 +268,7 @@ class FeatureRDDSuite
     val outputPath = tmpLocation(".gff3")
     features.saveAsGff3(outputPath)
     val reloadedFeatures = sc.loadGff3(outputPath)
-    assert(features.rdd.count === reloadedFeatures.rdd.count)
+    ==(features.rdd.count, reloadedFeatures.rdd.count)
   }
 
   test("save IntervalList as BED format") {
@@ -277,7 +277,7 @@ class FeatureRDDSuite
     val outputPath = tmpLocation(".bed")
     features.saveAsBed(outputPath)
     val reloadedFeatures = sc.loadBed(outputPath)
-    assert(features.rdd.count === reloadedFeatures.rdd.count)
+    ==(features.rdd.count, reloadedFeatures.rdd.count)
   }
 
   test("save IntervalList as IntervalList format") {
@@ -293,7 +293,7 @@ class FeatureRDDSuite
     val outputPath = tmpLocation(".narrowPeak")
     features.saveAsNarrowPeak(outputPath)
     val reloadedFeatures = sc.loadNarrowPeak(outputPath)
-    assert(features.rdd.count === reloadedFeatures.rdd.count)
+    ==(features.rdd.count, reloadedFeatures.rdd.count)
   }
 
   test("round trip IntervalList format") {
@@ -303,12 +303,12 @@ class FeatureRDDSuite
     // test single record
     val feature = expected.rdd.first
     val interval = FeatureRDD.toInterval(feature).split('\t')
-    assert(interval.length === 5)
-    assert(interval(0) === "chr1")
-    assert(interval(1) === "14416")
-    assert(interval(2) === "14499")
-    assert(interval(3) === "+")
-    assert(interval(4) === "gn|DDX11L1;gn|RP11-34P13.2;ens|ENSG00000223972;ens|ENSG00000227232;vega|OTTHUMG00000000958;vega|OTTHUMG00000000961")
+    ==(interval.length, 5)
+    ==(interval(0), "chr1")
+    ==(interval(1), "14416")
+    ==(interval(2), "14499")
+    ==(interval(3), "+")
+    ==(interval(4), "gn|DDX11L1;gn|RP11-34P13.2;ens|ENSG00000223972;ens|ENSG00000227232;vega|OTTHUMG00000000958;vega|OTTHUMG00000000961")
 
     // test a record with a refseq attribute
     val refseqFeature =
@@ -338,7 +338,7 @@ class FeatureRDDSuite
     val actual = sc.loadIntervalList(outputPath)
     val pairs = expected.rdd.collect.zip(actual.rdd.collect)
     pairs.foreach { p ⇒
-      assert(p._1 === p._2)
+      p._1 should be(p._2)
     }
   }
 
@@ -348,7 +348,7 @@ class FeatureRDDSuite
     val outputPath = tmpLocation(".gtf")
     features.saveAsGtf(outputPath)
     val reloadedFeatures = sc.loadGtf(outputPath)
-    assert(features.rdd.count === reloadedFeatures.rdd.count)
+    ==(features.rdd.count, reloadedFeatures.rdd.count)
   }
 
   test("save NarrowPeak as GFF3 format") {
@@ -357,7 +357,7 @@ class FeatureRDDSuite
     val outputPath = tmpLocation(".gff3")
     features.saveAsGff3(outputPath)
     val reloadedFeatures = sc.loadGff3(outputPath)
-    assert(features.rdd.count === reloadedFeatures.rdd.count)
+    ==(features.rdd.count, reloadedFeatures.rdd.count)
   }
 
   test("save NarrowPeak as BED format") {
@@ -366,7 +366,7 @@ class FeatureRDDSuite
     val outputPath = tmpLocation(".bed")
     features.saveAsBed(outputPath)
     val reloadedFeatures = sc.loadBed(outputPath)
-    assert(features.rdd.count === reloadedFeatures.rdd.count)
+    ==(features.rdd.count, reloadedFeatures.rdd.count)
   }
 
   test("save NarrowPeak as IntervalList format") {
@@ -375,7 +375,7 @@ class FeatureRDDSuite
     val outputPath = tmpLocation(".interval_list")
     features.saveAsIntervalList(outputPath)
     val reloadedFeatures = sc.loadIntervalList(outputPath)
-    assert(features.rdd.count === reloadedFeatures.rdd.count)
+    ==(features.rdd.count, reloadedFeatures.rdd.count)
   }
 
   test("save NarrowPeak as NarrowPeak format") {
@@ -393,23 +393,23 @@ class FeatureRDDSuite
 
     val feature = expected.rdd.first
     val npColumns = FeatureRDD.toNarrowPeak(feature).split('\t')
-    assert(npColumns.length === 10)
-    assert(npColumns(0) === "chr1")
-    assert(npColumns(1) === "713849")
-    assert(npColumns(2) === "714434")
-    assert(npColumns(3) === "chr1.1")
-    assert(npColumns(4) === "1000")
-    assert(npColumns(5) === ".")
-    assert(npColumns(6) === "0.2252")
-    assert(npColumns(7) === "9.16")
-    assert(npColumns(8) === "-1")
-    assert(npColumns(9) === "263")
+    ==(npColumns.length, 10)
+    ==(npColumns(0), "chr1")
+    ==(npColumns(1), "713849")
+    ==(npColumns(2), "714434")
+    ==(npColumns(3), "chr1.1")
+    ==(npColumns(4), "1000")
+    ==(npColumns(5), ".")
+    ==(npColumns(6), "0.2252")
+    ==(npColumns(7), "9.16")
+    ==(npColumns(8), "-1")
+    ==(npColumns(9), "263")
 
     val actual = sc.loadNarrowPeak(outputPath)
     val pairs = expected.rdd.zip(actual.rdd).collect
-    pairs.foreach(p => {
-      assert(p._1 === p._2)
-    })
+    pairs.foreach { p ⇒
+      p._1 should be(p._2)
+    }
   }
 
   test("sort by reference") {
@@ -553,7 +553,7 @@ class FeatureRDDSuite
 
     val jRdd = features.broadcastRegionJoin(targets)
 
-    assert(jRdd.rdd.count === 5L)
+    ==(jRdd.rdd.count, 5L)
   }
 
   test("use right outer broadcast join to pull down features mapped to targets") {
@@ -566,8 +566,8 @@ class FeatureRDDSuite
     val jRdd = features.rightOuterBroadcastRegionJoin(targets)
 
     val c = jRdd.rdd.collect
-    assert(c.count(_._1.isEmpty) === 1)
-    assert(c.count(_._1.isDefined) === 5)
+    ==(c.count(_._1.isEmpty), 1)
+    ==(c.count(_._1.isDefined), 5)
   }
 
   def sd = {
@@ -590,11 +590,11 @@ class FeatureRDDSuite
 
     // we can't guarantee that we get exactly the number of partitions requested,
     // we get close though
-    assert(jRdd.rdd.partitions.length === 1)
-    assert(jRdd0.rdd.partitions.length === 5)
+    ==(jRdd.rdd.partitions.length, 1)
+    ==(jRdd0.rdd.partitions.length, 5)
 
-    assert(jRdd.rdd.count === 5L)
-    assert(jRdd0.rdd.count === 5L)
+    ==(jRdd.rdd.count, 5L)
+    ==(jRdd0.rdd.count, 5L)
   }
 
   test("use right outer shuffle join to pull down features mapped to targets") {
@@ -612,15 +612,15 @@ class FeatureRDDSuite
 
     // we can't guarantee that we get exactly the number of partitions requested,
     // we get close though
-    assert(jRdd.rdd.partitions.length === 1)
-    assert(jRdd0.rdd.partitions.length === 5)
+    ==(jRdd.rdd.partitions.length, 1)
+    ==(jRdd0.rdd.partitions.length, 5)
 
     val c = jRdd.rdd.collect
     val c0 = jRdd0.rdd.collect
-    assert(c.count(_._1.isEmpty) === 1)
-    assert(c0.count(_._1.isEmpty) === 1)
-    assert(c.count(_._1.isDefined) === 5)
-    assert(c0.count(_._1.isDefined) === 5)
+    ==(c.count(_._1.isEmpty), 1)
+    ==(c0.count(_._1.isEmpty), 1)
+    ==(c.count(_._1.isDefined), 5)
+    ==(c0.count(_._1.isDefined), 5)
   }
 
   test("use left outer shuffle join to pull down features mapped to targets") {
@@ -638,15 +638,15 @@ class FeatureRDDSuite
 
     // we can't guarantee that we get exactly the number of partitions requested,
     // we get close though
-    assert(jRdd.rdd.partitions.length === 1)
-    assert(jRdd0.rdd.partitions.length === 5)
+    ==(jRdd.rdd.partitions.length, 1)
+    ==(jRdd0.rdd.partitions.length, 5)
 
     val c = jRdd.rdd.collect
     val c0 = jRdd0.rdd.collect
-    assert(c.count(_._2.isEmpty) === 15)
-    assert(c0.count(_._2.isEmpty) === 15)
-    assert(c.count(_._2.isDefined) === 5)
-    assert(c0.count(_._2.isDefined) === 5)
+    ==(c.count(_._2.isEmpty), 15)
+    ==(c0.count(_._2.isEmpty), 15)
+    ==(c.count(_._2.isDefined), 5)
+    ==(c0.count(_._2.isDefined), 5)
   }
 
   test("use full outer shuffle join to pull down features mapped to targets") {
@@ -664,19 +664,19 @@ class FeatureRDDSuite
 
     // we can't guarantee that we get exactly the number of partitions requested,
     // we get close though
-    assert(jRdd.rdd.partitions.length === 1)
-    assert(jRdd0.rdd.partitions.length === 5)
+    ==(jRdd.rdd.partitions.length, 1)
+    ==(jRdd0.rdd.partitions.length, 5)
 
     val c = jRdd.rdd.collect
     val c0 = jRdd0.rdd.collect
-    assert(c.count(t => t._1.isEmpty && t._2.isEmpty) === 0)
-    assert(c0.count(t => t._1.isEmpty && t._2.isEmpty) === 0)
-    assert(c.count(t => t._1.isDefined && t._2.isEmpty) === 15)
-    assert(c0.count(t => t._1.isDefined && t._2.isEmpty) === 15)
-    assert(c.count(t => t._1.isEmpty && t._2.isDefined) === 1)
-    assert(c0.count(t => t._1.isEmpty && t._2.isDefined) === 1)
-    assert(c.count(t => t._1.isDefined && t._2.isDefined) === 5)
-    assert(c0.count(t => t._1.isDefined && t._2.isDefined) === 5)
+    ==(c.count(t => t._1.isEmpty && t._2.isEmpty), 0)
+    ==(c0.count(t => t._1.isEmpty && t._2.isEmpty), 0)
+    ==(c.count(t => t._1.isDefined && t._2.isEmpty), 15)
+    ==(c0.count(t => t._1.isDefined && t._2.isEmpty), 15)
+    ==(c.count(t => t._1.isEmpty && t._2.isDefined), 1)
+    ==(c0.count(t => t._1.isEmpty && t._2.isDefined), 1)
+    ==(c.count(t => t._1.isDefined && t._2.isDefined), 5)
+    ==(c0.count(t => t._1.isDefined && t._2.isDefined), 5)
   }
 
   test("use shuffle join with group by to pull down features mapped to targets") {
@@ -694,13 +694,13 @@ class FeatureRDDSuite
 
     // we can't guarantee that we get exactly the number of partitions requested,
     // we get close though
-    assert(jRdd.rdd.partitions.length === 1)
-    assert(jRdd0.rdd.partitions.length === 5)
+    ==(jRdd.rdd.partitions.length, 1)
+    ==(jRdd0.rdd.partitions.length, 5)
 
     val c = jRdd.rdd.collect
     val c0 = jRdd0.rdd.collect
-    assert(c.length === 5)
-    assert(c0.length === 5)
+    ==(c.length, 5)
+    ==(c0.length, 5)
     assert(c.forall(_._2.size == 1))
     assert(c0.forall(_._2.size == 1))
   }
@@ -720,20 +720,20 @@ class FeatureRDDSuite
 
     // we can't guarantee that we get exactly the number of partitions requested,
     // we get close though
-    assert(jRdd.rdd.partitions.length === 1)
-    assert(jRdd0.rdd.partitions.length === 5)
+    ==(jRdd.rdd.partitions.length, 1)
+    ==(jRdd0.rdd.partitions.length, 5)
 
     val c = jRdd0.rdd.collect // FIXME
     val c0 = jRdd0.rdd.collect
 
-    assert(c.count(_._1.isDefined) === 20)
-    assert(c0.count(_._1.isDefined) === 20)
-    assert(c.filter(_._1.isDefined).count(_._2.size == 1) === 5)
-    assert(c0.filter(_._1.isDefined).count(_._2.size == 1) === 5)
-    assert(c.filter(_._1.isDefined).count(_._2.isEmpty) === 15)
-    assert(c0.filter(_._1.isDefined).count(_._2.isEmpty) === 15)
-    assert(c.count(_._1.isEmpty) === 1)
-    assert(c0.count(_._1.isEmpty) === 1)
+    ==(c.count(_._1.isDefined), 20)
+    ==(c0.count(_._1.isDefined), 20)
+    ==(c.filter(_._1.isDefined).count(_._2.size == 1), 5)
+    ==(c0.filter(_._1.isDefined).count(_._2.size == 1), 5)
+    ==(c.filter(_._1.isDefined).count(_._2.isEmpty), 15)
+    ==(c0.filter(_._1.isDefined).count(_._2.isEmpty), 15)
+    ==(c.count(_._1.isEmpty), 1)
+    ==(c0.count(_._1.isEmpty), 1)
     assert(c.filter(_._1.isEmpty).forall(_._2.size == 1))
     assert(c0.filter(_._1.isEmpty).forall(_._2.size == 1))
   }
@@ -799,7 +799,7 @@ class FeatureRDDSuite
 
     val pipedRdd: FeatureRDD = frdd.pipe("tee /dev/null")
     assert(pipedRdd.rdd.count >= frdd.rdd.count)
-    assert(pipedRdd.rdd.distinct.count === frdd.rdd.distinct.count)
+    ==(pipedRdd.rdd.distinct.count, frdd.rdd.distinct.count)
   }
 
   test("don't lose any features when piping as GTF format") {
@@ -811,7 +811,7 @@ class FeatureRDDSuite
 
     val pipedRdd: FeatureRDD = frdd.pipe("tee /dev/null")
     assert(pipedRdd.rdd.count >= frdd.rdd.count)
-    assert(pipedRdd.rdd.distinct.count === frdd.rdd.distinct.count)
+    ==(pipedRdd.rdd.distinct.count, frdd.rdd.distinct.count)
   }
 
   test("don't lose any features when piping as GFF3 format") {
@@ -823,7 +823,7 @@ class FeatureRDDSuite
 
     val pipedRdd: FeatureRDD = frdd.pipe("tee /dev/null")
     assert(pipedRdd.rdd.count >= frdd.rdd.count)
-    assert(pipedRdd.rdd.distinct.count === frdd.rdd.distinct.count)
+    ==(pipedRdd.rdd.distinct.count, frdd.rdd.distinct.count)
   }
 
   test("don't lose any features when piping as NarrowPeak format") {
@@ -835,6 +835,6 @@ class FeatureRDDSuite
 
     val pipedRdd: FeatureRDD = frdd.pipe("tee /dev/null")
     assert(pipedRdd.rdd.count >= frdd.rdd.count)
-    assert(pipedRdd.rdd.distinct.count === frdd.rdd.distinct.count)
+    ==(pipedRdd.rdd.distinct.count, frdd.rdd.distinct.count)
   }
 }

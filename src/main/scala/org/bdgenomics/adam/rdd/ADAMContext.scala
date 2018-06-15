@@ -55,7 +55,7 @@ import org.bdgenomics.adam.util.{ ReferenceContigMap, ReferenceFile, TwoBitFile 
 import org.bdgenomics.formats.avro._
 import org.bdgenomics.utils.instrumentation.Metrics
 import org.bdgenomics.utils.misc.{ HadoopUtil, Logging }
-import org.hammerlab.genomics.loci.parsing.{ LociRange, LociRanges, ParsedLoci }
+import org.hammerlab.genomics.loci.parsing.{ Range, LociRanges, ParsedLoci }
 import org.hammerlab.genomics.loci.set.LociSet
 import org.hammerlab.genomics.reference.ContigName.Factory
 import org.hammerlab.genomics.reference.Locus
@@ -731,7 +731,7 @@ class ADAMContext(val sc: SparkContext)(implicit factory: Factory)
       LociRanges(
         viewRegions.map(
           region =>
-            LociRange(region.referenceName, Locus(region.start), Locus(region.end))
+            Range(region.referenceName, Locus(region.start), Locus(region.end))
         )
       )
     )

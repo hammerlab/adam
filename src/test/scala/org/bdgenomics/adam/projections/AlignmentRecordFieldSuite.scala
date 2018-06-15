@@ -73,8 +73,8 @@ class AlignmentRecordFieldSuite
     )
 
     val alignmentRecords: RDD[AlignmentRecord] = sc.loadParquet(path, projection = Some(projection))
-    assert(alignmentRecords.count() === 1)
-    assert(alignmentRecords.first.getContigName === "6")
-    assert(alignmentRecords.first.getStart === 29941260L)
+    ==(alignmentRecords.count(), 1)
+    ==(alignmentRecords.first.getContigName, "6")
+    ==(alignmentRecords.first.getStart, 29941260L)
   }
 }

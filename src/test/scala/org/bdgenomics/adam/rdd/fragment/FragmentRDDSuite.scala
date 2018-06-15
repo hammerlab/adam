@@ -30,7 +30,7 @@ class FragmentRDDSuite extends ADAMFunSuite {
     val fragmentsPath = testFile("interleaved_fastq_sample1.ifq")
     val ardd = sc.loadFragments(fragmentsPath)
     val records = ardd.rdd.count
-    assert(records === 3)
+    ==(records, 3)
 
     implicit val tFormatter = InterleavedFASTQInFormatter
     implicit val uFormatter = new AnySAMOutFormatter
@@ -45,7 +45,7 @@ class FragmentRDDSuite extends ADAMFunSuite {
       )
 
     val newRecords = pipedRdd.rdd.count
-    assert(2 * records === newRecords)
+    ==(2 * records, newRecords)
   }
 
   test("use broadcast join to pull down fragments mapped to targets") {
@@ -57,7 +57,7 @@ class FragmentRDDSuite extends ADAMFunSuite {
 
     val jRdd = fragments.broadcastRegionJoin(targets)
 
-    assert(jRdd.rdd.count === 5)
+    ==(jRdd.rdd.count, 5)
   }
 
   test("use right outer broadcast join to pull down fragments mapped to targets") {
@@ -70,8 +70,8 @@ class FragmentRDDSuite extends ADAMFunSuite {
     val jRdd = fragments.rightOuterBroadcastRegionJoin(targets)
 
     val c = jRdd.rdd.collect
-    assert(c.count(_._1.isEmpty) === 1)
-    assert(c.count(_._1.isDefined) === 5)
+    ==(c.count(_._1.isEmpty), 1)
+    ==(c.count(_._1.isDefined), 5)
   }
 
   test("use shuffle join to pull down fragments mapped to targets") {
@@ -88,11 +88,11 @@ class FragmentRDDSuite extends ADAMFunSuite {
 
     // we can't guarantee that we get exactly the number of partitions requested,
     // we get close though
-    assert(jRdd.rdd.partitions.length === 1)
-    assert(jRdd0.rdd.partitions.length === 5)
+    ==(jRdd.rdd.partitions.length, 1)
+    ==(jRdd0.rdd.partitions.length, 5)
 
-    assert(jRdd.rdd.count === 5)
-    assert(jRdd0.rdd.count === 5)
+    ==(jRdd.rdd.count, 5)
+    ==(jRdd0.rdd.count, 5)
   }
 
   test("use right outer shuffle join to pull down fragments mapped to targets") {
@@ -109,15 +109,15 @@ class FragmentRDDSuite extends ADAMFunSuite {
 
     // we can't guarantee that we get exactly the number of partitions requested,
     // we get close though
-    assert(jRdd.rdd.partitions.length === 1)
-    assert(jRdd0.rdd.partitions.length === 5)
+    ==(jRdd.rdd.partitions.length, 1)
+    ==(jRdd0.rdd.partitions.length, 5)
 
     val c = jRdd.rdd.collect
     val c0 = jRdd0.rdd.collect
-    assert(c.count(_._1.isEmpty) === 1)
-    assert(c0.count(_._1.isEmpty) === 1)
-    assert(c.count(_._1.isDefined) === 5)
-    assert(c0.count(_._1.isDefined) === 5)
+    ==(c.count(_._1.isEmpty), 1)
+    ==(c0.count(_._1.isEmpty), 1)
+    ==(c.count(_._1.isDefined), 5)
+    ==(c0.count(_._1.isDefined), 5)
   }
 
   test("use left outer shuffle join to pull down fragments mapped to targets") {
@@ -134,15 +134,15 @@ class FragmentRDDSuite extends ADAMFunSuite {
 
     // we can't guarantee that we get exactly the number of partitions requested,
     // we get close though
-    assert(jRdd.rdd.partitions.length === 1)
-    assert(jRdd0.rdd.partitions.length === 5)
+    ==(jRdd.rdd.partitions.length, 1)
+    ==(jRdd0.rdd.partitions.length, 5)
 
     val c = jRdd.rdd.collect
     val c0 = jRdd0.rdd.collect
-    assert(c.count(_._2.isEmpty) === 15)
-    assert(c0.count(_._2.isEmpty) === 15)
-    assert(c.count(_._2.isDefined) === 5)
-    assert(c0.count(_._2.isDefined) === 5)
+    ==(c.count(_._2.isEmpty), 15)
+    ==(c0.count(_._2.isEmpty), 15)
+    ==(c.count(_._2.isDefined), 5)
+    ==(c0.count(_._2.isDefined), 5)
   }
 
   test("use full outer shuffle join to pull down fragments mapped to targets") {
@@ -159,19 +159,19 @@ class FragmentRDDSuite extends ADAMFunSuite {
 
     // we can't guarantee that we get exactly the number of partitions requested,
     // we get close though
-    assert(jRdd.rdd.partitions.length === 1)
-    assert(jRdd0.rdd.partitions.length === 5)
+    ==(jRdd.rdd.partitions.length, 1)
+    ==(jRdd0.rdd.partitions.length, 5)
 
     val c = jRdd.rdd.collect
     val c0 = jRdd0.rdd.collect
-    assert(c.count(t => t._1.isEmpty && t._2.isEmpty) === 0)
-    assert(c0.count(t => t._1.isEmpty && t._2.isEmpty) === 0)
-    assert(c.count(t => t._1.isDefined && t._2.isEmpty) === 15)
-    assert(c0.count(t => t._1.isDefined && t._2.isEmpty) === 15)
-    assert(c.count(t => t._1.isEmpty && t._2.isDefined) === 1)
-    assert(c0.count(t => t._1.isEmpty && t._2.isDefined) === 1)
-    assert(c.count(t => t._1.isDefined && t._2.isDefined) === 5)
-    assert(c0.count(t => t._1.isDefined && t._2.isDefined) === 5)
+    ==(c.count(t => t._1.isEmpty && t._2.isEmpty), 0)
+    ==(c0.count(t => t._1.isEmpty && t._2.isEmpty), 0)
+    ==(c.count(t => t._1.isDefined && t._2.isEmpty), 15)
+    ==(c0.count(t => t._1.isDefined && t._2.isEmpty), 15)
+    ==(c.count(t => t._1.isEmpty && t._2.isDefined), 1)
+    ==(c0.count(t => t._1.isEmpty && t._2.isDefined), 1)
+    ==(c.count(t => t._1.isDefined && t._2.isDefined), 5)
+    ==(c0.count(t => t._1.isDefined && t._2.isDefined), 5)
   }
 
   test("use shuffle join with group by to pull down fragments mapped to targets") {
@@ -188,13 +188,13 @@ class FragmentRDDSuite extends ADAMFunSuite {
 
     // we can't guarantee that we get exactly the number of partitions requested,
     // we get close though
-    assert(jRdd.rdd.partitions.length === 1)
-    assert(jRdd0.rdd.partitions.length === 5)
+    ==(jRdd.rdd.partitions.length, 1)
+    ==(jRdd0.rdd.partitions.length, 5)
 
     val c = jRdd.rdd.collect
     val c0 = jRdd0.rdd.collect
-    assert(c.length === 5)
-    assert(c0.length === 5)
+    ==(c.length, 5)
+    ==(c0.length, 5)
     assert(c.forall(_._2.size == 1))
     assert(c0.forall(_._2.size == 1))
   }
@@ -213,19 +213,19 @@ class FragmentRDDSuite extends ADAMFunSuite {
 
     // we can't guarantee that we get exactly the number of partitions requested,
     // we get close though
-    assert(jRdd.rdd.partitions.length === 1)
-    assert(jRdd0.rdd.partitions.length === 5)
+    ==(jRdd.rdd.partitions.length, 1)
+    ==(jRdd0.rdd.partitions.length, 5)
 
     val c = jRdd.rdd.collect
     val c0 = jRdd0.rdd.collect
-    assert(c.count(_._1.isDefined) === 20)
-    assert(c0.count(_._1.isDefined) === 20)
-    assert(c.filter(_._1.isDefined).count(_._2.size == 1) === 5)
-    assert(c0.filter(_._1.isDefined).count(_._2.size == 1) === 5)
-    assert(c.filter(_._1.isDefined).count(_._2.isEmpty) === 15)
-    assert(c0.filter(_._1.isDefined).count(_._2.isEmpty) === 15)
-    assert(c.count(_._1.isEmpty) === 1)
-    assert(c0.count(_._1.isEmpty) === 1)
+    ==(c.count(_._1.isDefined), 20)
+    ==(c0.count(_._1.isDefined), 20)
+    ==(c.filter(_._1.isDefined).count(_._2.size == 1), 5)
+    ==(c0.filter(_._1.isDefined).count(_._2.size == 1), 5)
+    ==(c.filter(_._1.isDefined).count(_._2.isEmpty), 15)
+    ==(c0.filter(_._1.isDefined).count(_._2.isEmpty), 15)
+    ==(c.count(_._1.isEmpty), 1)
+    ==(c0.count(_._1.isEmpty), 1)
     assert(c.filter(_._1.isEmpty).forall(_._2.size == 1))
     assert(c0.filter(_._1.isEmpty).forall(_._2.size == 1))
   }

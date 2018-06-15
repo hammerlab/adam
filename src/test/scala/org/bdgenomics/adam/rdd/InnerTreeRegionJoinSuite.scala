@@ -60,12 +60,18 @@ class InnerTreeRegionJoinSuite
         InnerTreeRegionJoinSuite.merge,
         InnerTreeRegionJoinSuite.and))
 
-    assert(InnerTreeRegionJoin[AlignmentRecord, AlignmentRecord]().broadcastAndJoin(
-      tree,
-      rdd2)
-      .aggregate(0)(
-        InnerTreeRegionJoinSuite.count,
-        InnerTreeRegionJoinSuite.sum) === 1)
+    ==(
+      InnerTreeRegionJoin[AlignmentRecord, AlignmentRecord]()
+        .broadcastAndJoin(
+          tree,
+          rdd2
+        )
+        .aggregate(0)(
+          InnerTreeRegionJoinSuite.count,
+          InnerTreeRegionJoinSuite.sum
+        ),
+      1
+    )
   }
 
   test("Overlapping reference regions") {
@@ -100,9 +106,15 @@ class InnerTreeRegionJoinSuite
         InnerTreeRegionJoinSuite.merge,
         InnerTreeRegionJoinSuite.and))
 
-    assert(InnerTreeRegionJoin[AlignmentRecord, AlignmentRecord]().broadcastAndJoin(
-      tree,
-      recordsRdd).count() === 2)
+    ==(
+      InnerTreeRegionJoin[AlignmentRecord, AlignmentRecord]()
+        .broadcastAndJoin(
+          tree,
+          recordsRdd
+        )
+        .count(),
+      2
+    )
   }
 
   test("Multiple reference regions do not throw exception") {
@@ -152,9 +164,15 @@ class InnerTreeRegionJoinSuite
         InnerTreeRegionJoinSuite.merge,
         InnerTreeRegionJoinSuite.and))
 
-    assert(InnerTreeRegionJoin[AlignmentRecord, AlignmentRecord]().broadcastAndJoin(
-      tree,
-      recordsRdd).count() === 3)
+    ==(
+      InnerTreeRegionJoin[AlignmentRecord, AlignmentRecord]()
+        .broadcastAndJoin(
+          tree,
+          recordsRdd
+        )
+        .count(),
+      3
+    )
   }
 }
 

@@ -60,12 +60,12 @@ trait OuterRegionJoinSuite
 
     val jrdd = runJoin(rdd1, rdd2).cache()
 
-    assert(jrdd.count === 2)
-    assert(jrdd.filter(_._1.isDefined).count === 1)
-    assert(jrdd.filter(_._1.isDefined).first._1.get.getReadName() === "1")
-    assert(jrdd.filter(_._1.isDefined).first._2.getReadName() === "2")
-    assert(jrdd.filter(_._1.isEmpty).count === 1)
-    assert(jrdd.filter(_._1.isEmpty).first._2.getReadName() === "4")
+    ==(jrdd.count, 2)
+    ==(jrdd.filter(_._1.isDefined).count, 1)
+    ==(jrdd.filter(_._1.isDefined).first._1.get.getReadName(), "1")
+    ==(jrdd.filter(_._1.isDefined).first._2.getReadName(), "2")
+    ==(jrdd.filter(_._1.isEmpty).count, 1)
+    ==(jrdd.filter(_._1.isEmpty).first._2.getReadName(), "4")
   }
 
   test("Overlapping reference regions") {
@@ -93,7 +93,7 @@ trait OuterRegionJoinSuite
 
     val jrdd = runJoin(baseRdd, recordsRdd).cache
 
-    assert(jrdd.count() === 3)
+    ==(jrdd.count(), 3)
     assert(jrdd.filter(_._1.isDefined).count == 2)
     assert(jrdd.filter(_._1.isEmpty).count == 1)
   }

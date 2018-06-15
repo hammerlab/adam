@@ -49,9 +49,9 @@ class RichAlignmentRecordSuite
   test("tags contains optional fields") {
     val contig = Contig.newBuilder.setContigName("chr1").build
     val rec = AlignmentRecord.newBuilder().setAttributes("XX:i:3\tYY:Z:foo").setContigName(contig.getContigName).build()
-    assert(rec.tags.size === 2)
-    assert(rec.tags(0) === Attribute("XX", TagType.Integer, 3))
-    assert(rec.tags(1) === Attribute("YY", TagType.String, "foo"))
+    ==(rec.tags.size, 2)
+    rec.tags(0) should be(Attribute("XX", TagType.Integer, 3))
+    rec.tags(1) should be(Attribute("YY", TagType.String, "foo"))
   }
 
   test("read overlap unmapped read") {

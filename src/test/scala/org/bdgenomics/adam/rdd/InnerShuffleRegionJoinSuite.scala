@@ -70,13 +70,14 @@ class InnerShuffleRegionJoinSuite
         )
     )
 
-    assert(
+    ==(
       InnerShuffleRegionJoin[AlignmentRecord, AlignmentRecord](seqDict, partitionSize, sc)
         .partitionAndJoin(
           baseRdd,
           recordsRdd
         )
-        .count() === 2
+        .count(),
+      2
     )
   }
 
@@ -129,13 +130,14 @@ class InnerShuffleRegionJoinSuite
         )
     )
 
-    assert(
+    ==(
       InnerShuffleRegionJoin[AlignmentRecord, AlignmentRecord](seqDict, partitionSize, sc)
         .partitionAndJoin(
           baseRdd,
           recordsRdd
         )
-        .count() === 3
+        .count(),
+      3
     )
   }
 }

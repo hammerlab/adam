@@ -38,8 +38,8 @@ class RecalibrationTableSuite extends FunSuite {
   test("look up quality scores in table") {
     val scores = table(observedCovariates.map(_._1).toArray)
 
-    assert(scores.size === 2)
-    assert(scores(0) === (50 + 33).toChar)
-    assert(scores(1) === (47 + 33).toChar)
+    ==(scores.size, 2)
+    ==(scores(0), (50 + 33).toChar)
+    ==(scores(1), (47 + 33).toChar)
   }
 }

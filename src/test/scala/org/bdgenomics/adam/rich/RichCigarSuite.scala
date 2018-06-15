@@ -35,7 +35,7 @@ class RichCigarSuite extends FunSuite {
     val newCigar2 = newCigar.moveLeft(1)
 
     assert(newCigar2.cigar.getReadLength == read.samtoolsCigar.getReadLength)
-    assert(newCigar2.cigar.toString === "8M10D12M")
+    ==(newCigar2.cigar.toString, "8M10D12M")
   }
 
   test("moving 2 bp from a insertion to a match operator") {
@@ -50,7 +50,7 @@ class RichCigarSuite extends FunSuite {
     val newCigar2 = newCigar.moveLeft(1)
 
     assert(newCigar2.cigar.getReadLength == read.samtoolsCigar.getReadLength)
-    assert(newCigar2.cigar.toString === "8M10I12M")
+    ==(newCigar2.cigar.toString, "8M10I12M")
   }
 
   test("moving 1 base in a two element cigar") {
@@ -64,7 +64,7 @@ class RichCigarSuite extends FunSuite {
     val newCigar = RichCigar(new Cigar(read.samtoolsCigar.getCigarElements)).moveLeft(1)
 
     assert(newCigar.cigar.getReadLength == read.samtoolsCigar.getReadLength)
-    assert(newCigar.cigar.toString === "9M1D1M")
+    ==(newCigar.cigar.toString, "9M1D1M")
   }
 
   test("move to start of read") {
@@ -78,7 +78,7 @@ class RichCigarSuite extends FunSuite {
     val newCigar = RichCigar(new Cigar(read.samtoolsCigar.getCigarElements)).moveLeft(1)
 
     assert(newCigar.cigar.getReadLength == read.samtoolsCigar.getReadLength)
-    assert(newCigar.cigar.toString === "1D2M")
+    ==(newCigar.cigar.toString, "1D2M")
   }
 
   val rightClippedCigar = new RichCigar(TextCigarCodec.decode("10H2S10M"))
@@ -86,17 +86,17 @@ class RichCigarSuite extends FunSuite {
   val bothClippedCigar = new RichCigar(TextCigarCodec.decode("1S12M3S2H"))
 
   test("process right clipped cigar") {
-    assert(rightClippedCigar.softClippedBasesAtStart === 2)
-    assert(rightClippedCigar.softClippedBasesAtEnd === 0)
+    ==(rightClippedCigar.softClippedBasesAtStart, 2)
+    ==(rightClippedCigar.softClippedBasesAtEnd, 0)
   }
 
   test("process left clipped cigar") {
-    assert(leftClippedCigar.softClippedBasesAtStart === 0)
-    assert(leftClippedCigar.softClippedBasesAtEnd === 4)
+    ==(leftClippedCigar.softClippedBasesAtStart, 0)
+    ==(leftClippedCigar.softClippedBasesAtEnd, 4)
   }
 
   test("process cigar clipped on both ends") {
-    assert(bothClippedCigar.softClippedBasesAtStart === 1)
-    assert(bothClippedCigar.softClippedBasesAtEnd === 3)
+    ==(bothClippedCigar.softClippedBasesAtStart, 1)
+    ==(bothClippedCigar.softClippedBasesAtEnd, 3)
   }
 }

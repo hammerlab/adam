@@ -110,7 +110,7 @@ class NucleotideContigFragmentRDDSuite
 
     val rdd = NucleotideContigFragmentRDD(sc.parallelize(List(fragment)))
 
-    assert(rdd.extract(region) === "ACTGTAC")
+    ==(rdd.extract(region), "ACTGTAC")
   }
 
   test("recover trimmed reference string from a single contig fragment") {
@@ -129,7 +129,7 @@ class NucleotideContigFragmentRDDSuite
 
     val rdd = NucleotideContigFragmentRDD(sc.parallelize(List(fragment)))
 
-    assert(rdd.extract(region) === "CTGTA")
+    ==(rdd.extract(region), "CTGTA")
   }
 
   test("recover reference string from multiple contig fragments") {
@@ -179,8 +179,8 @@ class NucleotideContigFragmentRDDSuite
       fragment1,
       fragment2)))
 
-    assert(rdd.extract(region0) === "ACTGTAC")
-    assert(rdd.extract(region1) === "GTACTCTCATG")
+    ==(rdd.extract(region0), "ACTGTAC")
+    ==(rdd.extract(region1), "GTACTCTCATG")
   }
 
   test("recover trimmed reference string from multiple contig fragments") {
@@ -233,8 +233,8 @@ class NucleotideContigFragmentRDDSuite
       fragment1,
       fragment2)))
 
-    assert(rdd.extract(region0) === "CTGTA")
-    assert(rdd.extract(region1) === "CTCTCA")
+    ==(rdd.extract(region0), "CTGTA")
+    ==(rdd.extract(region1), "CTCTCA")
   }
 
   test("testing nondeterminism from reduce when recovering referencestring") {
@@ -433,7 +433,7 @@ class NucleotideContigFragmentRDDSuite
     val rdd = NucleotideContigFragmentRDD(sc.parallelize(List(fragment)))
     val merged = rdd.mergeFragments()
 
-    assert(merged.rdd.map(_.getFragmentSequence()).collect === Array("ACTGTAC"))
+    ==(merged.rdd.map(_.getFragmentSequence()).collect, Array("ACTGTAC"))
   }
 
   test("merge single contig fragment number zero") {
@@ -452,7 +452,7 @@ class NucleotideContigFragmentRDDSuite
     val merged = rdd.mergeFragments()
 
     assert(merged.rdd.count == 1L)
-    assert(merged.rdd.first.getFragmentSequence() === "ACTGTAC")
+    ==(merged.rdd.first.getFragmentSequence(), "ACTGTAC")
   }
 
   test("merge multiple contig fragments") {

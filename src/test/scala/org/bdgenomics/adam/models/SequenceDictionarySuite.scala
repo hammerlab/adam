@@ -24,7 +24,9 @@ import htsjdk.variant.vcf.VCFFileReader
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.hammerlab.genomics.reference.test.ClearContigNames
 import org.hammerlab.genomics.reference.test.LociConversions.intToLocus
-import org.hammerlab.genomics.reference.{ ContigName, NumLoci }
+import org.hammerlab.genomics.reference.{ ContigName, Locus, NumLoci }
+import org.hammerlab.test.Cmp
+import shapeless.Generic
 
 import scala.collection.JavaConversions._
 
@@ -38,9 +40,9 @@ class SequenceDictionarySuite
 
     val asASR: SequenceRecord = SequenceRecord.fromSAMSequenceRecord(sr)
 
-    asASR.name should === ("1")
-    asASR.length should === (1000)
-    asASR.url should === (Some("http://bigdatagenomics.github.io/1"))
+    ==(asASR.name, "1")
+    ==(asASR.length, 1000)
+    ==(asASR.url, Some("http://bigdatagenomics.github.io/1"))
 
     val asPSR: SAMSequenceRecord = asASR.toSAMSequenceRecord
 
@@ -56,7 +58,7 @@ class SequenceDictionarySuite
       val chr1 = ssd.getSequence("1") // Validate that extra fields are parsed
       assert(chr1 != null)
       val refseq = chr1.getAttribute("REFSEQ")
-      refseq should ===("NC_000001.10")
+      ==(refseq, "NC_000001.10")
 
       assert(asd.contains("1"))
       assert(!asd.contains("2"))
@@ -76,23 +78,33 @@ class SequenceDictionarySuite
     }
   }
 
+//  implicit def cmpContigName(implicit cmp: Cmp[String]): Cmp.Aux[ContigName, cmp.Diff] = Cmp.by[String, ContigName](_.name)(cmp)
+//  implicit def cmpLocus(implicit cmp: Cmp[Long]): Cmp.Aux[Locus, cmp.Diff] = Cmp.by[Long, Locus](_.locus)(cmp)
+//
+//  implicitly[Cmp[ContigName]]
+//  implicitly[Cmp[NumLoci]]
+//  implicitly[Cmp[Option[String]]]
+//  implicitly[Cmp[Option[Int]]]
+//  implicitly[Generic[SequenceRecord]]
+//  implicitly[Cmp[SequenceRecord]]
+
   test("Can retrieve sequence by name") {
     val rec = record("chr1")
     val asd = SequenceDictionary(rec)
     val recFromName = asd(rec.name)
-    recFromName should === (Some(rec))
+    recFromName should be(Some(rec))
   }
 
   test("SequenceDictionary's with same single element are equal") {
     val asd1 = SequenceDictionary(record("chr1"))
     val asd2 = SequenceDictionary(record("chr1"))
-    asd1 should === (asd2)
+    asd1 should be(asd2)
   }
 
   test("SequenceDictionary's with same two elements are equals") {
     val asd1 = SequenceDictionary(record("chr1"), record("chr2"))
     val asd2 = SequenceDictionary(record("chr1"), record("chr2"))
-    asd1 should === (asd2)
+    asd1 should be(asd2)
   }
 
   test("SequenceDictionary's with different elements are unequal") {
@@ -122,9 +134,9 @@ class SequenceDictionarySuite
     val s2 = SequenceDictionary(record("foo"))
     val s3 = SequenceDictionary(record("foo"), record("bar"))
 
-    s1 + record("foo") should === (s2)
-    s2 + record("foo") should === (s2)
-    s2 + record("bar") should === (s3)
+    s1 + record("foo") should be(s2)
+    s2 + record("foo") should be(s2)
+    s2 + record("bar") should be(s3)
   }
 
   test("The append operation ++ works correctly") {
@@ -133,10 +145,10 @@ class SequenceDictionarySuite
     val s2b = SequenceDictionary(record("bar"))
     val s3 = SequenceDictionary(record("foo"), record("bar"))
 
-    s1 ++ s1 should === (s1)
-    s1 ++ s2a should === (s2a)
-    s1 ++ s2b should === (s2b)
-    s2a ++ s2b should === (s3)
+    s1  ++ s1  should be(s1 )
+    s1  ++ s2a should be(s2a)
+    s1  ++ s2b should be(s2b)
+    s2a ++ s2b should be(s3 )
   }
 
   test("ContainsRefName works correctly for different string types") {
@@ -160,8 +172,8 @@ class SequenceDictionarySuite
     val str0: String = "chr0"
     val str1: java.lang.String = "chr1"
 
-    dict(str0).get.name should === ("chr0")
-    dict(str1).get.name should === ("chr1")
+    ==(dict(str0).get.name, "chr0")
+    ==(dict(str1).get.name, "chr1")
   }
 
   def record(name: ContigName, length: NumLoci = 1000, md5: Option[String] = None): SequenceRecord =
@@ -173,9 +185,9 @@ class SequenceDictionarySuite
 
     val conv = SequenceRecord.fromSAMSequenceRecord(sr)
 
-    conv.name should === ("chr0")
-    conv.length should === (1000)
-    conv.url.get should === ("http://bigdatagenomics.github.io/chr0")
+    ==(conv.name, "chr0")
+    ==(conv.length, 1000)
+    ==(conv.url.get, "http://bigdatagenomics.github.io/chr0")
 
     val convSr = conv.toSAMSequenceRecord
 
@@ -212,12 +224,12 @@ class SequenceDictionarySuite
 
     val ssd = sd.toSAMSequenceDictionary
     val seq = ssd.getSequences
-    seq.get(0).getSequenceName should === ("1")
-    seq.get(1).getSequenceName should === ("2")
-    seq.get(2).getSequenceName should === ("3")
-    seq.get(3).getSequenceName should === ("4")
-    seq.get(4).getSequenceName should === ("X")
-    seq.get(5).getSequenceName should === ("MT")
+    ==(seq.get(0).getSequenceName, "1")
+    ==(seq.get(1).getSequenceName, "2")
+    ==(seq.get(2).getSequenceName, "3")
+    ==(seq.get(3).getSequenceName, "4")
+    ==(seq.get(4).getSequenceName, "X")
+    ==(seq.get(5).getSequenceName, "MT")
   }
 
   test("load sequence dictionary from VCF file") {
@@ -225,13 +237,13 @@ class SequenceDictionarySuite
     val fileReader = new VCFFileReader(path.toFile, false)
     val sd = SequenceDictionary.fromVCFHeader(fileReader.getFileHeader)
 
-    sd.records.size should === (1)
-    sd.records.head.name should === ("1")
+    ==(sd.records.size, 1)
+    ==(sd.records.head.name, "1")
   }
 
   test("empty sequence dictionary must be empty") {
     val sd = SequenceDictionary.empty
-    sd.records.size should === (0)
+    ==(sd.records.size, 0)
     assert(sd.isEmpty)
   }
 }

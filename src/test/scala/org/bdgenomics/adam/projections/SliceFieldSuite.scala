@@ -56,14 +56,14 @@ class SliceFieldSuite extends ADAMFunSuite {
     )
 
     val slices: RDD[Slice] = sc.loadParquet(path, projection = Some(projection));
-    assert(slices.count() === 1)
-    assert(slices.first.getName === "6")
-    assert(slices.first.getDescription === "Chromosome 6")
-    assert(slices.first.getAlphabet === Alphabet.DNA)
-    assert(slices.first.getSequence === "ACTG")
-    assert(slices.first.getStart === 0)
-    assert(slices.first.getEnd === 4)
-    assert(slices.first.getStrand === Strand.FORWARD)
-    assert(slices.first.getLength === 4)
+    ==(slices.count(), 1)
+    ==(slices.first.getName, "6")
+    ==(slices.first.getDescription, "Chromosome 6")
+    ==(slices.first.getAlphabet, Alphabet.DNA)
+    ==(slices.first.getSequence, "ACTG")
+    ==(slices.first.getStart, 0)
+    ==(slices.first.getEnd, 4)
+    ==(slices.first.getStrand, Strand.FORWARD)
+    ==(slices.first.getLength, 4)
   }
 }

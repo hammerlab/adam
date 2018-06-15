@@ -62,7 +62,7 @@ class ADAMContextSuite
 
     // Convert the reads12.sam file into a parquet file
     val bamReads: RDD[AlignmentRecord] = sc.loadAlignments(readsFilepath).rdd
-    bamReads.rdd.count should === (200)
+    ==(bamReads.rdd.count, 200)
   }
 
   test("sc.loadParquet should not load a file without a type specified") {
@@ -85,7 +85,7 @@ class ADAMContextSuite
   test("can read a small .SAM file") {
     val path = testFile("small.sam")
     val reads: RDD[AlignmentRecord] = sc.loadAlignments(path).rdd
-    reads.count() should === (20)
+    ==(reads.count(), 20)
   }
 
   test("can read a small .CRAM file") {
@@ -96,26 +96,29 @@ class ADAMContextSuite
       referencePath
     )
     val reads: RDD[AlignmentRecord] = sc.loadAlignments(path).rdd
-    reads.count() should === (10)
+    ==(reads.count(), 10)
   }
 
   test("can read a small .SAM with all attribute tag types") {
     val path = testFile("tags.sam")
     val reads: RDD[AlignmentRecord] = sc.loadAlignments(path).rdd
-    reads.count() should === (7)
+    ==(reads.count(), 7)
   }
 
   test("can filter a .SAM file based on quality") {
     val path = testFile("small.sam")
-    val reads: RDD[AlignmentRecord] = sc.loadAlignments(path)
-      .rdd
-      .filter(a => (a.getReadMapped && a.getMapq > 30))
-    reads.count() should === (18)
+    val reads: RDD[AlignmentRecord] =
+      sc
+        .loadAlignments(path)
+        .rdd
+        .filter(a ⇒ a.getReadMapped && a.getMapq > 30)
+
+    ==(reads.count(), 18)
   }
 
   test("Can convert to phred") {
-    successProbabilityToPhred(0.9) should === (10)
-    successProbabilityToPhred(0.99999) should === (50)
+    ==(successProbabilityToPhred(0.9), 10)
+    ==(successProbabilityToPhred(0.99999), 50)
   }
 
   test("Can convert from phred") {
@@ -127,26 +130,26 @@ class ADAMContextSuite
   test("Can read a .gtf file") {
     val path = testFile("Homo_sapiens.GRCh37.75.trun20.gtf")
     val features: RDD[Feature] = sc.loadFeatures(path).rdd
-    features.count should === (15)
+    ==(features.count, 15)
   }
 
   test("Can read a .bed file") {
     // note: this .bed doesn't actually conform to the UCSC BED spec...sigh...
     val path = testFile("gencode.v7.annotation.trunc10.bed")
     val features: RDD[Feature] = sc.loadFeatures(path).rdd
-    features.count should === (10)
+    ==(features.count, 10)
   }
 
   test("Can read a .bed file without cache") {
     val path = testFile("gencode.v7.annotation.trunc10.bed")
     val features: RDD[Feature] = sc.loadFeatures(path, optStorageLevel = Some(StorageLevel.NONE)).rdd
-    assert(features.count === 10)
+    ==(features.count, 10)
   }
 
   test("Can read a .narrowPeak file") {
     val path = testFile("wgEncodeOpenChromDnaseGm19238Pk.trunc10.narrowPeak")
     val annot: RDD[Feature] = sc.loadFeatures(path).rdd
-    annot.count should === (10)
+    ==(annot.count, 10)
   }
 
   test("Can read a .interval_list file") {
@@ -156,10 +159,10 @@ class ADAMContextSuite
     val arr = annot.collect
 
     val first = arr.find(f => f.getContigName == "chr1" && f.getStart == 14415L && f.getEnd == 14499L).get
-    first.getName should === ("gn|DDX11L1;gn|RP11-34P13.2;ens|ENSG00000223972;ens|ENSG00000227232;vega|OTTHUMG00000000958;vega|OTTHUMG00000000961")
+    ==(first.getName, "gn|DDX11L1;gn|RP11-34P13.2;ens|ENSG00000223972;ens|ENSG00000227232;vega|OTTHUMG00000000958;vega|OTTHUMG00000000961")
 
     val last = arr.find(f => f.getContigName == "chrY" && f.getStart == 27190031L && f.getEnd == 27190210L).get
-    last.getName should === ("gn|BPY2C;ccds|CCDS44030;ens|ENSG00000185894;vega|OTTHUMG00000045199")
+    ==(last.getName, "gn|BPY2C;ccds|CCDS44030;ens|ENSG00000185894;vega|OTTHUMG00000045199")
   }
 
   test("can read a small .vcf file") {
@@ -168,61 +171,61 @@ class ADAMContextSuite
     val gts = sc.loadGenotypes(path)
     val vcRdd = gts.toVariantContextRDD
     val vcs = vcRdd.rdd.collect.sortBy(_.position)
-    vcs.length should === (6)
+    ==(vcs.length, 6)
 
     val vc = vcs.head
     val variant = vc.variant.variant
-    variant.getContigName should === ("1")
-    variant.getStart should === (14396L)
-    variant.getEnd should === (14400L)
-    variant.getReferenceAllele should === ("CTGT")
-    variant.getAlternateAllele should === ("C")
+    ==(variant.getContigName, "1")
+    ==(variant.getStart, 14396L)
+    ==(variant.getEnd, 14400L)
+    ==(variant.getReferenceAllele, "CTGT")
+    ==(variant.getAlternateAllele, "C")
     assert(variant.getNames.isEmpty)
-    variant.getFiltersApplied should === (true)
-    variant.getFiltersPassed should === (false)
+    ==(variant.getFiltersApplied, true)
+    ==(variant.getFiltersPassed, false)
     assert(variant.getFiltersFailed.contains("IndelQD"))
 
-    vc.genotypes.size should === (3)
+    ==(vc.genotypes.size, 3)
 
     val gt = vc.genotypes.head
     assert(gt.getVariantCallingAnnotations != null)
-    gt.getReadDepth should === (20)
+    ==(gt.getReadDepth, 20)
   }
 
   test("can read a gzipped .vcf file") {
     val path = testFile("test.vcf.gz")
     val vcs = sc.loadVcf(path)
-    assert(vcs.rdd.count === 7)
+    ==(vcs.rdd.count, 7)
   }
 
   test("can read a vcf file with an empty alt") {
     val path = testFile("test.vcf")
     val vcs = sc.loadVariants(path)
-    assert(vcs.rdd.count === 7)
+    ==(vcs.rdd.count, 7)
   }
 
   test("can read a BGZF gzipped .vcf file with .gz file extension") {
     val path = testFile("test.vcf.bgzf.gz")
     val vcs = sc.loadVcf(path)
-    assert(vcs.rdd.count === 7)
+    ==(vcs.rdd.count, 7)
   }
 
   test("can read a BGZF gzipped .vcf file with .bgz file extension") {
     val path = testFile("test.vcf.bgz")
     val vcs = sc.loadVcf(path)
-    assert(vcs.rdd.count === 7)
+    ==(vcs.rdd.count, 7)
   }
 
   ignore("can read an uncompressed BCFv2.2 file") { // see https://github.com/samtools/htsjdk/issues/507
     val path = testFile("test.uncompressed.bcf")
     val vcs = sc.loadVcf(path)
-    assert(vcs.rdd.count === 7)
+    ==(vcs.rdd.count, 7)
   }
 
   ignore("can read a BGZF compressed BCFv2.2 file") { // see https://github.com/samtools/htsjdk/issues/507
     val path = testFile("test.compressed.bcf")
     val vcs = sc.loadVcf(path)
-    assert(vcs.rdd.count === 7)
+    ==(vcs.rdd.count, 7)
   }
 
   test("loadIndexedVcf with 1 ReferenceRegion") {
@@ -248,19 +251,19 @@ class ADAMContextSuite
 
       val reads = sc.loadAlignments(path)
       if (testNumber == 1) {
-        reads.rdd.count should === (6)
-        reads.rdd.filter(_.getReadPaired).count should === (6)
-        reads.rdd.filter(_.getReadInFragment == 0).count should === (3)
-        reads.rdd.filter(_.getReadInFragment == 1).count should === (3)
+        ==(reads.rdd.count, 6)
+        ==(reads.rdd.filter(_.getReadPaired).count, 6)
+        ==(reads.rdd.filter(_.getReadInFragment == 0).count, 3)
+        ==(reads.rdd.filter(_.getReadInFragment == 1).count, 3)
       } else {
-        reads.rdd.count should === (4)
-        reads.rdd.filter(_.getReadPaired).count should === (4)
-        reads.rdd.filter(_.getReadInFragment == 0).count should === (2)
-        reads.rdd.filter(_.getReadInFragment == 1).count should === (2)
+        ==(reads.rdd.count, 4)
+        ==(reads.rdd.filter(_.getReadPaired).count, 4)
+        ==(reads.rdd.filter(_.getReadInFragment == 0).count, 2)
+        ==(reads.rdd.filter(_.getReadInFragment == 1).count, 2)
       }
 
-      reads.rdd.collect.foreach(_.getSequence.length should === (250))
-      reads.rdd.collect.foreach(_.getQual.length should === (250))
+      reads.rdd.collect.foreach(r ⇒ ==(r.getSequence.length, 250))
+      reads.rdd.collect.foreach(r ⇒ ==(r.getQual.length, 250))
     }
   }
 
@@ -272,18 +275,18 @@ class ADAMContextSuite
 
       val reads = sc.loadAlignments(path)
       if (testNumber == 1) {
-        reads.rdd.count should === (6)
-        reads.rdd.filter(_.getReadPaired).count should === (0)
+        ==(reads.rdd.count, 6)
+        ==(reads.rdd.filter(_.getReadPaired).count, 0)
       } else if (testNumber == 4) {
-        reads.rdd.count should === (4)
-        reads.rdd.filter(_.getReadPaired).count should === (0)
+        ==(reads.rdd.count, 4)
+        ==(reads.rdd.filter(_.getReadPaired).count, 0)
       } else {
-        reads.rdd.count should === (5)
-        reads.rdd.filter(_.getReadPaired).count should === (0)
+        ==(reads.rdd.count, 5)
+        ==(reads.rdd.filter(_.getReadPaired).count, 0)
       }
 
-      reads.rdd.collect.foreach(_.getSequence.length should === (250))
-      reads.rdd.collect.foreach(_.getQual.length should === (250))
+      reads.rdd.collect.foreach(r ⇒ ==(r.getSequence.length, 250))
+      reads.rdd.collect.foreach(r ⇒ ==(r.getQual.length, 250))
     }
   }
 
@@ -291,15 +294,15 @@ class ADAMContextSuite
     val path = testFile("bqsr1.vcf")
 
     val variants = sc.loadVariants(path)
-    variants.rdd.count should === (681)
+    ==(variants.rdd.count, 681)
 
     val loc = tmpLocation()
     variants.saveAsParquet(loc, 1024, 1024) // force more than one row group (block)
 
-    val pred: FilterPredicate = (LongColumn("start") === 16097631L)
+    val pred: FilterPredicate = LongColumn("start") === 16097631L
     // the following only reads one row group
     val adamVariants = sc.loadParquetVariants(loc, predicate = Some(pred))
-    adamVariants.rdd.count should === (1)
+    ==(adamVariants.rdd.count, 1)
   }
 
   test("saveAsParquet with file path") {
@@ -308,7 +311,7 @@ class ADAMContextSuite
     val outputPath = tmpLocation()
     reads.saveAsParquet(outputPath)
     val reloadedReads = sc.loadAlignments(outputPath)
-    reads.rdd.count should === (reloadedReads.rdd.count)
+    ==(reads.rdd.count, reloadedReads.rdd.count)
   }
 
   test("saveAsParquet with file path, block size, page size") {
@@ -317,7 +320,7 @@ class ADAMContextSuite
     val outputPath = tmpLocation()
     reads.saveAsParquet(outputPath, 1024, 2048)
     val reloadedReads = sc.loadAlignments(outputPath)
-    reads.rdd.count should === (reloadedReads.rdd.count)
+    ==(reads.rdd.count, reloadedReads.rdd.count)
   }
 
   test("saveAsParquet with save args") {
@@ -326,17 +329,17 @@ class ADAMContextSuite
     val outputPath = tmpLocation()
     reads.saveAsParquet(TestSaveArgs(outputPath))
     val reloadedReads = sc.loadAlignments(outputPath)
-    reads.rdd.count should === (reloadedReads.rdd.count)
+    ==(reads.rdd.count, reloadedReads.rdd.count)
   }
 
   test("read a HLA fasta from GRCh38") {
     val inputPath = testFile("HLA_DQB1_05_01_01_02.fa")
     val gRdd = sc.loadFasta(inputPath, 10000L)
-    gRdd.sequences.records.size should === (1)
-    gRdd.sequences.records.head.name should === ("HLA-DQB1*05:01:01:02")
+    ==(gRdd.sequences.records.size, 1)
+    ==(gRdd.sequences.records.head.name, "HLA-DQB1*05:01:01:02")
     val fragments = gRdd.rdd.collect
-    fragments.length should === (1)
-    fragments.head.getContig.getContigName should === ("HLA-DQB1*05:01:01:02")
+    ==(fragments.length, 1)
+    ==(fragments.head.getContig.getContigName, "HLA-DQB1*05:01:01:02")
   }
 
   test("read a gzipped fasta file") {
@@ -344,21 +347,21 @@ class ADAMContextSuite
     val contigFragments: RDD[NucleotideContigFragment] = sc.loadFasta(inputPath, 10000L)
       .rdd
       .sortBy(_.getFragmentNumber.toInt)
-    contigFragments.rdd.count() should === (26)
+    ==(contigFragments.rdd.count(), 26)
     val first: NucleotideContigFragment = contigFragments.first()
-    first.getContig.getContigName should === (null)
-    first.getDescription should === ("gi|224384749|gb|CM000682.1| Homo sapiens chromosome 20, GRCh37 primary reference assembly")
-    first.getFragmentNumber should === (0)
-    first.getFragmentSequence.length should === (10000)
-    first.getFragmentStartPosition should === (0L)
-    first.getFragmentEndPosition should === (9999L)
-    first.getNumberOfFragmentsInContig should === (26)
+    ==(first.getContig.getContigName, null)
+    ==(first.getDescription, "gi|224384749|gb|CM000682.1| Homo sapiens chromosome 20, GRCh37 primary reference assembly")
+    ==(first.getFragmentNumber, 0)
+    ==(first.getFragmentSequence.length, 10000)
+    ==(first.getFragmentStartPosition, 0L)
+    ==(first.getFragmentEndPosition, 9999L)
+    ==(first.getNumberOfFragmentsInContig, 26)
 
     // 250k file actually has 251930 bases
     val last: NucleotideContigFragment = contigFragments.rdd.collect().last
-    last.getFragmentNumber should === (25)
-    last.getFragmentStartPosition should === (250000L)
-    last.getFragmentEndPosition should === (251929L)
+    ==(last.getFragmentNumber, 25)
+    ==(last.getFragmentStartPosition, 250000L)
+    ==(last.getFragmentEndPosition, 251929L)
   }
 
   test("loadIndexedBam with 1 ReferenceRegion") {
@@ -409,21 +412,21 @@ class ADAMContextSuite
     val path = testFile("bqsr1.vcf").parent / "*.vcf"
 
     val variants = sc.loadVcf(path).toVariantRDD
-    assert(variants.rdd.count === 722)
+    ==(variants.rdd.count, 722)
   }
 
   test("load vcf from a directory") {
     val path = testFile("vcf_dir")
 
     val variants = sc.loadVcf(path).toVariantRDD
-    variants.rdd.count should === (681)
+    ==(variants.rdd.count, 681)
   }
 
   lazy val gvcfDir = testFile("gvcf_dir")
 
   test("load gvcf which contains a multi-allelic row from a directory") {
     val variants = sc.loadVcf(gvcfDir).toVariantRDD
-    assert(variants.rdd.count === 6)
+    ==(variants.rdd.count, 6)
   }
 
   test("parse annotations for multi-allelic rows") {
@@ -436,7 +439,7 @@ class ADAMContextSuite
     val mleCounts = multiAllelicVariants.map(_.getAnnotation.getAttributes.get("MLEAC"))
     //ALT    T,TA,TAA,<NON_REF>
     //MLEAC  0,1,1,0
-    assert(mleCounts === Array("0", "1", "1"))
+    ==(mleCounts, Array("0", "1", "1"))
   }
 
   test("load parquet with globs") {
@@ -453,7 +456,7 @@ class ADAMContextSuite
 
     val reloadedReads = sc.loadParquetAlignments(globPath)
 
-    (2 * reads.rdd.count) should === (reloadedReads.rdd.count)
+    ==(2 * reads.rdd.count, reloadedReads.rdd.count)
   }
 
   test("bad glob should fail") {
@@ -481,34 +484,34 @@ class ADAMContextSuite
 
     variants.foreach(v => v.getStart.longValue match {
       case 14396L ⇒
-        assert(v.getReferenceAllele === "CTGT")
-        assert(v.getAlternateAllele === "C")
-        assert(v.getAnnotation.getTranscriptEffects.size === 4)
+        ==(v.getReferenceAllele, "CTGT")
+        ==(v.getAlternateAllele, "C")
+        ==(v.getAnnotation.getTranscriptEffects.size, 4)
 
         val te = v.getAnnotation.getTranscriptEffects.get(0)
-        assert(te.getAlternateAllele === "C")
+        ==(te.getAlternateAllele, "C")
         assert(te.getEffects.contains("downstream_gene_variant"))
-        assert(te.getGeneName === "WASH7P")
-        assert(te.getGeneId === "ENSG00000227232")
-        assert(te.getFeatureType === "transcript")
-        assert(te.getFeatureId === "ENST00000488147.1")
-        assert(te.getBiotype === "unprocessed_pseudogene")
+        ==(te.getGeneName, "WASH7P")
+        ==(te.getGeneId, "ENSG00000227232")
+        ==(te.getFeatureType, "transcript")
+        ==(te.getFeatureId, "ENST00000488147.1")
+        ==(te.getBiotype, "unprocessed_pseudogene")
       case 14521L ⇒
-        assert(v.getReferenceAllele === "G")
-        assert(v.getAlternateAllele === "A")
-        assert(v.getAnnotation.getTranscriptEffects.size === 4)
+        ==(v.getReferenceAllele, "G")
+        ==(v.getAlternateAllele, "A")
+        ==(v.getAnnotation.getTranscriptEffects.size, 4)
       case 19189L ⇒
-        assert(v.getReferenceAllele === "GC")
-        assert(v.getAlternateAllele === "G")
-        assert(v.getAnnotation.getTranscriptEffects.size === 3)
+        ==(v.getReferenceAllele, "GC")
+        ==(v.getAlternateAllele, "G")
+        ==(v.getAnnotation.getTranscriptEffects.size, 3)
       case 63734L ⇒
-        assert(v.getReferenceAllele === "CCTA")
-        assert(v.getAlternateAllele === "C")
-        assert(v.getAnnotation.getTranscriptEffects.size === 1)
+        ==(v.getReferenceAllele, "CCTA")
+        ==(v.getAlternateAllele, "C")
+        ==(v.getAnnotation.getTranscriptEffects.size, 1)
       case 752720L ⇒
-        assert(v.getReferenceAllele === "A")
-        assert(v.getAlternateAllele === "G")
-        assert(v.getAnnotation.getTranscriptEffects.size === 2)
+        ==(v.getReferenceAllele, "A")
+        ==(v.getAlternateAllele, "G")
+        ==(v.getAnnotation.getTranscriptEffects.size, 2)
       case _ ⇒
         fail("unexpected variant start " + v.getStart)
     })
@@ -520,8 +523,8 @@ class ADAMContextSuite
     val fastqReads1: RDD[AlignmentRecord] = sc.loadAlignments(readsFilepath1).rdd
     val fastqReads2: RDD[AlignmentRecord] = sc.loadAlignments(readsFilepath2).rdd
     val pairedReads: RDD[AlignmentRecord] = sc.loadAlignments(readsFilepath1, path2Opt = Option(readsFilepath2)).rdd
-    assert(fastqReads1.rdd.count === 488)
-    assert(fastqReads2.rdd.count === 488)
-    assert(pairedReads.rdd.count === 976)
+    ==(fastqReads1.rdd.count, 488)
+    ==(fastqReads2.rdd.count, 488)
+    ==(pairedReads.rdd.count, 976)
   }
 }

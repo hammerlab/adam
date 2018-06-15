@@ -38,7 +38,7 @@ class CoverageSuite
     // all fields should match between the two
     assert(coverageAfterConversion.start == featureToConvert.start)
     assert(coverageAfterConversion.end == featureToConvert.end)
-    assert(coverageAfterConversion.contigName === featureToConvert.getContigName)
+    ==(coverageAfterConversion.contigName, featureToConvert.getContigName)
     assert(coverageAfterConversion.count == featureToConvert.score)
   }
 

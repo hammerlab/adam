@@ -51,13 +51,13 @@ class ContigFieldSuite
     )
 
     val contigs: RDD[Contig] = sc.loadParquet(path, projection = Some(projection))
-    assert(contigs.count() === 1)
-    assert(contigs.first.getContigName === "6")
-    assert(contigs.first.getContigLength === 170805979)
-    assert(contigs.first.getContigMD5 === "013a29a149b249bb119d27368bb6bf52")
-    assert(contigs.first.getReferenceURL === "http://www.ebi.ac.uk/ena/data/view/GCA_000001405.22")
-    assert(contigs.first.getAssembly === "GRCh38")
-    assert(contigs.first.getSpecies === "Homo sapiens")
-    assert(contigs.first.getReferenceIndex === 0)
+    ==(contigs.count(), 1)
+    ==(contigs.first.getContigName, "6")
+    ==(contigs.first.getContigLength, 170805979)
+    ==(contigs.first.getContigMD5, "013a29a149b249bb119d27368bb6bf52")
+    ==(contigs.first.getReferenceURL, "http://www.ebi.ac.uk/ena/data/view/GCA_000001405.22")
+    ==(contigs.first.getAssembly, "GRCh38")
+    ==(contigs.first.getSpecies, "Homo sapiens")
+    ==(contigs.first.getReferenceIndex, 0)
   }
 }

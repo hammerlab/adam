@@ -25,8 +25,9 @@ import org.apache.avro.specific.{ SpecificDatumReader, SpecificDatumWriter, Spec
 import org.apache.hadoop.io.Writable
 import org.apache.spark.internal.io.FileCommitProtocol.TaskCommitMessage
 import org.apache.spark.serializer.KryoRegistrator
-import org.hammerlab.genomics.loci.set.Registrar
+import org.hammerlab.genomics.loci.set.LociSet
 import org.hammerlab.genomics.reference
+import org.hammerlab.kryo.spark.Registrator
 
 import scala.reflect.ClassTag
 
@@ -88,8 +89,9 @@ class WritableSerializer[T <: Writable] extends Serializer[T] {
   }
 }
 
-class ADAMKryoRegistrator extends KryoRegistrator {
+class ADAMKryoRegistrator extends Registrator {
   override def registerClasses(kryo: Kryo) {
+    super.registerClasses(kryo)
 
     // Register Avro classes using fully qualified class names
     // Sort alphabetically and add blank lines between packages
@@ -381,10 +383,14 @@ class ADAMKryoRegistrator extends KryoRegistrator {
     kryo.register(Nil.getClass)
     kryo.register(None.getClass)
 
-    new Registrar().registerClasses(kryo)
     new reference.Registrar().registerClasses(kryo)
 
     // https://issues.apache.org/jira/browse/SPARK-21569
     kryo.register(classOf[TaskCommitMessage])
   }
+
+  import org.hammerlab.kryo._
+  register(
+    cls[LociSet]
+  )
 }

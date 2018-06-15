@@ -38,8 +38,8 @@ class SmithWatermanSuite extends FunSuite {
     val sw = new SmithWatermanConstantGapScoring("AAAA", "AAAA", 1.0, 0.0, -1.0, -1.0)
 
     val max = sw.maxCoordinates(matrix)
-    assert(max._1 === 4)
-    assert(max._2 === 4)
+    ==(max._1, 4)
+    ==(max._2, 4)
   }
 
   test("gather max position from irregular scoring matrix") {
@@ -56,8 +56,8 @@ class SmithWatermanSuite extends FunSuite {
     val sw = new SmithWatermanConstantGapScoring("ACGT", "ACATGA", 1.0, 0.0, -1.0, -1.0)
 
     val max = sw.maxCoordinates(matrix)
-    assert(max._1 === 4)
-    assert(max._2 === 4)
+    ==(max._1, 4)
+    ==(max._2, 4)
   }
 
   test("gather max position from irregular scoring matrix with deletions") {
@@ -74,8 +74,8 @@ class SmithWatermanSuite extends FunSuite {
     val sw = new SmithWatermanConstantGapScoring("ACGA", "ACATGA", 1.0, 0.0, -0.5, -0.5)
 
     val max = sw.maxCoordinates(matrix)
-    assert(max._1 === 4)
-    assert(max._2 === 6)
+    ==(max._1, 4)
+    ==(max._2, 6)
   }
 
   test("score simple alignment with constant gap") {
@@ -141,9 +141,9 @@ class SmithWatermanSuite extends FunSuite {
   val swh = new SmithWatermanConstantGapScoring("", "", 0.0, 0.0, 0.0, 0.0)
 
   test("can unroll cigars correctly") {
-    assert(swh.cigarFromRNNCigar("MDDMMMM") === "4M2D1M")
-    assert(swh.cigarFromRNNCigar("MMMIIMM") === "2M2I3M")
-    assert(swh.cigarFromRNNCigar("MMMMMMMM") === "8M")
+    ==(swh.cigarFromRNNCigar("MDDMMMM"), "4M2D1M")
+    ==(swh.cigarFromRNNCigar("MMMIIMM"), "2M2I3M")
+    ==(swh.cigarFromRNNCigar("MMMMMMMM"), "8M")
   }
 
   test("execute simple trackback") {
@@ -156,8 +156,8 @@ class SmithWatermanSuite extends FunSuite {
 
     val (cx, cy, _, _) = swh.move(matrix, 4, 4, "", "")
 
-    assert(cx === "4M")
-    assert(cy === "4M")
+    ==(cx, "4M")
+    ==(cy, "4M")
   }
 
   test("execute trackback with indel") {
@@ -173,22 +173,22 @@ class SmithWatermanSuite extends FunSuite {
 
     val (cx, cy, _, _) = swh.move(matrix, 6, 4, "", "")
 
-    assert(cx === "2M2I2M")
-    assert(cy === "2M2D2M")
+    ==(cx, "2M2I2M")
+    ==(cy, "2M2D2M")
   }
 
   test("run end to end smith waterman for simple reads") {
     val sw = new SmithWatermanConstantGapScoring("AAAA", "AAAA", 1.0, 0.0, -1.0, -1.0)
 
-    assert(sw.cigarX.toString === "4M")
-    assert(sw.cigarY.toString === "4M")
+    ==(sw.cigarX.toString, "4M")
+    ==(sw.cigarY.toString, "4M")
   }
 
   test("run end to end smith waterman for short sequences with indel") {
     val sw = new SmithWatermanConstantGapScoring("ACATGA", "ACGA", 1.0, 0.0, -0.333, -0.333)
 
-    assert(sw.cigarX.toString === "2M2I2M")
-    assert(sw.cigarY.toString === "2M2D2M")
+    ==(sw.cigarX.toString, "2M2I2M")
+    ==(sw.cigarY.toString, "2M2D2M")
   }
 
   test("run end to end smith waterman for longer sequences with snp") {
@@ -198,8 +198,8 @@ class SmithWatermanSuite extends FunSuite {
       "ATTAGACTACTTAATATACAGAATTACCCCAATAGA",
       1.0, 0.0, -0.333, -0.333)
 
-    assert(sw.cigarX.toString === "36M")
-    assert(sw.cigarY.toString === "36M")
+    ==(sw.cigarX.toString, "36M")
+    ==(sw.cigarY.toString, "36M")
   }
 
   test("run end to end smith waterman for longer sequences with short indel") {
@@ -209,8 +209,8 @@ class SmithWatermanSuite extends FunSuite {
       "ATTAGACTACTTAATATACAGATACCCCAATAGA",
       1.0, 0.0, -0.333, -0.333)
 
-    assert(sw.cigarX.toString === "22M2I12M")
-    assert(sw.cigarY.toString === "22M2D12M")
+    ==(sw.cigarX.toString, "22M2I12M")
+    ==(sw.cigarY.toString, "22M2D12M")
   }
 
   test("run end to end smith waterman for shorter sequence in longer sequence") {
@@ -220,9 +220,9 @@ class SmithWatermanSuite extends FunSuite {
       "ACTTAATATACAGATTTACC",
       1.0, 0.0, -0.333, -0.333)
 
-    assert(sw.cigarX.toString === "20M")
-    assert(sw.cigarY.toString === "20M")
-    assert(sw.xStart === 8)
+    ==(sw.cigarX.toString, "20M")
+    ==(sw.cigarY.toString, "20M")
+    ==(sw.xStart, 8)
   }
 
   test("run end to end smith waterman for shorter sequence in longer sequence, with indel") {
@@ -232,18 +232,18 @@ class SmithWatermanSuite extends FunSuite {
       "ACTTAATATAGATTTACC",
       1.0, 0.0, -0.333, -0.333)
 
-    assert(sw.cigarX.toString === "9M2I9M")
-    assert(sw.cigarY.toString === "9M2D9M")
-    assert(sw.xStart === 8)
+    ==(sw.cigarX.toString, "9M2I9M")
+    ==(sw.cigarY.toString, "9M2D9M")
+    ==(sw.xStart, 8)
   }
 
   test("smithWaterman - simple alignment") {
     val sw = new SmithWatermanConstantGapScoring("AAA",
       "AAT",
       1.0, 0.0, -0.333, -0.333)
-    assert(sw.cigarX.toString === "3M")
-    assert(sw.cigarY.toString === "3M")
-    assert(sw.xStart === 0)
+    ==(sw.cigarX.toString, "3M")
+    ==(sw.cigarY.toString, "3M")
+    ==(sw.xStart, 0)
   }
 
 }

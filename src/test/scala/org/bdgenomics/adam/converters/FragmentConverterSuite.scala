@@ -21,7 +21,8 @@ import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro._
 
-class FragmentConverterSuite extends ADAMFunSuite {
+class FragmentConverterSuite
+  extends ADAMFunSuite {
 
   test("build a fragment collector and convert to a read") {
     val fcOpt = FragmentCollector(NucleotideContigFragment.newBuilder()
@@ -32,20 +33,20 @@ class FragmentConverterSuite extends ADAMFunSuite {
     assert(fcOpt.isDefined)
     val (builtContig, builtFragment) = fcOpt.get
 
-    assert(builtContig.getContigName === "ctg")
-    assert(builtFragment.fragments.length === 1)
+    ==(builtContig.getContigName, "ctg")
+    ==(builtFragment.fragments.length, 1)
     val (fragmentRegion, fragmentString) = builtFragment.fragments.head
-    assert(fragmentRegion === ReferenceRegion("ctg", 0L, 8L))
-    assert(fragmentString === "ACACACAC")
+    ==(fragmentRegion, ReferenceRegion("ctg", 0L, 8L))
+    ==(fragmentString, "ACACACAC")
 
     val convertedReads = FragmentConverter.convertFragment((builtContig, builtFragment))
-    assert(convertedReads.size === 1)
+    ==(convertedReads.size, 1)
     val convertedRead = convertedReads.head
 
-    assert(convertedRead.getSequence === "ACACACAC")
-    assert(convertedRead.getContigName === "ctg")
-    assert(convertedRead.getStart === 0)
-    assert(convertedRead.getEnd === 8)
+    ==(convertedRead.getSequence, "ACACACAC")
+    ==(convertedRead.getContigName, "ctg")
+    ==(convertedRead.getStart, 0)
+    ==(convertedRead.getEnd, 8)
   }
 
   test("if a fragment isn't associated with a contig, don't get a fragment collector") {
@@ -67,18 +68,18 @@ class FragmentConverterSuite extends ADAMFunSuite {
     val reads = FragmentConverter.convertRdd(rdd)
       .collect()
 
-    assert(reads.length === 2)
+    ==(reads.length, 2)
     val firstRead = reads.filter(_.getStart == 0L).head
     val secondRead = reads.filter(_.getStart != 0L).head
 
-    assert(firstRead.getSequence === "ACACACAC")
-    assert(firstRead.getContigName === "ctg")
-    assert(firstRead.getStart === 0L)
-    assert(firstRead.getEnd === 8L)
-    assert(secondRead.getSequence === "AATTCCGGCCTTAA")
-    assert(secondRead.getContigName === "ctg")
-    assert(secondRead.getStart === 14L)
-    assert(secondRead.getEnd === 28L)
+    ==(firstRead.getSequence, "ACACACAC")
+    ==(firstRead.getContigName, "ctg")
+    ==(firstRead.getStart, 0L)
+    ==(firstRead.getEnd, 8L)
+    ==(secondRead.getSequence, "AATTCCGGCCTTAA")
+    ==(secondRead.getContigName, "ctg")
+    ==(secondRead.getStart, 14L)
+    ==(secondRead.getEnd, 28L)
   }
 
   test("convert an rdd of contiguous fragments, all from the same contig") {
@@ -99,12 +100,12 @@ class FragmentConverterSuite extends ADAMFunSuite {
     val reads = FragmentConverter.convertRdd(rdd)
       .collect()
 
-    assert(reads.length === 1)
+    ==(reads.length, 1)
     val read = reads(0)
-    assert(read.getSequence === "ACACACACTGTGTGAATTCCGGCCTTAA")
-    assert(read.getContigName === "ctg")
-    assert(read.getStart === 0L)
-    assert(read.getEnd === 28L)
+    ==(read.getSequence, "ACACACACTGTGTGAATTCCGGCCTTAA")
+    ==(read.getContigName, "ctg")
+    ==(read.getStart, 0L)
+    ==(read.getEnd, 28L)
   }
 
   test("convert an rdd of varied fragments from multiple contigs") {
@@ -137,39 +138,39 @@ class FragmentConverterSuite extends ADAMFunSuite {
     val reads = FragmentConverter.convertRdd(rdd)
       .collect()
 
-    assert(reads.length === 4)
+    ==(reads.length, 4)
 
     val ctg1Reads = reads.filter(_.getContigName == "ctg1")
-    assert(ctg1Reads.length === 1)
+    ==(ctg1Reads.length, 1)
 
     val ctg1Read = ctg1Reads.head
-    assert(ctg1Read.getSequence === "ACACACACTGTGTGAATTCCGGCCTTAA")
-    assert(ctg1Read.getContigName === "ctg1")
-    assert(ctg1Read.getStart === 0L)
-    assert(ctg1Read.getEnd === 28L)
+    ==(ctg1Read.getSequence, "ACACACACTGTGTGAATTCCGGCCTTAA")
+    ==(ctg1Read.getContigName, "ctg1")
+    ==(ctg1Read.getStart, 0L)
+    ==(ctg1Read.getEnd, 28L)
 
     val ctg2Reads = reads.filter(_.getContigName == "ctg2")
-    assert(ctg2Reads.length === 2)
+    ==(ctg2Reads.length, 2)
 
     val firstCtg2Read = ctg2Reads.filter(_.getStart == 0L).head
     val secondCtg2Read = ctg2Reads.filter(_.getStart != 0L).head
 
-    assert(firstCtg2Read.getSequence === "ACACACAC")
-    assert(firstCtg2Read.getContigName === "ctg2")
-    assert(firstCtg2Read.getStart === 0L)
-    assert(firstCtg2Read.getEnd === 8L)
-    assert(secondCtg2Read.getSequence === "AATTCCGGCCTTAA")
-    assert(secondCtg2Read.getContigName === "ctg2")
-    assert(secondCtg2Read.getStart === 14L)
-    assert(secondCtg2Read.getEnd === 28L)
+    ==(firstCtg2Read.getSequence, "ACACACAC")
+    ==(firstCtg2Read.getContigName, "ctg2")
+    ==(firstCtg2Read.getStart, 0L)
+    ==(firstCtg2Read.getEnd, 8L)
+    ==(secondCtg2Read.getSequence, "AATTCCGGCCTTAA")
+    ==(secondCtg2Read.getContigName, "ctg2")
+    ==(secondCtg2Read.getStart, 14L)
+    ==(secondCtg2Read.getEnd, 28L)
 
     val ctg3Reads = reads.filter(_.getContigName == "ctg3")
-    assert(ctg3Reads.length === 1)
+    ==(ctg3Reads.length, 1)
 
     val ctg3Read = ctg3Reads.head
-    assert(ctg3Read.getSequence === "AATTCCGGCCTTAA")
-    assert(ctg3Read.getContigName === "ctg3")
-    assert(ctg3Read.getStart === 14L)
-    assert(ctg3Read.getEnd === 28L)
+    ==(ctg3Read.getSequence, "AATTCCGGCCTTAA")
+    ==(ctg3Read.getContigName, "ctg3")
+    ==(ctg3Read.getStart, 14L)
+    ==(ctg3Read.getEnd, 28L)
   }
 }

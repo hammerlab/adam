@@ -26,27 +26,27 @@ import org.scalatest.FunSuite
 class NormalizationUtilsSuite extends FunSuite {
 
   test("cannot move an indel left if there are no bases to it's left") {
-    assert(NormalizationUtils.numberOfPositionsToShiftIndel("ATC", "") === 0)
+    ==(NormalizationUtils.numberOfPositionsToShiftIndel("ATC", ""), 0)
   }
 
   test("move a simple indel to farthest position left until bases run out") {
-    assert(NormalizationUtils.numberOfPositionsToShiftIndel("AAA", "AA") === 2)
+    ==(NormalizationUtils.numberOfPositionsToShiftIndel("AAA", "AA"), 2)
   }
 
   test("move a simple indel to farthest position left, past length of indel") {
-    assert(NormalizationUtils.numberOfPositionsToShiftIndel("AAA", "TGAAAA") === 4)
+    ==(NormalizationUtils.numberOfPositionsToShiftIndel("AAA", "TGAAAA"), 4)
   }
 
   test("cannot move a left normalized indel in a short tandem repeat") {
-    assert(NormalizationUtils.numberOfPositionsToShiftIndel("ATAT", "TGTCC") === 0)
+    ==(NormalizationUtils.numberOfPositionsToShiftIndel("ATAT", "TGTCC"), 0)
   }
 
   test("move an indel in a short tandem repeat") {
-    assert(NormalizationUtils.numberOfPositionsToShiftIndel("ATAT", "TGTCCATATATAT") === 8)
+    ==(NormalizationUtils.numberOfPositionsToShiftIndel("ATAT", "TGTCCATATATAT"), 8)
   }
 
   test("move an indel in a short tandem repeat of more than 2 bases, where shift is not an integer multiple of repeated sequence length") {
-    assert(NormalizationUtils.numberOfPositionsToShiftIndel("ATGATG", "TGTCCTGATG") === 5)
+    ==(NormalizationUtils.numberOfPositionsToShiftIndel("ATGATG", "TGTCCTGATG"), 5)
   }
 
   test("moving a simple read with single deletion that cannot shift") {
@@ -63,13 +63,13 @@ class NormalizationUtilsSuite extends FunSuite {
     assert(new_cigar.toString == "10M10D10M")
     // TODO: the implicit for Read->RichADAMRecord doesn't get
     // called here for some reason.
-    assert(RichAlignmentRecord(read).samtoolsCigar.getReadLength === new_cigar.getReadLength)
+    ==(RichAlignmentRecord(read).samtoolsCigar.getReadLength, new_cigar.getReadLength)
   }
 
   test("shift an indel left by 0 in a cigar") {
     val cigar = RichCigar(TextCigarCodec.decode("10M10D10M"))
 
-    assert(cigar.cigar === NormalizationUtils.shiftIndel(cigar, 1, 0))
+    ==(cigar.cigar, NormalizationUtils.shiftIndel(cigar, 1, 0))
   }
 
   test("shift an indel left by 1 in a cigar") {
@@ -91,6 +91,6 @@ class NormalizationUtilsSuite extends FunSuite {
 
     val cigar = NormalizationUtils.leftAlignIndel(read)
 
-    assert(cigar.toString === "29M10D31M")
+    ==(cigar.toString, "29M10D31M")
   }
 }

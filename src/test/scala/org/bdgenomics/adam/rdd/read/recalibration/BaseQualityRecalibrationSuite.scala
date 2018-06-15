@@ -67,7 +67,7 @@ class BaseQualityRecalibrationSuite
         .toSeq
         .sorted
 
-    referenceObs.zip(testObs).foreach(p => assert(p._1 === p._2))
+    referenceObs.zip(testObs).foreach(p => ==(p._1, p._2))
   }
 
   test("BQSR Test Input #1 w/ VCF Sites without caching") {

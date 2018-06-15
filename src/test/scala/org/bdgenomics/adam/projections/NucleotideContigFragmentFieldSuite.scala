@@ -54,14 +54,14 @@ class NucleotideContigFragmentFieldSuite extends ADAMFunSuite {
     )
 
     val nucleotideContigFragments: RDD[NucleotideContigFragment] = sc.loadParquet(path, projection = Some(projection))
-    assert(nucleotideContigFragments.count() === 1)
-    assert(nucleotideContigFragments.first.getContig.getContigName === "6")
-    assert(nucleotideContigFragments.first.getDescription === "Chromosome 6")
-    assert(nucleotideContigFragments.first.getFragmentSequence === "ACTG")
-    assert(nucleotideContigFragments.first.getFragmentNumber === 1)
-    assert(nucleotideContigFragments.first.getFragmentStartPosition === 0)
-    assert(nucleotideContigFragments.first.getFragmentEndPosition === 4)
-    assert(nucleotideContigFragments.first.getFragmentLength === 4)
-    assert(nucleotideContigFragments.first.getNumberOfFragmentsInContig === 4)
+    ==(nucleotideContigFragments.count(), 1)
+    ==(nucleotideContigFragments.first.getContig.getContigName, "6")
+    ==(nucleotideContigFragments.first.getDescription, "Chromosome 6")
+    ==(nucleotideContigFragments.first.getFragmentSequence, "ACTG")
+    ==(nucleotideContigFragments.first.getFragmentNumber, 1)
+    ==(nucleotideContigFragments.first.getFragmentStartPosition, 0)
+    ==(nucleotideContigFragments.first.getFragmentEndPosition, 4)
+    ==(nucleotideContigFragments.first.getFragmentLength, 4)
+    ==(nucleotideContigFragments.first.getNumberOfFragmentsInContig, 4)
   }
 }

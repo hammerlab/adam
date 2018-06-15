@@ -20,12 +20,15 @@ package org.bdgenomics.adam.util
 import java.net.URL
 
 import htsjdk.samtools.util.Log
+import org.apache.spark.serializer.KryoRegistrator
 import org.bdgenomics.adam.serialization.ADAMKryoRegistrator
+import org.hammerlab.cmp.CanEq
+import org.hammerlab.genomics.reference.NumLoci
 import org.hammerlab.genomics.reference.test.{ ClearContigNames, ContigNameCanEqualString, LocusCanEqualInt }
 import org.hammerlab.hadoop.Configuration
 import org.hammerlab.paths.Path
 import org.hammerlab.spark.test.suite.KryoSparkSuite
-import org.hammerlab.test.matchers.files.FileMatcher.fileMatch
+import org.hammerlab.test.Cmp
 import org.hammerlab.test.resources.{ File, Url }
 import org.scalactic.TypeCheckedTripleEquals
 
@@ -38,7 +41,7 @@ abstract class ADAMFunSuite
     with ClearContigNames
     with TypeCheckedTripleEquals {
 
-  register(new ADAMKryoRegistrator)
+  register(new ADAMKryoRegistrator: KryoRegistrator)
 
   // added to resolve #1280
   Log.setGlobalLogLevel(Log.LogLevel.ERROR)
@@ -63,5 +66,28 @@ abstract class ADAMFunSuite
   def checkFiles(actualPath: Path, expectedPath: File): Unit = {
     actualPath should fileMatch(expectedPath)
   }
+
+  def nullCmp[T](implicit ord: Ordering[T]): Cmp.Aux[T, (T, T)] =
+    new Cmp[T] {
+      type Diff = (T, T)
+      def cmp(l: T, r: T): Option[(T, T)] =
+        (l, r) match {
+          case (null, null) ⇒ None
+          case (_, null) | (null, _) ⇒ Some((l, r))
+          case (l, r) if !ord.equiv(l, r) ⇒ Some((l, r))
+          case _ ⇒ None
+        }
+    }
+
+  implicit val cmpStrings: Cmp.Aux[String, (String, String)] = nullCmp
+  import java.{ lang ⇒ jl }
+  type JInt = jl.Integer
+  implicit val cmpInteger: Cmp.Aux[JInt, (JInt, JInt)] = nullCmp
+  implicit val cmpFloat: Cmp.Aux[jl.Float, (jl.Float, jl.Float)] = nullCmp
+  implicit val cmpBoolean: Cmp.Aux[jl.Boolean, (jl.Boolean, jl.Boolean)] = nullCmp
+  implicit val cmpLong: Cmp.Aux[jl.Long, (jl.Long, jl.Long)] = nullCmp
+
+  implicit def intCanEqJLong(implicit cmp: Cmp[java.lang.Long]): CanEq.Aux[java.lang.Long, Int, cmp.Diff] = CanEq.withConversion[java.lang.Long, Int](cmp, _.toLong)
+  implicit def numLociCanEqInt(implicit cmp: Cmp[NumLoci]): CanEq.Aux[NumLoci, Int, cmp.Diff] = CanEq.withConversion[NumLoci, Int](cmp, NumLoci(_))
 }
 

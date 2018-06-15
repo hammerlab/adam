@@ -47,14 +47,14 @@ class FlankReferenceFragmentsSuite
 
     val fragments = FlankReferenceFragments.flank(testIter, 5).toSeq
 
-    assert(fragments.size === 2)
+    ==(fragments.size, 2)
     fragments.foreach(_.getFragmentSequence.length === 10)
-    assert(fragments(0).getFragmentSequence === "AAAAATTTTT")
-    assert(fragments(0).getFragmentStartPosition === 0L)
-    assert(fragments(0).getFragmentEndPosition === 9L)
-    assert(fragments(1).getFragmentSequence === "CCCCCGGGGG")
-    assert(fragments(1).getFragmentStartPosition === 20L)
-    assert(fragments(1).getFragmentEndPosition === 29L)
+    ==(fragments(0).getFragmentSequence, "AAAAATTTTT")
+    ==(fragments(0).getFragmentStartPosition, 0L)
+    ==(fragments(0).getFragmentEndPosition, 9L)
+    ==(fragments(1).getFragmentSequence, "CCCCCGGGGG")
+    ==(fragments(1).getFragmentStartPosition, 20L)
+    ==(fragments(1).getFragmentEndPosition, 29L)
   }
 
   test("put flanks on adjacent fragments") {
@@ -86,15 +86,15 @@ class FlankReferenceFragmentsSuite
 
     val fragments = FlankReferenceFragments.flank(testIter, 5).toSeq
 
-    assert(fragments.size === 3)
-    assert(fragments(0).getFragmentSequence === "AAAAATTTTTNNNNN")
-    assert(fragments(0).getFragmentStartPosition === 0L)
-    assert(fragments(0).getFragmentEndPosition === 14L)
-    assert(fragments(1).getFragmentSequence === "TTTTTNNNNNUUUUUCCCCC")
-    assert(fragments(1).getFragmentStartPosition === 5L)
-    assert(fragments(1).getFragmentEndPosition === 24L)
-    assert(fragments(2).getFragmentSequence === "UUUUUCCCCCGGGGG")
-    assert(fragments(2).getFragmentStartPosition === 15L)
-    assert(fragments(2).getFragmentEndPosition === 29L)
+    ==(fragments.size, 3)
+    ==(fragments(0).getFragmentSequence, "AAAAATTTTTNNNNN")
+    ==(fragments(0).getFragmentStartPosition, 0L)
+    ==(fragments(0).getFragmentEndPosition, 14L)
+    ==(fragments(1).getFragmentSequence, "TTTTTNNNNNUUUUUCCCCC")
+    ==(fragments(1).getFragmentStartPosition, 5L)
+    ==(fragments(1).getFragmentEndPosition, 24L)
+    ==(fragments(2).getFragmentSequence, "UUUUUCCCCCGGGGG")
+    ==(fragments(2).getFragmentStartPosition, 15L)
+    ==(fragments(2).getFragmentEndPosition, 29L)
   }
 }

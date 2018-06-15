@@ -33,25 +33,25 @@ class TwoBitFileSuite
   lazy val g1k = TwoBitFile(testFile("human_g1k_v37_chr1_59kb.2bit"))
 
   test("correctly read sequence from .2bit file") {
-    hg19.numSeq should === (1)
-    hg19.seqRecords.toSeq.length should === (1)
-    hg19.extract(ReferenceRegion("hg19_chrM", 0, 10)) should === ("GATCACAGGT")
-    hg19.extract(ReferenceRegion("hg19_chrM", 503, 513)) should === ("CATCCTACCC")
-    hg19.extract(ReferenceRegion("hg19_chrM", 16561, 16571)) should === ("CATCACGATG")
+    ==(hg19.numSeq, 1)
+    ==(hg19.seqRecords.toSeq.length, 1)
+    ==(hg19.extract(ReferenceRegion("hg19_chrM", 0, 10)), "GATCACAGGT")
+    ==(hg19.extract(ReferenceRegion("hg19_chrM", 503, 513)), "CATCCTACCC")
+    ==(hg19.extract(ReferenceRegion("hg19_chrM", 16561, 16571)), "CATCACGATG")
   }
 
   test("correctly return masked sequences from .2bit file") {
-    hg19.extract(ReferenceRegion("hg19_chrM", 0, 10), true) should === ("GATCACAGGT")
-    hg19.extract(ReferenceRegion("hg19_chrM", 2600, 2610), true) should === ("taatcacttg")
+    ==(hg19.extract(ReferenceRegion("hg19_chrM", 0, 10), true), "GATCACAGGT")
+    ==(hg19.extract(ReferenceRegion("hg19_chrM", 2600, 2610), true), "taatcacttg")
   }
 
   test("correctly return Ns from .2bit file") {
-    g1k.extract(ReferenceRegion("1", 9990, 10010), true) should === ("NNNNNNNNNNTAACCCTAAC")
+    ==(g1k.extract(ReferenceRegion("1", 9990, 10010), true), "NNNNNNNNNNTAACCCTAAC")
   }
 
   test("correctly calculates sequence dictionary") {
     val dict = hg19.sequences
-    dict.records.length should === (1)
-    dict.records.head.length should === (16571)
+    ==(dict.records.length, 1)
+    ==(dict.records.head.length, 16571)
   }
 }
