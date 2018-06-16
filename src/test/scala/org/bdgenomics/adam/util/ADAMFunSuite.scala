@@ -24,7 +24,7 @@ import org.apache.spark.serializer.KryoRegistrator
 import org.bdgenomics.adam.serialization.ADAMKryoRegistrator
 import org.hammerlab.cmp.CanEq
 import org.hammerlab.genomics.reference.NumLoci
-import org.hammerlab.genomics.reference.test.{ ClearContigNames, ContigNameCanEqualString, LocusCanEqualInt }
+import org.hammerlab.genomics.reference.test.{ ClearContigNames, LocusCanEqualInt }
 import org.hammerlab.hadoop.Configuration
 import org.hammerlab.paths.Path
 import org.hammerlab.spark.test.suite.KryoSparkSuite
@@ -36,10 +36,9 @@ abstract class ADAMFunSuite
   extends KryoSparkSuite(
     referenceTracking = true
   )
-    with ContigNameCanEqualString
-    with LocusCanEqualInt
-    with ClearContigNames
-    with TypeCheckedTripleEquals {
+  with LocusCanEqualInt
+  with ClearContigNames
+  with TypeCheckedTripleEquals {
 
   register(new ADAMKryoRegistrator: KryoRegistrator)
 

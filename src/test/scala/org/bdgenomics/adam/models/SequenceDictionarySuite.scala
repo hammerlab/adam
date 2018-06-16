@@ -78,16 +78,6 @@ class SequenceDictionarySuite
     }
   }
 
-//  implicit def cmpContigName(implicit cmp: Cmp[String]): Cmp.Aux[ContigName, cmp.Diff] = Cmp.by[String, ContigName](_.name)(cmp)
-//  implicit def cmpLocus(implicit cmp: Cmp[Long]): Cmp.Aux[Locus, cmp.Diff] = Cmp.by[Long, Locus](_.locus)(cmp)
-//
-//  implicitly[Cmp[ContigName]]
-//  implicitly[Cmp[NumLoci]]
-//  implicitly[Cmp[Option[String]]]
-//  implicitly[Cmp[Option[Int]]]
-//  implicitly[Generic[SequenceRecord]]
-//  implicitly[Cmp[SequenceRecord]]
-
   test("Can retrieve sequence by name") {
     val rec = record("chr1")
     val asd = SequenceDictionary(rec)
