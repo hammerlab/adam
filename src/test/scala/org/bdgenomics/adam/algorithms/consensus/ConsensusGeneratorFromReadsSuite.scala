@@ -37,7 +37,7 @@ class ConsensusGeneratorFromReadsSuite extends ADAMFunSuite {
       .collect()
       .toSeq)
 
-    assert(consensus.size === 2)
+    ==(consensus.size, 2)
   }
 }
 

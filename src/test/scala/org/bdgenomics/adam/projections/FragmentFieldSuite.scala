@@ -50,11 +50,11 @@ class FragmentFieldSuite extends ADAMFunSuite {
     )
 
     val fragments: RDD[Fragment] = sc.loadParquet(path, projection = Some(projection))
-    assert(fragments.count() === 1)
-    assert(fragments.first.getReadName === "read_name")
-    assert(fragments.first.getInstrument === "instrument")
-    assert(fragments.first.getRunId === "run_id")
-    assert(fragments.first.getFragmentSize === 42)
-    assert(fragments.first.getAlignments.get(0).getContigName === "6")
+    ==(fragments.count(), 1)
+    ==(fragments.first.getReadName, "read_name")
+    ==(fragments.first.getInstrument, "instrument")
+    ==(fragments.first.getRunId, "run_id")
+    ==(fragments.first.getFragmentSize, 42)
+    ==(fragments.first.getAlignments.get(0).getContigName, "6")
   }
 }

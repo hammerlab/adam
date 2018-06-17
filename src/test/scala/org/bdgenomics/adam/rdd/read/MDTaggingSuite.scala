@@ -192,6 +192,6 @@ class MDTaggingSuite extends ADAMFunSuite {
     val tagger = MDTagging(makeReads(read)._2,
       ReferenceContigMap(makeFrags((chr1, 0, "TTTTTTTTTT"))),
       validationStringency = ValidationStringency.LENIENT)
-    assert(tagger.taggedReads.collect.size === 1)
+    ==(tagger.taggedReads.collect.size, 1)
   }
 }

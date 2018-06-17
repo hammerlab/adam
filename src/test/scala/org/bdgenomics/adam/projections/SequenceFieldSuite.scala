@@ -46,11 +46,11 @@ class SequenceFieldSuite extends ADAMFunSuite {
     )
 
     val sequences: RDD[Sequence] = sc.loadParquet(path, projection = Some(projection));
-    assert(sequences.count() === 1)
-    assert(sequences.first.getName === "6")
-    assert(sequences.first.getDescription === "Chromosome 6")
-    assert(sequences.first.getAlphabet === Alphabet.DNA)
-    assert(sequences.first.getSequence === "ACTG")
-    assert(sequences.first.getLength === 4)
+    ==(sequences.count(), 1)
+    ==(sequences.first.getName, "6")
+    ==(sequences.first.getDescription, "Chromosome 6")
+    ==(sequences.first.getAlphabet, Alphabet.DNA)
+    ==(sequences.first.getSequence, "ACTG")
+    ==(sequences.first.getLength, 4)
   }
 }

@@ -66,11 +66,11 @@ class ParallelFileMergerSuite
     val fs = FileSystem.get(hadoopConf)
     val (size, sizes) = getFullSize(fs, files)
 
-    assert(size === fileSizes.sum.toLong)
+    ==(size, fileSizes.sum.toLong)
 
     sizes.map(_._2)
       .zip(fileSizes)
-      .foreach(p ⇒ assert(p._1 === p._2))
+      .foreach(p ⇒ ==(p._1, p._2))
   }
 
   test("block size must be positive and non-zero when trying to merge files") {
@@ -101,18 +101,18 @@ class ParallelFileMergerSuite
 
     val (_, filesWithSizes) = getFullSize(fs, files)
     val merges = generateMerges(Int.MaxValue, filesWithSizes)
-    assert(merges.size === 1)
+    ==(merges.size, 1)
     val (index, paths) = merges.head
-    assert(index === 0)
-    assert(paths.size === 2)
+    ==(index, 0)
+    ==(paths.size, 2)
     paths.foreach { t ⇒
       val (file, start, end) = t
       val path = new Path(file)
-      assert(start === 0)
+      ==(start, 0)
       assert(fileSizesMap.contains(path))
 
       val fileSize = fileSizesMap(path)
-      assert(end === fileSize - 1)
+      ==(end, fileSize - 1)
     }
   }
 
@@ -136,33 +136,33 @@ class ParallelFileMergerSuite
     val (_, filesWithSizes) = getFullSize(fs, files)
     val merges = generateMerges(16 * 1024, // 16KB
       filesWithSizes)
-    assert(merges.size === 2)
+    ==(merges.size, 2)
     val optFirstMerge = merges.find(_._1 == 0)
     assert(optFirstMerge.isDefined)
     optFirstMerge.foreach(firstMerge => {
       val (_, merges) = firstMerge
-      assert(merges.size === 1)
+      ==(merges.size, 1)
       val (file, start, end) = merges.head
       val path = new Path(file)
-      assert(path.getName === "unmapped.sam")
-      assert(start === 0)
-      assert(end === 16 * 1024 - 1)
+      ==(path.getName, "unmapped.sam")
+      ==(start, 0)
+      ==(end, 16 * 1024 - 1)
     })
     val optSecondMerge = merges.find(_._1 == 1)
     assert(optSecondMerge.isDefined)
     optSecondMerge.foreach(firstMerge => {
       val (_, merges) = firstMerge
-      assert(merges.size === 2)
+      ==(merges.size, 2)
       val (file0, start0, end0) = merges.head
       val path0 = new Path(file0)
-      assert(path0.getName === "unmapped.sam")
-      assert(start0 === 16 * 1024)
-      assert(end0 === (fs.getFileStatus(path0).getLen().toInt - 1))
+      ==(path0.getName, "unmapped.sam")
+      ==(start0, 16 * 1024)
+      ==(end0, (fs.getFileStatus(path0).getLen().toInt - 1))
       val (file1, start1, end1) = merges.tail.head
       val path1 = new Path(file1)
-      assert(path1.getName === "small.sam")
-      assert(start1 === 0)
-      assert(end1 === (fs.getFileStatus(path1).getLen().toInt - 1))
+      ==(path1.getName, "small.sam")
+      ==(start1, 0)
+      ==(end1, (fs.getFileStatus(path1).getLen().toInt - 1))
     })
   }
 
@@ -189,7 +189,7 @@ class ParallelFileMergerSuite
 
     val mergedReads = sc.loadAlignments(outPath)
 
-    assert(mergedReads.rdd.count === reads.rdd.count)
+    ==(mergedReads.rdd.count, reads.rdd.count)
   }
 
   test("merge a sharded bam file") {
@@ -215,7 +215,7 @@ class ParallelFileMergerSuite
 
     val mergedReads = sc.loadAlignments(outPath)
 
-    assert(mergedReads.rdd.count === reads.rdd.count)
+    ==(mergedReads.rdd.count, reads.rdd.count)
   }
 
   test("merge a sharded cram file") {
@@ -246,7 +246,7 @@ class ParallelFileMergerSuite
 
     val mergedReads = sc.loadAlignments(outPath)
 
-    assert(mergedReads.rdd.count === reads.rdd.count)
+    ==(mergedReads.rdd.count, reads.rdd.count)
   }
 
   test("can't turn a negative index into a path") {
@@ -257,6 +257,6 @@ class ParallelFileMergerSuite
 
   test("generate a path from an index") {
     val path = indexToPath(2, "nonsense")
-    assert(path.toString === "nonsense_part-r-00002")
+    ==(path.toString, "nonsense_part-r-00002")
   }
 }

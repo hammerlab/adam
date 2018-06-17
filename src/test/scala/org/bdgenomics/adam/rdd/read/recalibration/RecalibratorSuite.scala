@@ -66,8 +66,8 @@ class RecalibratorSuite extends FunSuite {
       .build
     val recalibratedRead = lowRecalibrator(qualFreeRead,
       Array.empty)
-    assert(recalibratedRead.getQual === null)
-    assert(recalibratedRead.getOrigQual === null)
+    ==(recalibratedRead.getQual, null)
+    ==(recalibratedRead.getOrigQual, null)
   }
 
   test("if no covariates, return alignment") {
@@ -75,7 +75,7 @@ class RecalibratorSuite extends FunSuite {
       .setReadName("emptyRead")
       .build
     val notRecalibratedRead = lowRecalibrator(emptyRead, Array.empty)
-    assert(emptyRead === notRecalibratedRead)
+    ==(emptyRead, notRecalibratedRead)
   }
 
   test("skip recalibration if base is below quality threshold") {
@@ -84,7 +84,7 @@ class RecalibratorSuite extends FunSuite {
     val expectedRead = AlignmentRecord.newBuilder(read)
       .setOrigQual(read.getQual)
       .build
-    assert(recalibratedRead === expectedRead)
+    ==(recalibratedRead, expectedRead)
   }
 
   test("recalibrate changed bases above quality threshold") {
@@ -94,6 +94,6 @@ class RecalibratorSuite extends FunSuite {
       .setQual(Seq(47, 50).map(i => (i + 33).toChar).mkString)
       .setOrigQual(read.getQual)
       .build
-    assert(recalibratedRead === expectedRead)
+    ==(recalibratedRead, expectedRead)
   }
 }

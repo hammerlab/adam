@@ -26,7 +26,7 @@ class ProgramRecordSuite extends FunSuite {
     val spr = new SAMProgramRecord("myProgramRecord")
     val pr = ProgramRecord(spr)
 
-    assert(pr.id === "myProgramRecord")
+    ==(pr.id, "myProgramRecord")
     assert(pr.commandLine.isEmpty)
     assert(pr.name.isEmpty)
     assert(pr.version.isEmpty)
@@ -45,11 +45,11 @@ class ProgramRecordSuite extends FunSuite {
 
     val pr = ProgramRecord(spr)
 
-    assert(pr.id === "myProgramRecord")
-    assert(pr.commandLine.get === "command")
-    assert(pr.name.get === "myCommand")
-    assert(pr.version.get === "0.0.0")
-    assert(pr.previousID.get === "myPreviousProgramRecord")
+    ==(pr.id, "myProgramRecord")
+    ==(pr.commandLine.get, "command")
+    ==(pr.name.get, "myCommand")
+    ==(pr.version.get, "0.0.0")
+    ==(pr.previousID.get, "myPreviousProgramRecord")
 
     val convert = pr.toSAMProgramRecord()
     assert(spr.equals(convert))

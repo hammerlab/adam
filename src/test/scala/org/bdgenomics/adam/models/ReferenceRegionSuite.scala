@@ -60,9 +60,9 @@ class ReferenceRegionSuite
     val r12 = region("chr0", 0, 100)
     val r13 = region("chr0", 10, 150)
 
-    r1.merge(r1) should === (r1)
-    r1.merge(r2) should === (r12)
-    r1.merge(r3) should === (r13)
+    ==(r1.merge(r1), r1)
+    ==(r1.merge(r2), r12)
+    ==(r1.merge(r3), r13)
   }
 
   test("overlaps") {
@@ -203,10 +203,10 @@ class ReferenceRegionSuite
       .setReadNegativeStrand(false)
       .build()
     val rr = ReferenceRegion.stranded(read)
-    rr.referenceName should === ("ctg")
-    rr.start should === (10L)
-    rr.end should === (15L)
-    rr.strand should === (Strand.FORWARD)
+    ==(rr.referenceName, "ctg")
+    ==(rr.start, 10L)
+    ==(rr.end, 15L)
+    ==(rr.strand, Strand.FORWARD)
   }
 
   test("create stranded region from read on reverse strand") {
@@ -218,10 +218,10 @@ class ReferenceRegionSuite
       .setReadNegativeStrand(true)
       .build()
     val rr = ReferenceRegion.stranded(read)
-    rr.referenceName should === ("ctg")
-    rr.start should === (10L)
-    rr.end should === (15L)
-    rr.strand should === (Strand.REVERSE)
+    ==(rr.referenceName, "ctg")
+    ==(rr.start, 10L)
+    ==(rr.end, 15L)
+    ==(rr.strand, Strand.REVERSE)
   }
 
   test("create region from mapped read contains read start and end") {
@@ -268,7 +268,7 @@ class ReferenceRegionSuite
     val hull1 = r1.hull(r2)
     val hull2 = r2.hull(r1)
 
-    hull1 should === (hull2)
+    ==(hull1, hull2)
     assert(hull1.overlaps(r1))
     assert(hull1.overlaps(r2))
     assert(hull1.start == 0L)
@@ -292,9 +292,9 @@ class ReferenceRegionSuite
 
     val r = ReferenceRegion.unstranded(read)
 
-    r.referenceName should === ("chrM")
-    r.start should === (5L)
-    r.end should === (10L)
+    ==(r.referenceName, "chrM")
+    ==(r.start, 5L)
+    ==(r.end, 10L)
   }
 
   test("intersection fails on non-overlapping regions") {
@@ -308,9 +308,9 @@ class ReferenceRegionSuite
 
   test("compute intersection") {
     val overlapRegion = ReferenceRegion("chr1", 1L, 10L).intersection(ReferenceRegion("chr1", 5L, 15L))
-    overlapRegion.referenceName should === ("chr1")
-    overlapRegion.start should === (5L)
-    overlapRegion.end should === (10L)
+    ==(overlapRegion.referenceName, "chr1")
+    ==(overlapRegion.start, 5L)
+    ==(overlapRegion.end, 10L)
   }
 
   def region(refName: String, start: Long, end: Long): ReferenceRegion =
@@ -332,9 +332,9 @@ class ReferenceRegionSuite
   }
 
   test("check the width of a reference region") {
-    ReferenceRegion("chr1", 100, 201).width should === (101)
-    ReferenceRegion("chr2", 200, 401, Strand.FORWARD).width should === (201)
-    ReferenceRegion("chr3", 399, 1000, Strand.REVERSE).width should === (601)
+    ==(ReferenceRegion("chr1", 100, 201).width, 101)
+    ==(ReferenceRegion("chr2", 200, 401, Strand.FORWARD).width, 201)
+    ==(ReferenceRegion("chr3", 399, 1000, Strand.REVERSE).width, 601)
   }
 
   test("make a reference region for a variant or genotype") {
@@ -352,26 +352,26 @@ class ReferenceRegionSuite
     val rrV = ReferenceRegion(v)
     val rrG = ReferenceRegion(g)
 
-    rrV.referenceName should === ("chr")
-    rrV.start should === (1L)
-    rrV.end should === (3L)
-    rrV should === (rrG)
+    ==(rrV.referenceName, "chr")
+    ==(rrV.start, 1L)
+    ==(rrV.end, 3L)
+    ==(rrV, rrG)
   }
 
   test("uniformly pad a reference region") {
     val rr = ReferenceRegion("1", 2L, 3L)
     val padded = rr.pad(2)
-    padded.referenceName should === ("1")
-    padded.start should === (0L)
-    padded.end should === (5L)
+    ==(padded.referenceName, "1")
+    ==(padded.start, 0L)
+    ==(padded.end, 5L)
   }
 
   test("unevenly pad a reference region") {
     val rr = ReferenceRegion("1", 2L, 4L)
     val padded = rr.pad(2, 1)
-    padded.referenceName should === ("1")
-    padded.start should === (0L)
-    padded.end should === (5L)
+    ==(padded.referenceName, "1")
+    ==(padded.start, 0L)
+    ==(padded.end, 5L)
   }
 
   test("can build an open ended reference region") {
@@ -454,13 +454,13 @@ class ReferenceRegionSuite
       vcb.getAlleles(),
       Map.empty[String, java.lang.Object])).make()
     val gts = converter.convert(vc).flatMap(_.genotypes)
-    gts.size should === (1)
+    ==(gts.size, 1)
     val gt = gts.head
 
     val rr = ReferenceRegion(gt)
-    rr.referenceName should === ("1")
-    rr.start should === (0L)
-    rr.end should === (1L)
+    ==(rr.referenceName, "1")
+    ==(rr.start, 0L)
+    ==(rr.end, 1L)
   }
 
   test("create region from feature with null alignment positions fails") {
@@ -498,10 +498,10 @@ class ReferenceRegionSuite
       .setStrand(Strand.FORWARD)
       .build()
     val rr = ReferenceRegion.stranded(feature)
-    rr.referenceName should === ("ctg")
-    rr.start should === (10L)
-    rr.end should === (15L)
-    rr.strand should === (Strand.FORWARD)
+    ==(rr.referenceName, "ctg")
+    ==(rr.start, 10L)
+    ==(rr.end, 15L)
+    ==(rr.strand, Strand.FORWARD)
   }
 
   test("create stranded region from feature on reverse strand") {
@@ -512,9 +512,9 @@ class ReferenceRegionSuite
       .setStrand(Strand.REVERSE)
       .build()
     val rr = ReferenceRegion.stranded(feature)
-    rr.referenceName should === ("ctg")
-    rr.start should === (10L)
-    rr.end should === (15L)
-    rr.strand should === (Strand.REVERSE)
+    ==(rr.referenceName, "ctg")
+    ==(rr.start, 10L)
+    ==(rr.end, 15L)
+    ==(rr.strand, Strand.REVERSE)
   }
 }

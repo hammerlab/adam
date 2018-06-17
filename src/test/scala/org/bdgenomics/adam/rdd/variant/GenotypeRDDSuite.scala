@@ -31,7 +31,7 @@ class GenotypeRDDSuite extends ADAMFunSuite {
 
     val jRdd = genotypes.broadcastRegionJoin(targets)
 
-    assert(jRdd.rdd.count === 9L)
+    ==(jRdd.rdd.count, 9L)
   }
 
   test("use right outer broadcast join to pull down genotypes mapped to targets") {
@@ -44,8 +44,8 @@ class GenotypeRDDSuite extends ADAMFunSuite {
     val jRdd = genotypes.rightOuterBroadcastRegionJoin(targets)
 
     val c = jRdd.rdd.collect
-    assert(c.count(_._1.isEmpty) === 3)
-    assert(c.count(_._1.isDefined) === 9)
+    ==(c.count(_._1.isEmpty), 3)
+    ==(c.count(_._1.isDefined), 9)
   }
 
   test("use shuffle join to pull down genotypes mapped to targets") {
@@ -62,11 +62,11 @@ class GenotypeRDDSuite extends ADAMFunSuite {
 
     // we can't guarantee that we get exactly the number of partitions requested,
     // we get close though
-    assert(jRdd.rdd.partitions.length === 1)
-    assert(jRdd0.rdd.partitions.length === 5)
+    ==(jRdd.rdd.partitions.length, 1)
+    ==(jRdd0.rdd.partitions.length, 5)
 
-    assert(jRdd.rdd.count === 9L)
-    assert(jRdd0.rdd.count === 9L)
+    ==(jRdd.rdd.count, 9L)
+    ==(jRdd0.rdd.count, 9L)
   }
 
   test("use right outer shuffle join to pull down genotypes mapped to targets") {
@@ -83,15 +83,15 @@ class GenotypeRDDSuite extends ADAMFunSuite {
 
     // we can't guarantee that we get exactly the number of partitions requested,
     // we get close though
-    assert(jRdd.rdd.partitions.length === 1)
-    assert(jRdd0.rdd.partitions.length === 5)
+    ==(jRdd.rdd.partitions.length, 1)
+    ==(jRdd0.rdd.partitions.length, 5)
 
     val c = jRdd.rdd.collect
     val c0 = jRdd0.rdd.collect
-    assert(c.count(_._1.isEmpty) === 3)
-    assert(c0.count(_._1.isEmpty) === 3)
-    assert(c.count(_._1.isDefined) === 9)
-    assert(c0.count(_._1.isDefined) === 9)
+    ==(c.count(_._1.isEmpty), 3)
+    ==(c0.count(_._1.isEmpty), 3)
+    ==(c.count(_._1.isDefined), 9)
+    ==(c0.count(_._1.isDefined), 9)
   }
 
   test("use left outer shuffle join to pull down genotypes mapped to targets") {
@@ -108,15 +108,15 @@ class GenotypeRDDSuite extends ADAMFunSuite {
 
     // we can't guarantee that we get exactly the number of partitions requested,
     // we get close though
-    assert(jRdd.rdd.partitions.length === 1)
-    assert(jRdd0.rdd.partitions.length === 5)
+    ==(jRdd.rdd.partitions.length, 1)
+    ==(jRdd0.rdd.partitions.length, 5)
 
     val c = jRdd.rdd.collect
     val c0 = jRdd0.rdd.collect
-    assert(c.count(_._2.isEmpty) === 9)
-    assert(c0.count(_._2.isEmpty) === 9)
-    assert(c.count(_._2.isDefined) === 9)
-    assert(c0.count(_._2.isDefined) === 9)
+    ==(c.count(_._2.isEmpty), 9)
+    ==(c0.count(_._2.isEmpty), 9)
+    ==(c.count(_._2.isDefined), 9)
+    ==(c0.count(_._2.isDefined), 9)
   }
 
   test("use full outer shuffle join to pull down genotypes mapped to targets") {
@@ -133,19 +133,19 @@ class GenotypeRDDSuite extends ADAMFunSuite {
 
     // we can't guarantee that we get exactly the number of partitions requested,
     // we get close though
-    assert(jRdd.rdd.partitions.length === 1)
-    assert(jRdd0.rdd.partitions.length === 5)
+    ==(jRdd.rdd.partitions.length, 1)
+    ==(jRdd0.rdd.partitions.length, 5)
 
     val c = jRdd.rdd.collect
     val c0 = jRdd0.rdd.collect
-    assert(c.count(t => t._1.isEmpty && t._2.isEmpty) === 0)
-    assert(c0.count(t => t._1.isEmpty && t._2.isEmpty) === 0)
-    assert(c.count(t => t._1.isDefined && t._2.isEmpty) === 9)
-    assert(c0.count(t => t._1.isDefined && t._2.isEmpty) === 9)
-    assert(c.count(t => t._1.isEmpty && t._2.isDefined) === 3)
-    assert(c0.count(t => t._1.isEmpty && t._2.isDefined) === 3)
-    assert(c.count(t => t._1.isDefined && t._2.isDefined) === 9)
-    assert(c0.count(t => t._1.isDefined && t._2.isDefined) === 9)
+    ==(c.count(t => t._1.isEmpty && t._2.isEmpty), 0)
+    ==(c0.count(t => t._1.isEmpty && t._2.isEmpty), 0)
+    ==(c.count(t => t._1.isDefined && t._2.isEmpty), 9)
+    ==(c0.count(t => t._1.isDefined && t._2.isEmpty), 9)
+    ==(c.count(t => t._1.isEmpty && t._2.isDefined), 3)
+    ==(c0.count(t => t._1.isEmpty && t._2.isDefined), 3)
+    ==(c.count(t => t._1.isDefined && t._2.isDefined), 9)
+    ==(c0.count(t => t._1.isDefined && t._2.isDefined), 9)
   }
 
   test("use shuffle join with group by to pull down genotypes mapped to targets") {
@@ -162,13 +162,13 @@ class GenotypeRDDSuite extends ADAMFunSuite {
 
     // we can't guarantee that we get exactly the number of partitions requested,
     // we get close though
-    assert(jRdd.rdd.partitions.length === 1)
-    assert(jRdd0.rdd.partitions.length === 5)
+    ==(jRdd.rdd.partitions.length, 1)
+    ==(jRdd0.rdd.partitions.length, 5)
 
     val c = jRdd.rdd.collect
     val c0 = jRdd0.rdd.collect
-    assert(c.size === 9)
-    assert(c0.size === 9)
+    ==(c.size, 9)
+    ==(c0.size, 9)
     assert(c.forall(_._2.size == 1))
     assert(c0.forall(_._2.size == 1))
   }
@@ -187,20 +187,20 @@ class GenotypeRDDSuite extends ADAMFunSuite {
 
     // we can't guarantee that we get exactly the number of partitions requested,
     // we get close though
-    assert(jRdd.rdd.partitions.length === 1)
-    assert(jRdd0.rdd.partitions.length === 5)
+    ==(jRdd.rdd.partitions.length, 1)
+    ==(jRdd0.rdd.partitions.length, 5)
 
     val c = jRdd0.rdd.collect
     val c0 = jRdd0.rdd.collect
 
-    assert(c.count(_._1.isDefined) === 18)
-    assert(c0.count(_._1.isDefined) === 18)
-    assert(c.filter(_._1.isDefined).count(_._2.size == 1) === 9)
-    assert(c0.filter(_._1.isDefined).count(_._2.size == 1) === 9)
-    assert(c.filter(_._1.isDefined).count(_._2.isEmpty) === 9)
-    assert(c0.filter(_._1.isDefined).count(_._2.isEmpty) === 9)
-    assert(c.count(_._1.isEmpty) === 3)
-    assert(c0.count(_._1.isEmpty) === 3)
+    ==(c.count(_._1.isDefined), 18)
+    ==(c0.count(_._1.isDefined), 18)
+    ==(c.filter(_._1.isDefined).count(_._2.size == 1), 9)
+    ==(c0.filter(_._1.isDefined).count(_._2.size == 1), 9)
+    ==(c.filter(_._1.isDefined).count(_._2.isEmpty), 9)
+    ==(c0.filter(_._1.isDefined).count(_._2.isEmpty), 9)
+    ==(c.count(_._1.isEmpty), 3)
+    ==(c0.count(_._1.isEmpty), 3)
     assert(c.filter(_._1.isEmpty).forall(_._2.size == 1))
     assert(c0.filter(_._1.isEmpty).forall(_._2.size == 1))
   }
@@ -214,11 +214,11 @@ class GenotypeRDDSuite extends ADAMFunSuite {
     assert(variantContexts.samples.nonEmpty)
 
     val vcs = variantContexts.rdd.collect
-    assert(vcs.size === 6)
+    ==(vcs.size, 6)
 
     val vc = vcs.head
-    assert(vc.position.referenceName === "1")
-    assert(vc.variant.variant.contigName === "1")
+    ==(vc.position.referenceName, "1")
+    ==(vc.variant.variant.contigName, "1")
     assert(vc.genotypes.nonEmpty)
   }
 }

@@ -43,8 +43,8 @@ class SampleFieldSuite
     )
 
     val samples: RDD[Sample] = sc.loadParquet(path, projection = Some(projection))
-    assert(samples.count() === 1)
-    assert(samples.first.getSampleId === "sample_id")
-    assert(samples.first.getName === "name")
+    ==(samples.count(), 1)
+    ==(samples.first.getSampleId, "sample_id")
+    ==(samples.first.getName, "name")
   }
 }

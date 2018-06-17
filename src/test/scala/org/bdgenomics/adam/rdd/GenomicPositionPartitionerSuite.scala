@@ -41,14 +41,14 @@ class GenomicPositionPartitionerSuite
   test("partitions the UNMAPPED ReferencePosition into the top partition") {
     val parter = GenomicPositionPartitioner(10, SequenceDictionary(("foo", 1000)))
 
-    parter.numPartitions should === (11)
-    parter.getPartition(ReferencePosition.UNMAPPED) should === (10)
+    ==(parter.numPartitions, 11)
+    ==(parter.getPartition(ReferencePosition.UNMAPPED), 10)
   }
 
   test("if we do not have a contig for a record, we throw an IAE") {
     val parter = GenomicPositionPartitioner(10, SequenceDictionary("foo" → 1000))
 
-    parter.numPartitions should === (11)
+    ==(parter.numPartitions, 11)
     intercept[IllegalArgumentException] {
       parter.getPartition(ReferencePosition("chrFoo", 10))
     }
@@ -56,34 +56,34 @@ class GenomicPositionPartitionerSuite
 
   test("partitioning into N pieces on M total sequence length, where N > M, results in M partitions") {
     val parter = GenomicPositionPartitioner(10, SequenceDictionary("foo" → 9))
-    parter.numPartitions should === (10)
+    ==(parter.numPartitions, 10)
   }
 
   test("correctly partitions a single dummy sequence into two pieces") {
     val parter = GenomicPositionPartitioner(2, SequenceDictionary(("foo", 10)))
-    parter.getPartition(ReferencePosition("foo", 3)) should === (0)
-    parter.getPartition(ReferencePosition("foo", 7)) should === (1)
+    ==(parter.getPartition(ReferencePosition("foo", 3)), 0)
+    ==(parter.getPartition(ReferencePosition("foo", 7)), 1)
   }
 
   test("correctly counts cumulative lengths") {
     val parter = GenomicPositionPartitioner(3, SequenceDictionary("foo" → 20, "bar" → 10))
 
-    parter.cumulativeLengths("bar") should === (0)
-    parter.cumulativeLengths("foo") should === (10)
+    ==(parter.cumulativeLengths("bar"), 0)
+    ==(parter.cumulativeLengths("foo"), 10)
   }
 
   test("correctly partitions positions across two dummy sequences") {
     val parter = GenomicPositionPartitioner(3, SequenceDictionary("bar" → 20, "foo" → 10))
     // check easy examples
-    parter.getPartition(ReferencePosition("foo", 8)) should === (2)
-    parter.getPartition(ReferencePosition("foo", 18)) should === (3)
-    parter.getPartition(ReferencePosition("bar", 18)) should === (1)
-    parter.getPartition(ReferencePosition("bar", 8)) should === (0)
+    ==(parter.getPartition(ReferencePosition("foo", 8)), 2)
+    ==(parter.getPartition(ReferencePosition("foo", 18)), 3)
+    ==(parter.getPartition(ReferencePosition("bar", 18)), 1)
+    ==(parter.getPartition(ReferencePosition("bar", 8)), 0)
 
     // check edge cases
-    parter.getPartition(ReferencePosition("foo", 0)) should === (2)
-    parter.getPartition(ReferencePosition("foo", 10)) should === (3)
-    parter.getPartition(ReferencePosition("bar", 0)) should === (0)
+    ==(parter.getPartition(ReferencePosition("foo", 0)), 2)
+    ==(parter.getPartition(ReferencePosition("foo", 10)), 3)
+    ==(parter.getPartition(ReferencePosition("bar", 0)), 0)
   }
 
   test("test that we can range partition ADAMRecords") {
@@ -95,7 +95,7 @@ class GenomicPositionPartitionerSuite
     val parter = new RangePartitioner(parts, pairs)
     val partitioned = pairs.sortByKey().partitionBy(parter)
 
-    partitioned.count() should === (count)
+    ==(partitioned.count(), count)
     // check here to make sure that we have at least increased the number of partitions
     // as of spark 1.1.0, range partitioner does not guarantee that you will receive a 
     // number of partitions equal to the number requested
@@ -111,7 +111,7 @@ class GenomicPositionPartitionerSuite
     val parter = new RangePartitioner(parts, pairs)
     val partitioned = pairs.sortByKey().partitionBy(parter)
 
-    partitioned.count() should === (count)
+    ==(partitioned.count(), count)
     assert(partitioned.partitions.length > 1)
   }
 
@@ -128,7 +128,7 @@ class GenomicPositionPartitionerSuite
 
     val parter = GenomicPositionPartitioner(parts, gRdd.sequences)
 
-    rdd.count() should === (200)
+    ==(rdd.count(), 200)
 
     val keyed =
       rdd.map(rec => (ReferencePosition(rec.getContigName, rec.getStart), rec)).sortByKey()
@@ -137,14 +137,14 @@ class GenomicPositionPartitionerSuite
     assert(!keys.exists(rp => parter.getPartition(rp) < 0 || parter.getPartition(rp) >= parts))
 
     val partitioned = keyed.partitionBy(parter)
-    partitioned.count() should === (200)
+    ==(partitioned.count(), 200)
 
     val partSizes = partitioned.mapPartitions {
       itr =>
         List(itr.size).iterator
     }
 
-    partSizes.count() should === (parts + 1)
+    ==(partSizes.count(), parts + 1)
   }
 
   test("test indexed ReferencePosition partitioning works on a set of indexed ADAMRecords") {
@@ -156,7 +156,7 @@ class GenomicPositionPartitionerSuite
 
     val parter = GenomicPositionPartitioner(parts, gRdd.sequences)
 
-    rdd.count() should === (200)
+    ==(rdd.count(), 200)
 
     val keyed =
       rdd.keyBy(rec => (ReferencePosition(rec.getContigName, rec.getStart), "sample")).sortByKey()
@@ -165,14 +165,14 @@ class GenomicPositionPartitionerSuite
     assert(!keys.exists(rp => parter.getPartition(rp) < 0 || parter.getPartition(rp) >= parts))
 
     val partitioned = keyed.partitionBy(parter)
-    partitioned.count() should === (200)
+    ==(partitioned.count(), 200)
 
     val partSizes = partitioned.mapPartitions {
       itr =>
         List(itr.size).iterator
     }
 
-    partSizes.count() should === (parts + 1)
+    ==(partSizes.count(), parts + 1)
   }
 
   def adamRecord(referenceName: String, readName: String, start: Long, readMapped: Boolean) = {

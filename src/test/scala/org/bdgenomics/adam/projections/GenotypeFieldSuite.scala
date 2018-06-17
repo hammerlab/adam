@@ -60,8 +60,8 @@ class GenotypeFieldSuite extends ADAMFunSuite {
     )
 
     val genotypes: RDD[Genotype] = sc.loadParquet(path, projection = Some(projection))
-    assert(genotypes.count() === 1)
-    assert(genotypes.first.getContigName === "6")
-    assert(genotypes.first.getStart === 29941260L)
+    ==(genotypes.count(), 1)
+    ==(genotypes.first.getContigName, "6")
+    ==(genotypes.first.getStart, 29941260L)
   }
 }

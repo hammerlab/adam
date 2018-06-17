@@ -24,7 +24,7 @@ class ModPartitionerSuite extends FunSuite {
   val partitioner = ModPartitioner(123)
 
   test("report number of partitions correctly") {
-    assert(partitioner.numPartitions === 123)
+    ==(partitioner.numPartitions, 123)
   }
 
   test("partition a number that is lower than the number of partitions and positive") {

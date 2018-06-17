@@ -79,25 +79,25 @@ class RealignIndelsSuite
       new IndelRealignmentTarget(None, ReferenceRegion("ctg", 100L, 400L)))
 
     assert(mapToTarget(makeRead(0L, 1L), targets, 0, 3) < 0)
-    assert(mapToTarget(makeRead(0L, 2L), targets, 0, 3) === 0)
-    assert(mapToTarget(makeRead(1L, 2L), targets, 0, 3) === 0)
-    assert(mapToTarget(makeRead(3L, 6L), targets, 0, 3) === 0)
+    ==(mapToTarget(makeRead(0L, 2L), targets, 0, 3), 0)
+    ==(mapToTarget(makeRead(1L, 2L), targets, 0, 3), 0)
+    ==(mapToTarget(makeRead(3L, 6L), targets, 0, 3), 0)
     assert(mapToTarget(makeRead(6L, 8L), targets, 0, 3) < 0)
-    assert(mapToTarget(makeRead(8L, 12L), targets, 0, 3) === 1)
-    assert(mapToTarget(makeRead(10L, 12L), targets, 0, 3) === 1)
-    assert(mapToTarget(makeRead(14L, 36L), targets, 0, 3) === 1)
-    assert(mapToTarget(makeRead(35L, 50L), targets, 0, 3) === 1)
+    ==(mapToTarget(makeRead(8L, 12L), targets, 0, 3), 1)
+    ==(mapToTarget(makeRead(10L, 12L), targets, 0, 3), 1)
+    ==(mapToTarget(makeRead(14L, 36L), targets, 0, 3), 1)
+    ==(mapToTarget(makeRead(35L, 50L), targets, 0, 3), 1)
     assert(mapToTarget(makeRead(45L, 50L), targets, 0, 3) < 0)
     assert(mapToTarget(makeRead(90L, 100L), targets, 0, 3) < 0)
-    assert(mapToTarget(makeRead(90L, 101L), targets, 0, 3) === 2)
-    assert(mapToTarget(makeRead(200L, 300L), targets, 0, 3) === 2)
-    assert(mapToTarget(makeRead(200L, 600L), targets, 0, 3) === 2)
+    ==(mapToTarget(makeRead(90L, 101L), targets, 0, 3), 2)
+    ==(mapToTarget(makeRead(200L, 300L), targets, 0, 3), 2)
+    ==(mapToTarget(makeRead(200L, 600L), targets, 0, 3), 2)
     assert(mapToTarget(makeRead(700L, 1000L), targets, 0, 3) < 0)
   }
 
   test("checking mapping to targets for artificial reads") {
     val targets = RealignmentTargetFinder(artificialReads.map(RichAlignmentRecord(_))).toArray
-    assert(targets.length === 1)
+    ==(targets.length, 1)
     val rr = artificialReads.map(RichAlignmentRecord(_))
     val readsMappedToTarget = mapTargets(rr, targets).map(kv => {
       val (t, r) = kv
@@ -105,7 +105,7 @@ class RealignIndelsSuite
       (t, r.map(r => r.record))
     }).collect()
 
-    assert(readsMappedToTarget.count(_._1.isDefined) === 1)
+    ==(readsMappedToTarget.count(_._1.isDefined), 1)
 
     assert(
       readsMappedToTarget.forall {
@@ -139,12 +139,12 @@ class RealignIndelsSuite
     consensus = consensus.distinct
     assert(consensus.nonEmpty)
     // Note: it seems that consensus ranges are non-inclusive
-    assert(consensus(0).index.start === 34)
-    assert(consensus(0).index.end === 45)
-    assert(consensus(0).consensus === "")
-    assert(consensus(1).index.start === 54)
-    assert(consensus(1).index.end === 65)
-    assert(consensus(1).consensus === "")
+    ==(consensus(0).index.start, 34)
+    ==(consensus(0).index.end, 45)
+    ==(consensus(0).consensus, "")
+    ==(consensus(1).index.start, 54)
+    ==(consensus(1).index.end, 65)
+    ==(consensus(1).consensus, "")
     // TODO: add check with insertions, how about SNPs
   }
 
@@ -154,8 +154,8 @@ class RealignIndelsSuite
       val refStr = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGGGGGGGGGGAAAAAAAAAAGGGGGGGGGGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
       val startIndex = readReference._2.toInt
       val stopIndex = readReference._3.toInt
-      assert(readReference._1.length === stopIndex - startIndex)
-      assert(readReference._1 === refStr.substring(startIndex, stopIndex))
+      ==(readReference._1.length, stopIndex - startIndex)
+      ==(readReference._1, refStr.substring(startIndex, stopIndex))
     }
 
     val targets = RealignmentTargetFinder(artificialReads.map(RichAlignmentRecord(_))).toArray
@@ -191,16 +191,16 @@ class RealignIndelsSuite
     val gatkArtificialRealignedReadsCollected = gatkArtificialRealignedReads
       .collect()
 
-    assert(artificialRealignedReadsCollected.size === gatkArtificialRealignedReadsCollected.size)
+    ==(artificialRealignedReadsCollected.size, gatkArtificialRealignedReadsCollected.size)
 
     val artificialRead4 = artificialRealignedReadsCollected.filter(_.getReadName == "read4")
     val gatkRead4 = gatkArtificialRealignedReadsCollected.filter(_.getReadName == "read4")
     val result = artificialRead4.zip(gatkRead4)
 
-    result.foreach(pair => assert(pair._1.getReadName === pair._2.getReadName))
-    result.foreach(pair => assert(pair._1.getStart === pair._2.getStart))
-    result.foreach(pair => assert(pair._1.getCigar === pair._2.getCigar))
-    result.foreach(pair => assert(pair._1.getMapq === pair._2.getMapq))
+    result.foreach(pair => ==(pair._1.getReadName, pair._2.getReadName))
+    result.foreach(pair => ==(pair._1.getStart, pair._2.getStart))
+    result.foreach(pair => ==(pair._1.getCigar, pair._2.getCigar))
+    result.foreach(pair => ==(pair._1.getMapq, pair._2.getMapq))
   }
 
   test("checking realigned reads for artificial input with reference file") {
@@ -209,16 +209,16 @@ class RealignIndelsSuite
     val gatkArtificialRealignedReadsCollected = gatkArtificialRealignedReads
       .collect()
 
-    assert(artificialRealignedReadsCollected.size === gatkArtificialRealignedReadsCollected.size)
+    ==(artificialRealignedReadsCollected.size, gatkArtificialRealignedReadsCollected.size)
 
     val artificialRead4 = artificialRealignedReadsCollected.filter(_.getReadName == "read4")
     val gatkRead4 = gatkArtificialRealignedReadsCollected.filter(_.getReadName == "read4")
     val result = artificialRead4.zip(gatkRead4)
 
-    result.foreach(pair => assert(pair._1.getReadName === pair._2.getReadName))
-    result.foreach(pair => assert(pair._1.getStart === pair._2.getStart))
-    result.foreach(pair => assert(pair._1.getCigar === pair._2.getCigar))
-    result.foreach(pair => assert(pair._1.getMapq === pair._2.getMapq))
+    result.foreach(pair => ==(pair._1.getReadName, pair._2.getReadName))
+    result.foreach(pair => ==(pair._1.getStart, pair._2.getStart))
+    result.foreach(pair => ==(pair._1.getCigar, pair._2.getCigar))
+    result.foreach(pair => ==(pair._1.getMapq, pair._2.getMapq))
   }
 
   test("checking realigned reads for artificial input using knowns") {
@@ -237,16 +237,16 @@ class RealignIndelsSuite
     val gatkArtificialRealignedReadsCollected = gatkArtificialRealignedReads
       .collect()
 
-    assert(artificialRealignedReadsCollected.length === gatkArtificialRealignedReadsCollected.length)
+    ==(artificialRealignedReadsCollected.length, gatkArtificialRealignedReadsCollected.length)
 
     val artificialRead4 = artificialRealignedReadsCollected.filter(_.getReadName == "read4")
     val gatkRead4 = gatkArtificialRealignedReadsCollected.filter(_.getReadName == "read4")
     val result = artificialRead4.zip(gatkRead4)
 
-    result.foreach(pair => assert(pair._1.getReadName === pair._2.getReadName))
-    result.foreach(pair => assert(pair._1.getStart === pair._2.getStart))
-    result.foreach(pair => assert(pair._1.getCigar === pair._2.getCigar))
-    result.foreach(pair => assert(pair._1.getMapq === pair._2.getMapq))
+    result.foreach(pair => ==(pair._1.getReadName, pair._2.getReadName))
+    result.foreach(pair => ==(pair._1.getStart, pair._2.getStart))
+    result.foreach(pair => ==(pair._1.getCigar, pair._2.getCigar))
+    result.foreach(pair => ==(pair._1.getMapq, pair._2.getMapq))
   }
 
   test("checking realigned reads for artificial input using knowns and reads") {
@@ -266,16 +266,16 @@ class RealignIndelsSuite
     val gatkArtificialRealignedReadsCollected = gatkArtificialRealignedReads
       .collect()
 
-    assert(artificialRealignedReadsCollected.size === gatkArtificialRealignedReadsCollected.size)
+    ==(artificialRealignedReadsCollected.size, gatkArtificialRealignedReadsCollected.size)
 
     val artificialRead4 = artificialRealignedReadsCollected.filter(_.getReadName == "read4")
     val gatkRead4 = gatkArtificialRealignedReadsCollected.filter(_.getReadName == "read4")
     val result = artificialRead4.zip(gatkRead4)
 
-    result.foreach(pair => assert(pair._1.getReadName === pair._2.getReadName))
-    result.foreach(pair => assert(pair._1.getStart === pair._2.getStart))
-    result.foreach(pair => assert(pair._1.getCigar === pair._2.getCigar))
-    result.foreach(pair => assert(pair._1.getMapq === pair._2.getMapq))
+    result.foreach(pair => ==(pair._1.getReadName, pair._2.getReadName))
+    result.foreach(pair => ==(pair._1.getStart, pair._2.getStart))
+    result.foreach(pair => ==(pair._1.getCigar, pair._2.getCigar))
+    result.foreach(pair => ==(pair._1.getMapq, pair._2.getMapq))
   }
 
   test("skip realigning reads if target is highly covered") {
@@ -284,10 +284,10 @@ class RealignIndelsSuite
     val reads = artificialReads
     val result = artificialRealignedReadsCollected.zip(reads.collect())
 
-    result.foreach(pair => assert(pair._1.getReadName === pair._2.getReadName))
-    result.foreach(pair => assert(pair._1.getStart === pair._2.getStart))
-    result.foreach(pair => assert(pair._1.getCigar === pair._2.getCigar))
-    result.foreach(pair => assert(pair._1.getMapq === pair._2.getMapq))
+    result.foreach(pair => ==(pair._1.getReadName, pair._2.getReadName))
+    result.foreach(pair => ==(pair._1.getStart, pair._2.getStart))
+    result.foreach(pair => ==(pair._1.getCigar, pair._2.getCigar))
+    result.foreach(pair => ==(pair._1.getMapq, pair._2.getMapq))
   }
 
   test("skip realignment if target is an insufficient LOD improvement") {
@@ -299,7 +299,7 @@ class RealignIndelsSuite
       .map(_._2)
       .collect()
 
-    result.foreach(pair => assert(pair._1 === pair._2))
+    result.foreach(pair ⇒ pair._1 should be(pair._2))
   }
 
   test("realign reads to an insertion") {
@@ -312,13 +312,13 @@ class RealignIndelsSuite
       .collect()
 
     val movedReads = result.filter(pair => pair._1 != pair._2)
-    assert(movedReads.size === 41)
+    ==(movedReads.size, 41)
     val read = movedReads.map(_._2)
       .filter(_.getReadName === "H06HDADXX130110:1:1114:19044:27806")
       .head
-    assert(read.getStart === 922057)
-    assert(read.getCigar === "248M1I1M")
-    assert(read.getMismatchingPositions === "249")
+    ==(read.getStart, 922057)
+    ==(read.getCigar, "248M1I1M")
+    ==(read.getMismatchingPositions, "249")
   }
 
   test("test mismatch quality scoring") {
@@ -327,7 +327,7 @@ class RealignIndelsSuite
     val ref = "AAGGGGAA"
     val qScores = Seq(40, 40, 40, 40, 40, 40, 40, 40)
 
-    assert(ri.sumMismatchQualityIgnoreCigar(read, ref, qScores, Int.MaxValue, 0) === 160)
+    ==(ri.sumMismatchQualityIgnoreCigar(read, ref, qScores, Int.MaxValue, 0), 160)
   }
 
   test("test mismatch quality scoring for no mismatches") {
@@ -335,7 +335,7 @@ class RealignIndelsSuite
     val read = "AAAAAAAA"
     val qScores = Seq(40, 40, 40, 40, 40, 40, 40, 40)
 
-    assert(ri.sumMismatchQualityIgnoreCigar(read, read, qScores, Int.MaxValue, 0) === 0)
+    ==(ri.sumMismatchQualityIgnoreCigar(read, read, qScores, Int.MaxValue, 0), 0)
   }
 
   test("test mismatch quality scoring for offset") {
@@ -344,7 +344,7 @@ class RealignIndelsSuite
     val ref = "G%s".format(read)
     val qScores = Seq(40, 40, 40, 40, 40, 40, 40, 40)
 
-    assert(ri.sumMismatchQualityIgnoreCigar(read, ref, qScores, Int.MaxValue, 1) === 0)
+    ==(ri.sumMismatchQualityIgnoreCigar(read, ref, qScores, Int.MaxValue, 1), 0)
   }
 
   test("test mismatch quality scoring with early exit") {
@@ -353,14 +353,14 @@ class RealignIndelsSuite
     val ref = "AAGGGGAA"
     val qScores = Seq(40, 40, 40, 40, 40, 40, 40, 40)
 
-    assert(ri.sumMismatchQualityIgnoreCigar(read, ref, qScores, 120, 0) === Int.MaxValue)
+    ==(ri.sumMismatchQualityIgnoreCigar(read, ref, qScores, 120, 0), Int.MaxValue)
   }
 
   test("test mismatch quality scoring after unpacking read") {
     val ri = new RealignIndels(sc)
     val read = artificialReads.first()
 
-    assert(ri.sumMismatchQuality(read) === 400)
+    ==(ri.sumMismatchQuality(read), 400)
   }
 
   test("we shouldn't try to realign a region with no target") {
@@ -451,7 +451,7 @@ class RealignIndelsSuite
       .build()))
 
     // this should be a NOP
-    assert(RealignIndels(reads).count === 4)
+    ==(RealignIndels(reads).count, 4)
   }
 
   test("test OP and OC tags") {
@@ -571,44 +571,44 @@ class RealignIndelsSuite
     val realignedReads = rdd.realignIndels(lodThreshold = 0.0)
       .rdd
       .collect
-    assert(realignedReads.count(_.getMapq >= 50) === 7)
+    ==(realignedReads.count(_.getMapq >= 50), 7)
     val realignedExtRead = realignedReads.filter(_.getMapq == 50).head
-    assert(realignedExtRead.getStart === 8L)
-    assert(realignedExtRead.getEnd === 14L)
-    assert(realignedExtRead.getCigar === "6M2S")
-    assert(realignedExtRead.getMismatchingPositions === "6")
+    ==(realignedExtRead.getStart, 8L)
+    ==(realignedExtRead.getEnd, 14L)
+    ==(realignedExtRead.getCigar, "6M2S")
+    ==(realignedExtRead.getMismatchingPositions, "6")
     val realignedOvlRead = realignedReads.filter(_.getMapq == 51).head
-    assert(realignedOvlRead.getStart === 9L)
-    assert(realignedOvlRead.getEnd === 15L)
-    assert(realignedOvlRead.getCigar === "5M3I1M")
-    assert(realignedOvlRead.getMismatchingPositions === "6")
+    ==(realignedOvlRead.getStart, 9L)
+    ==(realignedOvlRead.getEnd, 15L)
+    ==(realignedOvlRead.getCigar, "5M3I1M")
+    ==(realignedOvlRead.getMismatchingPositions, "6")
     val realignedOvsRead = realignedReads.filter(_.getMapq == 52).head
-    assert(realignedOvsRead.getStart === 13L)
-    assert(realignedOvsRead.getEnd === 18L)
-    assert(realignedOvsRead.getCigar === "1M3I4M")
-    assert(realignedOvsRead.getMismatchingPositions === "5")
+    ==(realignedOvsRead.getStart, 13L)
+    ==(realignedOvsRead.getEnd, 18L)
+    ==(realignedOvsRead.getCigar, "1M3I4M")
+    ==(realignedOvsRead.getMismatchingPositions, "5")
     val realignedStRead = realignedReads.filter(_.getMapq == 53).head
-    assert(realignedStRead.getStart === 14L)
-    assert(realignedStRead.getEnd === 19L)
-    assert(realignedStRead.getCigar === "2S5M")
-    assert(realignedStRead.getMismatchingPositions === "5")
+    ==(realignedStRead.getStart, 14L)
+    ==(realignedStRead.getEnd, 19L)
+    ==(realignedStRead.getCigar, "2S5M")
+    ==(realignedStRead.getMismatchingPositions, "5")
     val realignedScRead = realignedReads.filter(_.getMapq == 54).head
-    assert(realignedScRead.getStart === 13L)
-    assert(realignedScRead.getEnd === 15L)
-    assert(realignedScRead.getCigar === "2S1M3I1M")
-    assert(realignedScRead.getMismatchingPositions === "2")
+    ==(realignedScRead.getStart, 13L)
+    ==(realignedScRead.getEnd, 15L)
+    ==(realignedScRead.getCigar, "2S1M3I1M")
+    ==(realignedScRead.getMismatchingPositions, "2")
     val realignedEcRead = realignedReads.filter(_.getMapq == 55).head
-    assert(realignedEcRead.getStart === 13L)
-    assert(realignedEcRead.getEnd === 15L)
-    assert(realignedEcRead.getCigar === "1M3I1M1S1H")
-    assert(realignedEcRead.getMismatchingPositions === "2")
-    assert(realignedEcRead.getBasesTrimmedFromEnd === 1)
+    ==(realignedEcRead.getStart, 13L)
+    ==(realignedEcRead.getEnd, 15L)
+    ==(realignedEcRead.getCigar, "1M3I1M1S1H")
+    ==(realignedEcRead.getMismatchingPositions, "2")
+    ==(realignedEcRead.getBasesTrimmedFromEnd, 1)
   }
 
   test("if realigning a target doesn't improve the LOD, don't drop reads") {
     val reads = sc.loadAlignments(testFile("NA12878.1_854950_855150.sam"))
     val realignedReads = reads.realignIndels()
-    assert(reads.rdd.count === realignedReads.rdd.count)
+    ==(reads.rdd.count, realignedReads.rdd.count)
   }
 
   test("extract seq/qual from a read with no clipped bases") {
@@ -620,13 +620,13 @@ class RealignIndelsSuite
 
     val (seq, qual) = new RealignIndels(sc).extractSequenceAndQuality(read)
 
-    assert(seq === "ACTCG")
-    assert(qual.length === 5)
-    assert(qual(0) === 20)
-    assert(qual(1) === 30)
-    assert(qual(2) === 40)
-    assert(qual(3) === 50)
-    assert(qual(4) === 60)
+    ==(seq, "ACTCG")
+    ==(qual.length, 5)
+    ==(qual(0), 20)
+    ==(qual(1), 30)
+    ==(qual(2), 40)
+    ==(qual(3), 50)
+    ==(qual(4), 60)
   }
 
   test("extract seq/qual from a read with clipped bases at start") {
@@ -638,12 +638,12 @@ class RealignIndelsSuite
 
     val (seq, qual) = new RealignIndels(sc).extractSequenceAndQuality(read)
 
-    assert(seq === "CTCG")
-    assert(qual.length === 4)
-    assert(qual(0) === 30)
-    assert(qual(1) === 40)
-    assert(qual(2) === 50)
-    assert(qual(3) === 60)
+    ==(seq, "CTCG")
+    ==(qual.length, 4)
+    ==(qual(0), 30)
+    ==(qual(1), 40)
+    ==(qual(2), 50)
+    ==(qual(3), 60)
   }
 
   test("extract seq/qual from a read with clipped bases at end") {
@@ -655,11 +655,11 @@ class RealignIndelsSuite
 
     val (seq, qual) = new RealignIndels(sc).extractSequenceAndQuality(read)
 
-    assert(seq === "ACT")
-    assert(qual.length === 3)
-    assert(qual(0) === 20)
-    assert(qual(1) === 30)
-    assert(qual(2) === 40)
+    ==(seq, "ACT")
+    ==(qual.length, 3)
+    ==(qual(0), 20)
+    ==(qual(1), 30)
+    ==(qual(2), 40)
   }
 
   test("if unclip is selected, don't drop base when extracting from a read with clipped bases") {
@@ -672,13 +672,13 @@ class RealignIndelsSuite
     val (seq, qual) = new RealignIndels(sc,
       unclipReads = true).extractSequenceAndQuality(read)
 
-    assert(seq === "ACTCG")
-    assert(qual.length === 5)
-    assert(qual(0) === 20)
-    assert(qual(1) === 30)
-    assert(qual(2) === 40)
-    assert(qual(3) === 50)
-    assert(qual(4) === 60)
+    ==(seq, "ACTCG")
+    ==(qual.length, 5)
+    ==(qual(0), 20)
+    ==(qual(1), 30)
+    ==(qual(2), 40)
+    ==(qual(3), 50)
+    ==(qual(4), 60)
   }
 
   test("get cigar and coordinates for read that spans indel, no clipped bases") {
@@ -692,9 +692,9 @@ class RealignIndelsSuite
       3,
       Consensus("TT", ReferenceRegion("ctg", 15L, 16L)))
 
-    assert(start === 13L)
-    assert(end === 18L)
-    assert(cigar.toString === "3M2I2M")
+    ==(start, 13L)
+    ==(end, 18L)
+    ==(cigar.toString, "3M2I2M")
   }
 
   test("get cigar and coordinates for read that spans deletion, clipped bases at start") {
@@ -716,9 +716,9 @@ class RealignIndelsSuite
       3,
       Consensus("", ReferenceRegion("ctg", 16L, 19L)))
 
-    assert(start === 13L)
-    assert(end === 22L)
-    assert(cigar.toString === "1S3M2D4M")
+    ==(start, 13L)
+    ==(end, 22L)
+    ==(cigar.toString, "1S3M2D4M")
   }
 
   test("get cigar and coordinates for read that falls wholly before insertion") {
@@ -731,9 +731,9 @@ class RealignIndelsSuite
       10L,
       4,
       Consensus("AA", ReferenceRegion("ctg", 23L, 24L)))
-    assert(start === 14L)
-    assert(end === 20L)
-    assert(cigar.toString === "6M2S")
+    ==(start, 14L)
+    ==(end, 20L)
+    ==(cigar.toString, "6M2S")
   }
 
   test("get cigar and coordinates for read that falls wholly after insertion") {
@@ -746,9 +746,9 @@ class RealignIndelsSuite
       10L,
       6,
       Consensus("AA", ReferenceRegion("ctg", 12L, 13L)))
-    assert(start === 14L)
-    assert(end === 20L)
-    assert(cigar.toString === "6M2S")
+    ==(start, 14L)
+    ==(end, 20L)
+    ==(cigar.toString, "6M2S")
   }
 
   test("get cigar and coordinates for read that falls wholly after deletion") {
@@ -763,9 +763,9 @@ class RealignIndelsSuite
       10L,
       4,
       Consensus("", ReferenceRegion("ctg", 11L, 12L)))
-    assert(start === 14L)
-    assert(end === 20L)
-    assert(cigar.toString === "1S6M1S1H")
+    ==(start, 14L)
+    ==(end, 20L)
+    ==(cigar.toString, "1S6M1S1H")
   }
 
   test("get cigar and coordinates for read that partially spans insertion, no clipped bases") {
@@ -779,9 +779,9 @@ class RealignIndelsSuite
       10L,
       4,
       Consensus("AT", ReferenceRegion("ctg", 19L, 20L)))
-    assert(start === 14L)
-    assert(end === 20L)
-    assert(cigar.toString === "1S6M1S")
+    ==(start, 14L)
+    ==(end, 20L)
+    ==(cigar.toString, "1S6M1S")
   }
 
   test("get cigar and coordinates for read that partially spans insertion, clipped bases at end") {
@@ -795,9 +795,9 @@ class RealignIndelsSuite
       10L,
       4,
       Consensus("AT", ReferenceRegion("ctg", 19L, 20L)))
-    assert(start === 14L)
-    assert(end === 20L)
-    assert(cigar.toString === "1H6M2S")
+    ==(start, 14L)
+    ==(end, 20L)
+    ==(cigar.toString, "1H6M2S")
   }
 
   test("get cigar and coordinates for read that partially spans insertion, clipped bases both ends") {
@@ -812,8 +812,8 @@ class RealignIndelsSuite
       11,
       Consensus("AT", ReferenceRegion("ctg", 19L, 20L)))
 
-    assert(start === 20L)
-    assert(end === 24L)
-    assert(cigar.toString === "2S4M2S")
+    ==(start, 20L)
+    ==(end, 24L)
+    ==(cigar.toString, "2S4M2S")
   }
 }

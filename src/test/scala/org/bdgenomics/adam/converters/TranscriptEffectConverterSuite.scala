@@ -303,7 +303,7 @@ class TranscriptEffectConverterSuite extends ADAMFunSuite {
     assert(transcriptEffectsOpt.isDefined)
 
     transcriptEffectsOpt.foreach(transcriptEffects => {
-      assert(transcriptEffects.size === 3)
+      ==(transcriptEffects.size, 3)
       transcriptEffects.foreach(te => {
         assert(te.getAlternateAllele == "T")
         assert(te.getEffects.contains("upstream_gene_variant"))
@@ -346,7 +346,7 @@ class TranscriptEffectConverterSuite extends ADAMFunSuite {
       .setDistance(453)
       .build()
 
-    assert(VALID === TranscriptEffectConverter.convertToVcfInfoAnnValue(Seq(te)))
+    ==(VALID, TranscriptEffectConverter.convertToVcfInfoAnnValue(Seq(te)))
   }
 
   test("convert transcript effect with null fields to VCF ANN attribute value") {
@@ -370,7 +370,7 @@ class TranscriptEffectConverterSuite extends ADAMFunSuite {
       .setDistance(453)
       .build()
 
-    assert(VALID === TranscriptEffectConverter.convertToVcfInfoAnnValue(Seq(te)))
+    ==(VALID, TranscriptEffectConverter.convertToVcfInfoAnnValue(Seq(te)))
   }
 
   test("convert transcript effect with incorrect fractional value to VCF ANN attribute value") {

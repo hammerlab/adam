@@ -35,15 +35,15 @@ class CycleCovariateSuite extends FunSuite {
       .setCigar("8M")
       .build
     val covariates = cc.compute(read)
-    assert(covariates.size === 8)
-    assert(covariates(0) === 8)
-    assert(covariates(1) === 7)
-    assert(covariates(2) === 6)
-    assert(covariates(3) === 5)
-    assert(covariates(4) === 4)
-    assert(covariates(5) === 3)
-    assert(covariates(6) === 2)
-    assert(covariates(7) === 1)
+    ==(covariates.size, 8)
+    ==(covariates(0), 8)
+    ==(covariates(1), 7)
+    ==(covariates(2), 6)
+    ==(covariates(3), 5)
+    ==(covariates(4), 4)
+    ==(covariates(5), 3)
+    ==(covariates(6), 2)
+    ==(covariates(7), 1)
   }
 
   test("compute covariates for a first-of-pair read on the negative strand") {
@@ -59,15 +59,15 @@ class CycleCovariateSuite extends FunSuite {
       .setReadInFragment(0)
       .build
     val covariates = cc.compute(read)
-    assert(covariates.size === 8)
-    assert(covariates(0) === 8)
-    assert(covariates(1) === 7)
-    assert(covariates(2) === 6)
-    assert(covariates(3) === 5)
-    assert(covariates(4) === 4)
-    assert(covariates(5) === 3)
-    assert(covariates(6) === 2)
-    assert(covariates(7) === 1)
+    ==(covariates.size, 8)
+    ==(covariates(0), 8)
+    ==(covariates(1), 7)
+    ==(covariates(2), 6)
+    ==(covariates(3), 5)
+    ==(covariates(4), 4)
+    ==(covariates(5), 3)
+    ==(covariates(6), 2)
+    ==(covariates(7), 1)
   }
 
   test("compute covariates for a second-of-pair read on the negative strand") {
@@ -83,15 +83,15 @@ class CycleCovariateSuite extends FunSuite {
       .setReadInFragment(1)
       .build
     val covariates = cc.compute(read)
-    assert(covariates.size === 8)
-    assert(covariates(0) === -8)
-    assert(covariates(1) === -7)
-    assert(covariates(2) === -6)
-    assert(covariates(3) === -5)
-    assert(covariates(4) === -4)
-    assert(covariates(5) === -3)
-    assert(covariates(6) === -2)
-    assert(covariates(7) === -1)
+    ==(covariates.size, 8)
+    ==(covariates(0), -8)
+    ==(covariates(1), -7)
+    ==(covariates(2), -6)
+    ==(covariates(3), -5)
+    ==(covariates(4), -4)
+    ==(covariates(5), -3)
+    ==(covariates(6), -2)
+    ==(covariates(7), -1)
   }
 
   test("compute covariates for an unpaired read on the positive strand") {
@@ -105,15 +105,15 @@ class CycleCovariateSuite extends FunSuite {
       .setCigar("8M")
       .build
     val covariates = cc.compute(read)
-    assert(covariates.size === 8)
-    assert(covariates(0) === 1)
-    assert(covariates(1) === 2)
-    assert(covariates(2) === 3)
-    assert(covariates(3) === 4)
-    assert(covariates(4) === 5)
-    assert(covariates(5) === 6)
-    assert(covariates(6) === 7)
-    assert(covariates(7) === 8)
+    ==(covariates.size, 8)
+    ==(covariates(0), 1)
+    ==(covariates(1), 2)
+    ==(covariates(2), 3)
+    ==(covariates(3), 4)
+    ==(covariates(4), 5)
+    ==(covariates(5), 6)
+    ==(covariates(6), 7)
+    ==(covariates(7), 8)
   }
 
   test("compute covariates for a first-of-pair read on the positive strand") {
@@ -129,15 +129,15 @@ class CycleCovariateSuite extends FunSuite {
       .setReadInFragment(0)
       .build
     val covariates = cc.compute(read)
-    assert(covariates.size === 8)
-    assert(covariates(0) === 1)
-    assert(covariates(1) === 2)
-    assert(covariates(2) === 3)
-    assert(covariates(3) === 4)
-    assert(covariates(4) === 5)
-    assert(covariates(5) === 6)
-    assert(covariates(6) === 7)
-    assert(covariates(7) === 8)
+    ==(covariates.size, 8)
+    ==(covariates(0), 1)
+    ==(covariates(1), 2)
+    ==(covariates(2), 3)
+    ==(covariates(3), 4)
+    ==(covariates(4), 5)
+    ==(covariates(5), 6)
+    ==(covariates(6), 7)
+    ==(covariates(7), 8)
   }
 
   test("compute covariates for a second-of-pair read on the positive strand") {
@@ -153,14 +153,14 @@ class CycleCovariateSuite extends FunSuite {
       .setReadInFragment(1)
       .build
     val covariates = cc.compute(read)
-    assert(covariates.size === 8)
-    assert(covariates(0) === -1)
-    assert(covariates(1) === -2)
-    assert(covariates(2) === -3)
-    assert(covariates(3) === -4)
-    assert(covariates(4) === -5)
-    assert(covariates(5) === -6)
-    assert(covariates(6) === -7)
-    assert(covariates(7) === -8)
+    ==(covariates.size, 8)
+    ==(covariates(0), -1)
+    ==(covariates(1), -2)
+    ==(covariates(2), -3)
+    ==(covariates(3), -4)
+    ==(covariates(4), -5)
+    ==(covariates(5), -6)
+    ==(covariates(6), -7)
+    ==(covariates(7), -8)
   }
 }

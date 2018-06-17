@@ -80,22 +80,22 @@ class VariantContextRDDSuite
     assert(exists(path))
 
     val vcRdd = sc.loadVcf(path / "part-r-00000")
-    vcRdd.rdd.count should === (1)
+    ==(vcRdd.rdd.count, 1)
 
     val variant = vcRdd.rdd.first.variant.variant
-    variant.getContigName should === ("11")
+    ==(variant.getContigName, "11")
     variant.getStart should be(17409572)
-    variant.getReferenceAllele should === ("T")
-    variant.getAlternateAllele should === ("C")
-    variant.getNames.length should === (2)
-    variant.getNames.get(0) should === ("rs3131972")
-    variant.getNames.get(1) should === ("rs201888535")
-    variant.getFiltersApplied should === (true)
-    variant.getFiltersPassed should === (true)
+    ==(variant.getReferenceAllele, "T")
+    ==(variant.getAlternateAllele, "C")
+    ==(variant.getNames.length, 2)
+    ==(variant.getNames.get(0), "rs3131972")
+    ==(variant.getNames.get(1), "rs201888535")
+    ==(variant.getFiltersApplied, true)
+    ==(variant.getFiltersPassed, true)
     assert(variant.getFiltersFailed.isEmpty)
 
-    vcRdd.sequences.records.size should === (1)
-    vcRdd.sequences.records(0).name should === ("11")
+    ==(vcRdd.sequences.records.size, 1)
+    ==(vcRdd.sequences.records(0).name, "11")
   }
 
   test("can write as a single file, then read in .vcf file") {
@@ -104,9 +104,9 @@ class VariantContextRDDSuite
     assert(exists(path))
 
     val vcRdd = sc.loadVcf(path)
-    vcRdd.rdd.count should === (1)
-    vcRdd.sequences.records.size should === (1)
-    vcRdd.sequences.records(0).name should === ("11")
+    ==(vcRdd.rdd.count, 1)
+    ==(vcRdd.sequences.records.size, 1)
+    ==(vcRdd.sequences.records(0).name, "11")
   }
 
   test("don't lose any variants when piping as VCF") {
@@ -120,8 +120,8 @@ class VariantContextRDDSuite
     val pipedRdd: VariantContextRDD = rdd.pipe[VariantContext, VariantContextRDD, VCFInFormatter]("tee /dev/null")
       .transform(_.cache())
     val newRecords = pipedRdd.rdd.count
-    records should === (newRecords)
-    pipedRdd.rdd.flatMap(_.genotypes).count should === (18)
+    ==(records, newRecords)
+    ==(pipedRdd.rdd.flatMap(_.genotypes).count, 18)
   }
 
   test("save a file sorted by contig index") {

@@ -51,9 +51,9 @@ class RepairPartitionsSuite extends ADAMFunSuite {
     val reads = RepairPartitions.getPairAtStart(1, iter)
       .toSeq
 
-    assert(reads.size === 1)
-    assert(reads.head._1 === 1)
-    assert(reads.head._2.size === 1)
+    ==(reads.size, 1)
+    ==(reads.head._1, 1)
+    ==(reads.head._2.size, 1)
     assert(reads.head._2.forall(_.getReadName == "read1"))
   }
 
@@ -65,9 +65,9 @@ class RepairPartitionsSuite extends ADAMFunSuite {
     val reads = RepairPartitions.getPairAtStart(1, iter)
       .toSeq
 
-    assert(reads.size === 1)
-    assert(reads.head._1 === 1)
-    assert(reads.head._2.size === 2)
+    ==(reads.size, 1)
+    ==(reads.head._1, 1)
+    ==(reads.head._2.size, 2)
     assert(reads.head._2.forall(_.getReadName == "read1"))
   }
 
@@ -81,7 +81,7 @@ class RepairPartitionsSuite extends ADAMFunSuite {
 
     val reads = RepairPartitions.dropPairAtStart(0, iter)
 
-    assert(reads.size === 2)
+    ==(reads.size, 2)
   }
 
   test("drop a single read from the partition if there are no other reads in the pair") {
@@ -91,7 +91,7 @@ class RepairPartitionsSuite extends ADAMFunSuite {
     val reads = RepairPartitions.dropPairAtStart(1, iter)
       .toSeq
 
-    assert(reads.size === 1)
+    ==(reads.size, 1)
     assert(reads.forall(_.getReadName == "read2"))
   }
 
@@ -103,7 +103,7 @@ class RepairPartitionsSuite extends ADAMFunSuite {
     val reads = RepairPartitions.dropPairAtStart(1, iter)
       .toSeq
 
-    assert(reads.size === 1)
+    ==(reads.size, 1)
     assert(reads.forall(_.getReadName == "read2"))
   }
 
@@ -116,7 +116,7 @@ class RepairPartitionsSuite extends ADAMFunSuite {
     val reads = RepairPartitions.addPairsAtEnd(0, iter, readArray)
       .toSeq
 
-    assert(reads.size === 2)
+    ==(reads.size, 2)
     assert(reads.forall(_.getReadName == "read1"))
   }
 
@@ -127,7 +127,7 @@ class RepairPartitionsSuite extends ADAMFunSuite {
     val reads = RepairPartitions.addPairsAtEnd(1, iter, readArray)
       .toSeq
 
-    assert(reads.size === 3)
+    ==(reads.size, 3)
     assert(reads.forall(_.getReadName == "read2"))
   }
 
@@ -139,7 +139,7 @@ class RepairPartitionsSuite extends ADAMFunSuite {
     val reads = RepairPartitions.addPairsAtEnd(2, iter, readArray)
       .toSeq
 
-    assert(reads.size === 1)
+    ==(reads.size, 1)
     assert(reads.forall(_.getReadName == "read3"))
   }
 
@@ -158,10 +158,10 @@ class RepairPartitionsSuite extends ADAMFunSuite {
 
     val unrolledArray = RepairPartitions.unrollArray(array, 3)
 
-    assert(unrolledArray.length === 3)
-    assert(unrolledArray(0).size === 1)
+    ==(unrolledArray.length, 3)
+    ==(unrolledArray(0).size, 1)
     assert(unrolledArray(0).forall(_.getReadName == "read1"))
-    assert(unrolledArray(1).size === 2)
+    ==(unrolledArray(1).size, 2)
     assert(unrolledArray(1).forall(_.getReadName == "read2"))
     assert(unrolledArray(2).isEmpty)
   }
@@ -187,9 +187,9 @@ class RepairPartitionsSuite extends ADAMFunSuite {
       iter.map(r => (idx, r.getReadName))
     }).countByValue()
 
-    assert(readNamesByPartition.size === 3)
-    assert(readNamesByPartition((0, "read1")) === 2)
-    assert(readNamesByPartition((1, "read2")) === 3)
-    assert(readNamesByPartition((2, "read3")) === 1)
+    ==(readNamesByPartition.size, 3)
+    ==(readNamesByPartition((0, "read1")), 2)
+    ==(readNamesByPartition((1, "read2")), 3)
+    ==(readNamesByPartition((2, "read3")), 1)
   }
 }

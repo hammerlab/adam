@@ -55,13 +55,13 @@ class ReadFieldSuite extends ADAMFunSuite {
       )
 
     val reads: RDD[Read] = sc.loadParquet(path, projection = Some(projection))
-    assert(reads.count() === 1)
-    assert(reads.first.getName === "read 1")
-    assert(reads.first.getDescription === "read 1")
-    assert(reads.first.getAlphabet === Alphabet.DNA)
-    assert(reads.first.getSequence === "ACTG")
-    assert(reads.first.getLength === 4)
-    assert(reads.first.getQualityScores === "0123")
-    assert(reads.first.getQualityScoreVariant === QualityScoreVariant.FASTQ_SANGER)
+    ==(reads.count(), 1)
+    ==(reads.first.getName, "read 1")
+    ==(reads.first.getDescription, "read 1")
+    ==(reads.first.getAlphabet, Alphabet.DNA)
+    ==(reads.first.getSequence, "ACTG")
+    ==(reads.first.getLength, 4)
+    ==(reads.first.getQualityScores, "0123")
+    ==(reads.first.getQualityScoreVariant, QualityScoreVariant.FASTQ_SANGER)
   }
 }

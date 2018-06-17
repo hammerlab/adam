@@ -51,8 +51,8 @@ class RecordGroupDictionarySuite extends FunSuite {
     val rg3 = new RecordGroup("you", "rg1") // all hail the king!
 
     assert(rg1a.equals(rg1a))
-    assert(rg1a.sample === rg1b.sample)
-    assert(rg1a.recordGroupName === rg1b.recordGroupName)
+    ==(rg1a.sample, rg1b.sample)
+    ==(rg1a.recordGroupName, rg1b.recordGroupName)
     assert(!rg1a.equals(rg2))
     assert(!rg1a.equals(rg3))
     assert(!rg1b.equals(rg2))
@@ -72,16 +72,16 @@ class RecordGroupDictionarySuite extends FunSuite {
     assert(!rgd.isEmpty)
     val samples = rgd.toSamples
 
-    assert(samples.size === 3)
-    assert(samples.count(_.getSampleId == "sample1") === 1)
-    assert(samples.count(_.getSampleId == "sample2") === 1)
-    assert(samples.count(_.getSampleId == "sample3") === 1)
+    ==(samples.size, 3)
+    ==(samples.count(_.getSampleId == "sample1"), 1)
+    ==(samples.count(_.getSampleId == "sample2"), 1)
+    ==(samples.count(_.getSampleId == "sample3"), 1)
   }
 
   test("empty record group is empty") {
     val emptyRgd = RecordGroupDictionary.empty
 
     assert(emptyRgd.isEmpty)
-    assert(emptyRgd.recordGroups.size === 0)
+    ==(emptyRgd.recordGroups.size, 0)
   }
 }

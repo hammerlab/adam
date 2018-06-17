@@ -62,12 +62,12 @@ class IndelRealignmentTargetSuite
       ReferenceRegion("1", 1, 51))
     val target2 = new IndelRealignmentTarget(None,
       ReferenceRegion("1", 60, 91))
-    assert(target1.readRange.start === 1)
-    assert(target1.readRange.end === 51)
-    assert(TargetOrdering.overlap(target1, target1) === true)
-    assert(TargetOrdering.overlap(target1, target2) === false)
-    assert(target2.readRange.start === 60)
-    assert(target2.readRange.end === 91)
+    ==(target1.readRange.start, 1)
+    ==(target1.readRange.end, 51)
+    ==(TargetOrdering.overlap(target1, target1), true)
+    ==(TargetOrdering.overlap(target1, target2), false)
+    ==(target2.readRange.start, 60)
+    ==(target2.readRange.end, 91)
     assert(!target1.isEmpty)
     assert(target2.isEmpty)
   }
@@ -77,11 +77,11 @@ class IndelRealignmentTargetSuite
     val read_rdd: RDD[RichAlignmentRecord] = sc.makeRDD(Seq(read), 1)
     val targets = RealignmentTargetFinder(read_rdd)
     assert(targets != null)
-    assert(targets.size === 1)
-    assert(targets.head.variation.get.start === 5)
-    assert(targets.head.variation.get.end === 8)
-    assert(targets.head.readRange.start === 3)
-    assert(targets.head.readRange.end === 10)
+    ==(targets.size, 1)
+    ==(targets.head.variation.get.start, 5)
+    ==(targets.head.variation.get.end, 8)
+    ==(targets.head.readRange.start, 3)
+    ==(targets.head.readRange.end, 10)
     assert(TargetOrdering.contains(targets.head, read))
     assert(!TargetOrdering.lt(targets.head, read))
     val read2 = make_read(2L, "2M3D2M", "2^AAA2", 4, 7)
@@ -95,11 +95,11 @@ class IndelRealignmentTargetSuite
     val read_rdd: RDD[RichAlignmentRecord] = sc.makeRDD(Seq(read), 1)
     val targets = RealignmentTargetFinder(read_rdd)
     assert(targets != null)
-    assert(targets.size === 1)
-    assert(targets.head.variation.get.start === 5)
-    assert(targets.head.variation.get.end === 6)
-    assert(targets.head.readRange.start === 3)
-    assert(targets.head.readRange.end === 7)
+    ==(targets.size, 1)
+    ==(targets.head.variation.get.start, 5)
+    ==(targets.head.variation.get.end, 6)
+    ==(targets.head.readRange.start, 3)
+    ==(targets.head.readRange.end, 7)
   }
 
   test("joining simple realignment targets on same chr") {
@@ -108,10 +108,10 @@ class IndelRealignmentTargetSuite
     val target2 = new IndelRealignmentTarget(Some(ReferenceRegion("1", 10, 16)),
       ReferenceRegion("1", 6, 26))
     val merged_target = target1.merge(target2)
-    assert(merged_target.readRange.start === 1)
-    assert(merged_target.readRange.end === 26)
-    assert(merged_target.variation.get.start === 10)
-    assert(merged_target.variation.get.end === 16)
+    ==(merged_target.readRange.start, 1)
+    ==(merged_target.readRange.end, 26)
+    ==(merged_target.variation.get.start, 10)
+    ==(merged_target.variation.get.end, 16)
   }
 
   test("joining simple realignment targets on different chr throws exception") {
@@ -132,11 +132,11 @@ class IndelRealignmentTargetSuite
     val read_rdd: RDD[RichAlignmentRecord] = sc.makeRDD(Seq(read1, read2, read3), 1)
     val targets = RealignmentTargetFinder(read_rdd)
     assert(targets != null)
-    assert(targets.size === 1)
-    assert(targets.head.variation.get.start === 5)
-    assert(targets.head.variation.get.end === 8)
-    assert(targets.head.readRange.start === 1)
-    assert(targets.head.readRange.end === 10)
+    ==(targets.size, 1)
+    ==(targets.head.variation.get.start, 5)
+    ==(targets.head.variation.get.end, 8)
+    ==(targets.head.readRange.start, 1)
+    ==(targets.head.readRange.end, 10)
   }
 
   test("creating targets from three intersecting reads, two different indel") {
@@ -148,11 +148,11 @@ class IndelRealignmentTargetSuite
     val targets = RealignmentTargetFinder(read_rdd)
 
     assert(targets != null)
-    assert(targets.size === 1)
-    assert(targets.head.variation.get.start === 3)
-    assert(targets.head.variation.get.end === 9)
-    assert(targets.head.readRange.start === 1)
-    assert(targets.head.readRange.end === 13)
+    ==(targets.size, 1)
+    ==(targets.head.variation.get.start, 3)
+    ==(targets.head.variation.get.end, 9)
+    ==(targets.head.readRange.start, 1)
+    ==(targets.head.readRange.end, 13)
   }
 
   test("creating targets from two disjoint reads") {
@@ -161,15 +161,15 @@ class IndelRealignmentTargetSuite
     val read_rdd: RDD[RichAlignmentRecord] = sc.makeRDD(Seq(read1, read2), 1)
     val targets = RealignmentTargetFinder(read_rdd).toArray
     assert(targets != null)
-    assert(targets.size === 2)
-    assert(targets(0).variation.get.start === 3)
-    assert(targets(0).variation.get.end === 5)
-    assert(targets(0).readRange.start === 1)
-    assert(targets(0).readRange.end === 7)
-    assert(targets(1).variation.get.start === 9)
-    assert(targets(1).variation.get.end === 11)
-    assert(targets(1).readRange.start === 7)
-    assert(targets(1).readRange.end === 13)
+    ==(targets.size, 2)
+    ==(targets(0).variation.get.start, 3)
+    ==(targets(0).variation.get.end, 5)
+    ==(targets(0).readRange.start, 1)
+    ==(targets(0).readRange.end, 7)
+    ==(targets(1).variation.get.start, 9)
+    ==(targets(1).variation.get.end, 11)
+    ==(targets(1).readRange.start, 7)
+    ==(targets(1).readRange.end, 13)
   }
 
   test("creating targets for artificial reads: one-by-one") {
@@ -192,9 +192,9 @@ class IndelRealignmentTargetSuite
         val targets = RealignmentTargetFinder(read_rdd)
         if (read.getStart < 105) {
           assert(targets != null)
-          assert(targets.size === 1) // the later read mates do not have indels
-          assert(targets.head.readRange.start === read.getStart)
-          assert(targets.head.readRange.end === read.getEnd)
+          ==(targets.size, 1) // the later read mates do not have indels
+          ==(targets.head.readRange.start, read.getStart)
+          ==(targets.head.readRange.end, read.getEnd)
           assert(check_indel(targets.head, read))
         }
       })
@@ -203,11 +203,11 @@ class IndelRealignmentTargetSuite
   test("creating targets for artificial reads: all-at-once (merged)") {
     val targets_collected: Array[IndelRealignmentTarget] = RealignmentTargetFinder(artificial_reads).toArray
 
-    assert(targets_collected.size === 1)
-    assert(targets_collected.head.readRange.start === 5)
-    assert(targets_collected.head.readRange.end === 95)
-    assert(targets_collected.head.variation.get.start === 34)
-    assert(targets_collected.head.variation.get.end === 64)
+    ==(targets_collected.size, 1)
+    ==(targets_collected.head.readRange.start, 5)
+    ==(targets_collected.head.readRange.end, 95)
+    ==(targets_collected.head.variation.get.start, 34)
+    ==(targets_collected.head.variation.get.end, 64)
   }
 
   test("creating indel targets for mason reads") {
@@ -219,7 +219,7 @@ class IndelRealignmentTargetSuite
     // the third read has a one base deletion
     assert(targets_collected(1).variation.get.start == 807755 && targets_collected(1).variation.get.end == 807756)
     // read 7 has a single 4 bp deletion
-    assert(targets_collected(5).variation.get.length === 4)
+    ==(targets_collected(5).variation.get.length, 4)
     assert(targets_collected(5).variation.get.start == 869644 && targets_collected(5).variation.get.end == 869648)
   }
 }

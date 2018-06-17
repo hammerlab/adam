@@ -60,8 +60,8 @@ class NonoverlappingRegionsSuite
     val region = new ReferenceRegion("chr1", 1, 2)
     val regions = new NonoverlappingRegions(Seq(region))
     val result = regions.findOverlappingRegions(region)
-    assert(result.size === 1)
-    assert(result.head === region)
+    ==(result.size, 1)
+    ==(result.head, region)
   }
 
   test("Two adjacent regions will be merged") {
@@ -69,7 +69,7 @@ class NonoverlappingRegionsSuite
       ReferenceRegion("chr1", 10, 20),
       ReferenceRegion("chr1", 20, 30)))
 
-    assert(regions.endpoints === Array(10L, 30L))
+    ==(regions.endpoints, Array(10L, 30L))
   }
 
   test("Nonoverlapping regions will all be returned") {
@@ -81,9 +81,9 @@ class NonoverlappingRegionsSuite
 
     // this should be 2, not 3, because binaryRegionSearch is (now) no longer returning
     // ReferenceRegions in which no original RR's were placed (i.e. the 'gaps').
-    assert(regions.findOverlappingRegions(testRegion3).size === 2)
+    ==(regions.findOverlappingRegions(testRegion3).size, 2)
 
-    assert(regions.findOverlappingRegions(testRegion1).size === 1)
+    ==(regions.findOverlappingRegions(testRegion1).size, 1)
   }
 
   test("Many overlapping regions will all be merged") {
@@ -92,7 +92,7 @@ class NonoverlappingRegionsSuite
     val region3 = new ReferenceRegion("chr1", 3, 5)
     val testRegion = new ReferenceRegion("chr1", 1, 4)
     val regions = new NonoverlappingRegions(Seq(region1, region2, region3))
-    assert(regions.findOverlappingRegions(testRegion).size === 1)
+    ==(regions.findOverlappingRegions(testRegion).size, 1)
   }
 
   test("ADAMRecords return proper references") {
@@ -117,8 +117,8 @@ class NonoverlappingRegionsSuite
     val baseMapping = new NonoverlappingRegions(Seq(ReferenceRegion.unstranded(baseRecord)))
     val regions1 = baseMapping.findOverlappingRegions(ReferenceRegion.unstranded(record1))
     val regions2 = baseMapping.findOverlappingRegions(ReferenceRegion.unstranded(record2))
-    assert(regions1.size === 1)
-    assert(regions2.size === 1)
-    assert(regions1.head === regions2.head)
+    ==(regions1.size, 1)
+    ==(regions2.size, 1)
+    ==(regions1.head, regions2.head)
   }
 }

@@ -45,7 +45,7 @@ class FastqRecordConverterSuite extends FunSuite with PrivateMethodTester {
         ("@desc", false)
       )
     ) // not exception raised
-    assert(converter.readNameSuffixAndIndexOfPairMustMatch(readName, isFirstOfPair) === ())
+    ==(converter.readNameSuffixAndIndexOfPairMustMatch(readName, isFirstOfPair), ())
   }
 
   test("test parseReadInFastq, read suffix removal") {
@@ -57,7 +57,7 @@ class FastqRecordConverterSuite extends FunSuite with PrivateMethodTester {
         "@desc+1", "@desc+2",
         "@desc_1", "@desc_2"
       )
-    ) assert(converter.parseReadInFastq(s"${desc}\nATCG\n+\n1234")._1 === "desc")
+    ) ==(converter.parseReadInFastq(s"${desc}\nATCG\n+\n1234")._1, "desc")
 
     // a bit more complicated cases
     for (
@@ -67,7 +67,7 @@ class FastqRecordConverterSuite extends FunSuite with PrivateMethodTester {
         "@more desc+1", "@more desc+2",
         "@more desc_1", "@more desc_2"
       )
-    ) assert(converter.parseReadInFastq(s"${desc}\nATCG\n+\n1234")._1 === "more desc")
+    ) ==(converter.parseReadInFastq(s"${desc}\nATCG\n+\n1234")._1, "more desc")
   }
 
   test("test parseReadInFastq, read quality shorter than read length, padded with B") {
@@ -79,7 +79,7 @@ class FastqRecordConverterSuite extends FunSuite with PrivateMethodTester {
     val thrown = intercept[IllegalArgumentException] {
       converter.parseReadInFastq("@description\nA\n+\nZZ", stringency = lenient)
     }
-    assert(thrown.getMessage === "Quality length must not be longer than read length")
+    ==(thrown.getMessage, "Quality length must not be longer than read length")
   }
 
   test("test parseReadInFastq, no read quality") {
@@ -91,11 +91,11 @@ class FastqRecordConverterSuite extends FunSuite with PrivateMethodTester {
     val input = (null, new Text("@read/1\nATCGA\n+\nabcde\n@read/2\nTCGAT\n+\n12345"))
     val alignRecIterator = converter.convertPair(input)
 
-    assert(alignRecIterator.map(a => a.getReadName) === List("read", "read"))
-    assert(alignRecIterator.map(a => a.getSequence) === List("ATCGA", "TCGAT"))
-    assert(alignRecIterator.map(a => a.getQual) === List("abcde", "12345"))
-    assert(alignRecIterator.map(a => a.getReadPaired) === List(true, true))
-    assert(alignRecIterator.map(a => a.getReadInFragment) === List(0, 1))
+    ==(alignRecIterator.map(a => a.getReadName), List("read", "read"))
+    ==(alignRecIterator.map(a => a.getSequence), List("ATCGA", "TCGAT"))
+    ==(alignRecIterator.map(a => a.getQual), List("abcde", "12345"))
+    ==(alignRecIterator.map(a => a.getReadPaired), List(true, true))
+    ==(alignRecIterator.map(a => a.getReadInFragment), List(0, 1))
   }
 
   test("testing FastqRecordConverter.convertPair with 7-line invalid input") {
@@ -127,18 +127,18 @@ class FastqRecordConverterSuite extends FunSuite with PrivateMethodTester {
 
     // more detailed testing
     val align1 = fragment.getAlignments.get(0)
-    assert(align1.getReadName === "read")
-    assert(align1.getSequence === "ATCGA")
-    assert(align1.getQual === "abcde")
-    assert(align1.getReadPaired === true)
-    assert(align1.getReadInFragment === 0)
+    ==(align1.getReadName, "read")
+    ==(align1.getSequence, "ATCGA")
+    ==(align1.getQual, "abcde")
+    ==(align1.getReadPaired, true)
+    ==(align1.getReadInFragment, 0)
 
     val align2 = fragment.getAlignments.get(1)
-    assert(align2.getReadName === "read")
-    assert(align2.getSequence === "TCGAT")
-    assert(align2.getQual === "12345")
-    assert(align2.getReadPaired === true)
-    assert(align2.getReadInFragment === 1)
+    ==(align2.getReadName, "read")
+    ==(align2.getSequence, "TCGAT")
+    ==(align2.getQual, "12345")
+    ==(align2.getReadPaired, true)
+    ==(align2.getReadInFragment, 1)
   }
 
   test("testing FastqRecordConverter.convertFragment with another valid input having /1, /2 suffixes") {
@@ -148,18 +148,18 @@ class FastqRecordConverterSuite extends FunSuite with PrivateMethodTester {
 
     // more detailed testing
     val align1 = fragment.getAlignments.get(0)
-    assert(align1.getReadName === "read")
-    assert(align1.getSequence === "ATCGA")
-    assert(align1.getQual === "abcde")
-    assert(align1.getReadPaired === true)
-    assert(align1.getReadInFragment === 0)
+    ==(align1.getReadName, "read")
+    ==(align1.getSequence, "ATCGA")
+    ==(align1.getQual, "abcde")
+    ==(align1.getReadPaired, true)
+    ==(align1.getReadInFragment, 0)
 
     val align2 = fragment.getAlignments.get(1)
-    assert(align2.getReadName === "read")
-    assert(align2.getSequence === "TCGAT")
-    assert(align2.getQual === "12345")
-    assert(align2.getReadPaired === true)
-    assert(align2.getReadInFragment === 1)
+    ==(align2.getReadName, "read")
+    ==(align2.getSequence, "TCGAT")
+    ==(align2.getQual, "12345")
+    ==(align2.getReadPaired, true)
+    ==(align2.getReadInFragment, 1)
   }
 
   test("testing FastqRecordConverter.convertFragment with invalid input: different read names") {
@@ -172,11 +172,11 @@ class FastqRecordConverterSuite extends FunSuite with PrivateMethodTester {
   test("testing FastqRecordConverter.convertRead with valid input") {
     val input = (null, new Text("@nameX\nATCGA\n+\nabcde"))
     val alignment = converter.convertRead(input)
-    assert(alignment.getReadName === "nameX")
-    assert(alignment.getSequence === "ATCGA")
-    assert(alignment.getQual === "abcde")
-    assert(alignment.getReadPaired === false)
-    assert(alignment.getReadInFragment === 0)
+    ==(alignment.getReadName, "nameX")
+    ==(alignment.getSequence, "ATCGA")
+    ==(alignment.getQual, "abcde")
+    ==(alignment.getReadPaired, false)
+    ==(alignment.getReadInFragment, 0)
   }
 
   test("testing FastqRecordConverter.convertRead with valid input: setFirstOfPair set to true") {
@@ -184,8 +184,8 @@ class FastqRecordConverterSuite extends FunSuite with PrivateMethodTester {
       (null, new Text("@nameX\nATCGA\n+\nabcde")),
       setFirstOfPair = true
     )
-    assert(alignment.getReadPaired === true)
-    assert(alignment.getReadInFragment === 0)
+    ==(alignment.getReadPaired, true)
+    ==(alignment.getReadInFragment, 0)
   }
 
   test("testing FastqRecordConverter.convertRead with valid input: setSecondOfPair set to true") {
@@ -193,8 +193,8 @@ class FastqRecordConverterSuite extends FunSuite with PrivateMethodTester {
       (null, new Text("@nameX\nATCGA\n+\nabcde")),
       setSecondOfPair = true
     )
-    assert(alignment.getReadPaired === true)
-    assert(alignment.getReadInFragment === 1)
+    ==(alignment.getReadPaired, true)
+    ==(alignment.getReadInFragment, 1)
   }
 
   test("testing FastqRecordConverter.convertRead with valid input: setFirstOfPair and setSecondOfPair both true") {
@@ -205,7 +205,7 @@ class FastqRecordConverterSuite extends FunSuite with PrivateMethodTester {
         setSecondOfPair = true
       )
     }
-    assert(thrown.getMessage === "setFirstOfPair and setSecondOfPair cannot be true at the same time")
+    ==(thrown.getMessage, "setFirstOfPair and setSecondOfPair cannot be true at the same time")
   }
 
   test("testing FastqRecordConverter.convertRead with valid input, no qual, strict") {
@@ -219,7 +219,7 @@ class FastqRecordConverterSuite extends FunSuite with PrivateMethodTester {
   test("testing FastqRecordConverter.convertRead with valid input, no qual, not strict") {
     val input = (null, new Text("@nameX\nATCGA\n+\n*"))
     val alignment = converter.convertRead(input, stringency = lenient)
-    assert(alignment.getReadName === "nameX")
-    assert(alignment.getQual === "BBBBB")
+    ==(alignment.getReadName, "nameX")
+    ==(alignment.getQual, "BBBBB")
   }
 }

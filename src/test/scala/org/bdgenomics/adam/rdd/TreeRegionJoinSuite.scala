@@ -72,7 +72,7 @@ class TreeRegionJoinSuite extends ADAMFunSuite {
         (k.map(_.getStart.toInt), v.getStart.toInt)
       }).collect
 
-    assert(joinData.length === 5)
+    ==(joinData.length, 5)
 
     val joinMap =
       joinData
@@ -81,16 +81,16 @@ class TreeRegionJoinSuite extends ADAMFunSuite {
         .toMap
         .mapValues(_.toSet)
 
-    assert(joinMap.size === 4)
-    assert(joinMap(0).size === 2)
+    ==(joinMap.size, 4)
+    ==(joinMap(0).size, 2)
     assert(joinMap(0)(0))
     assert(joinMap(0)(1))
-    assert(joinMap(1).size === 2)
+    ==(joinMap(1).size, 2)
     assert(joinMap(1)(1))
     assert(joinMap(1)(2))
-    assert(joinMap(2).size === 1)
+    ==(joinMap(2).size, 1)
     assert(joinMap(2)(2))
-    assert(joinMap(4).size === 1)
+    ==(joinMap(4).size, 1)
     assert(joinMap(4)(4))
   }
 }

@@ -29,7 +29,7 @@ import org.bdgenomics.adam.rdd.variant.{ VCFOutFormatter, VariantContextRDD }
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro._
 import org.hammerlab.genomics.reference.test.LociConversions.intToLocus
-import org.hammerlab.test.matchers.seqs.ArrMatcher.arrMatch
+import org.hammerlab.test.matchers._
 import org.seqdoop.hadoop_bam.CRAMInputFormat.REFERENCE_SOURCE_PATH_PROPERTY
 import org.seqdoop.hadoop_bam.SAMFormat.{ BAM, CRAM, SAM }
 
@@ -90,7 +90,7 @@ class AlignmentRecordRDDSuite
     // Make sure that we appropriately sorted the reads
     val expectedSortedReads = mapped.sortWith(
       (a, b) => a._1.getContigName < b._1.getContigName && a._1.getStart < b._1.getStart)
-    assert(expectedSortedReads === mapped)
+    expectedSortedReads should be(mapped)
   }
 
   test("coverage does not fail on unmapped reads") {
@@ -101,7 +101,7 @@ class AlignmentRecordRDDSuite
       })
 
     val coverage = reads.toCoverage()
-    assert(coverage.rdd.count === 0)
+    ==(coverage.rdd.count, 0)
   }
 
   test("computes coverage") {
@@ -183,7 +183,7 @@ class AlignmentRecordRDDSuite
       ((toIndex(r), start), (r, idx))
     }).sortBy(_._1)
       .map(_._2)
-    assert(expectedSortedReads === mapped)
+    expectedSortedReads should be(mapped)
   }
 
   test("round trip from ADAM to SAM and back to ADAM produces equivalent Read values") {
@@ -200,7 +200,7 @@ class AlignmentRecordRDDSuite
 
     val rdd12B = sc.loadBam(outputPath / "part-r-00000")
 
-    assert(rdd12B.rdd.count() === rdd12A.rdd.count())
+    ==(rdd12B.rdd.count(), rdd12A.rdd.count())
 
     val reads12A = rdd12A.rdd.collect()
     val reads12B = rdd12B.rdd.collect()
@@ -208,9 +208,9 @@ class AlignmentRecordRDDSuite
     reads12A.indices.foreach {
       i ⇒
         val (readA, readB) = (reads12A(i), reads12B(i))
-        assert(readA.getSequence === readB.getSequence)
-        assert(readA.getQual === readB.getQual)
-        assert(readA.getCigar === readB.getCigar)
+        ==(readA.getSequence, readB.getSequence)
+        ==(readA.getQual, readB.getQual)
+        ==(readA.getCigar, readB.getCigar)
     }
   }
 
@@ -233,7 +233,7 @@ class AlignmentRecordRDDSuite
 
     val rddB = sc.loadBam(tempFile)
 
-    assert(rddB.rdd.count() === rddA.rdd.count())
+    ==(rddB.rdd.count(), rddA.rdd.count())
 
     val readsA = rddA.rdd.collect()
     val readsB = rddB.rdd.collect()
@@ -241,9 +241,9 @@ class AlignmentRecordRDDSuite
     readsA.indices.foreach {
       i ⇒
         val (readA, readB) = (readsA(i), readsB(i))
-        assert(readA.getSequence === readB.getSequence)
-        assert(readA.getQual === readB.getQual)
-        assert(readA.getCigar === readB.getCigar)
+        ==(readA.getSequence, readB.getSequence)
+        ==(readA.getQual, readB.getQual)
+        ==(readA.getCigar, readB.getCigar)
     }
   }
 
@@ -266,7 +266,7 @@ class AlignmentRecordRDDSuite
 
     val rddB = sc.loadBam(tempFile + "/part-r-00000")
 
-    assert(rddB.rdd.count() === rddA.rdd.count())
+    ==(rddB.rdd.count(), rddA.rdd.count())
 
     val readsA = rddA.rdd.collect()
     val readsB = rddB.rdd.collect()
@@ -274,9 +274,9 @@ class AlignmentRecordRDDSuite
     readsA.indices.foreach {
       i ⇒
         val (readA, readB) = (readsA(i), readsB(i))
-        assert(readA.getSequence === readB.getSequence)
-        assert(readA.getQual === readB.getQual)
-        assert(readA.getCigar === readB.getCigar)
+        ==(readA.getSequence, readB.getSequence)
+        ==(readA.getQual, readB.getQual)
+        ==(readA.getCigar, readB.getCigar)
     }
   }
 
@@ -331,7 +331,7 @@ class AlignmentRecordRDDSuite
 
     val rdd12B = sc.loadAlignments(path)
 
-    assert(rdd12B.rdd.count() === rdd12A.rdd.count())
+    ==(rdd12B.rdd.count(), rdd12A.rdd.count())
 
     val reads12A = rdd12A.rdd.collect()
     val reads12B = rdd12B.rdd.collect()
@@ -339,9 +339,9 @@ class AlignmentRecordRDDSuite
     reads12A.indices.foreach {
       i ⇒
         val (readA, readB) = (reads12A(i), reads12B(i))
-        assert(readA.getSequence === readB.getSequence)
-        assert(readA.getQual === readB.getQual)
-        assert(readA.getReadName === readB.getReadName)
+        ==(readA.getSequence, readB.getSequence)
+        ==(readA.getQual, readB.getQual)
+        ==(readA.getReadName, readB.getReadName)
     }
   }
 
@@ -362,7 +362,7 @@ class AlignmentRecordRDDSuite
     val rddB = sc.loadAlignments(tempPath1).reassembleReadPairs(sc.loadAlignments(tempPath2).rdd,
       validationStringency = STRICT)
 
-    assert(rddB.rdd.count() === rddA.rdd.count())
+    ==(rddB.rdd.count(), rddA.rdd.count())
 
     val readsA = rddA.rdd.collect()
     val readsB = rddB.rdd.collect()
@@ -370,9 +370,9 @@ class AlignmentRecordRDDSuite
     readsA.indices.foreach {
       i ⇒
         val (readA, readB) = (readsA(i), readsB(i))
-        assert(readA.getSequence === readB.getSequence)
-        assert(readA.getQual === readB.getQual)
-        assert(readA.getReadName === readB.getReadName)
+        ==(readA.getSequence, readB.getSequence)
+        ==(readA.getQual, readB.getQual)
+        ==(readA.getReadName, readB.getReadName)
     }
   }
 
@@ -443,16 +443,16 @@ class AlignmentRecordRDDSuite
     val (fsp1, fsf1) = rRdd.flagStat()
     val (fsp2, fsf2) = rdd2.flagStat()
 
-    assert(rRdd.rdd.count === rdd2.rdd.count)
-    assert(fsp1 === fsp2)
-    assert(fsf1 === fsf2)
+    ==(rRdd.rdd.count, rdd2.rdd.count)
+    ==(fsp1, fsp2)
+    ==(fsf1, fsf2)
 
     val jrdd =
       rRdd.rdd.map(r => ((r.getReadName, r.getReadInFragment, r.getReadMapped), r))
         .join(rdd2.rdd.map(r => ((r.getReadName, r.getReadInFragment, r.getReadMapped), r)))
         .cache()
 
-    assert(rRdd.rdd.count === jrdd.count)
+    ==(rRdd.rdd.count, jrdd.count)
 
     jrdd
       .values
@@ -460,48 +460,48 @@ class AlignmentRecordRDDSuite
       .foreach {
         case (p1, p2) ⇒
 
-          assert(p1.getReadInFragment === p2.getReadInFragment)
-          assert(p1.getReadName === p2.getReadName)
-          assert(p1.getSequence === p2.getSequence)
-          assert(p1.getQual === p2.getQual)
-          assert(p1.getOrigQual === p2.getOrigQual)
-          assert(p1.getRecordGroupSample === p2.getRecordGroupSample)
-          assert(p1.getRecordGroupName === p2.getRecordGroupName)
-          assert(p1.getFailedVendorQualityChecks === p2.getFailedVendorQualityChecks)
-          assert(p1.getBasesTrimmedFromStart === p2.getBasesTrimmedFromStart)
-          assert(p1.getBasesTrimmedFromEnd === p2.getBasesTrimmedFromEnd)
+          ==(p1.getReadInFragment, p2.getReadInFragment)
+          ==(p1.getReadName, p2.getReadName)
+          ==(p1.getSequence, p2.getSequence)
+          ==(p1.getQual, p2.getQual)
+          ==(p1.getOrigQual, p2.getOrigQual)
+          ==(p1.getRecordGroupSample, p2.getRecordGroupSample)
+          ==(p1.getRecordGroupName, p2.getRecordGroupName)
+          ==(p1.getFailedVendorQualityChecks, p2.getFailedVendorQualityChecks)
+          ==(p1.getBasesTrimmedFromStart, p2.getBasesTrimmedFromStart)
+          ==(p1.getBasesTrimmedFromEnd, p2.getBasesTrimmedFromEnd)
 
-          assert(p1.getReadMapped === p2.getReadMapped)
+          ==(p1.getReadMapped, p2.getReadMapped)
           // note: BQSR1.sam has reads that are unmapped, but where the mapping flags are set
           // that is why we split this check out
           // the SAM spec doesn't say anything particularly meaningful about this, other than
           // that some fields should be disregarded if the read is not mapped
           if (p1.getReadMapped && p2.getReadMapped) {
-            assert(p1.getDuplicateRead === p2.getDuplicateRead)
-            assert(p1.getContigName === p2.getContigName)
-            assert(p1.getStart === p2.getStart)
-            assert(p1.getEnd === p2.getEnd)
-            assert(p1.getCigar === p2.getCigar)
-            assert(p1.getOldCigar === p2.getOldCigar)
-            assert(p1.getPrimaryAlignment === p2.getPrimaryAlignment)
-            assert(p1.getSecondaryAlignment === p2.getSecondaryAlignment)
-            assert(p1.getSupplementaryAlignment === p2.getSupplementaryAlignment)
-            assert(p1.getReadNegativeStrand === p2.getReadNegativeStrand)
+            ==(p1.getDuplicateRead, p2.getDuplicateRead)
+            ==(p1.getContigName, p2.getContigName)
+            ==(p1.getStart, p2.getStart)
+            ==(p1.getEnd, p2.getEnd)
+            ==(p1.getCigar, p2.getCigar)
+            ==(p1.getOldCigar, p2.getOldCigar)
+            ==(p1.getPrimaryAlignment, p2.getPrimaryAlignment)
+            ==(p1.getSecondaryAlignment, p2.getSecondaryAlignment)
+            ==(p1.getSupplementaryAlignment, p2.getSupplementaryAlignment)
+            ==(p1.getReadNegativeStrand, p2.getReadNegativeStrand)
           }
 
-          assert(p1.getReadPaired === p2.getReadPaired)
+          ==(p1.getReadPaired, p2.getReadPaired)
           // a variety of fields are undefined if the reads are not paired
           if (p1.getReadPaired && p2.getReadPaired) {
-            assert(p1.getInferredInsertSize === p2.getInferredInsertSize)
-            assert(p1.getProperPair === p2.getProperPair)
+            ==(p1.getInferredInsertSize, p2.getInferredInsertSize)
+            ==(p1.getProperPair, p2.getProperPair)
 
             // same caveat about read alignment applies to mates
-            assert(p1.getMateMapped === p2.getMateMapped)
+            ==(p1.getMateMapped, p2.getMateMapped)
             if (p1.getMateMapped && p2.getMateMapped) {
-              assert(p1.getMateNegativeStrand === p2.getMateNegativeStrand)
-              assert(p1.getMateContigName === p2.getMateContigName)
-              assert(p1.getMateAlignmentStart === p2.getMateAlignmentStart)
-              assert(p1.getMateAlignmentEnd === p2.getMateAlignmentEnd)
+              ==(p1.getMateNegativeStrand, p2.getMateNegativeStrand)
+              ==(p1.getMateContigName, p2.getMateContigName)
+              ==(p1.getMateAlignmentStart, p2.getMateAlignmentStart)
+              ==(p1.getMateAlignmentEnd, p2.getMateAlignmentEnd)
             }
           }
       }
@@ -676,7 +676,7 @@ class AlignmentRecordRDDSuite
 
     val pipedRdd: AlignmentRecordRDD = ardd.pipe("tee /dev/null")
     val newRecords = pipedRdd.rdd.count
-    assert(records === newRecords)
+    ==(records, newRecords)
   }
 
   test("don't lose any reads when piping as BAM") {
@@ -689,7 +689,7 @@ class AlignmentRecordRDDSuite
 
     val pipedRdd: AlignmentRecordRDD = ardd.pipe("tee /dev/null")
     val newRecords = pipedRdd.rdd.count
-    assert(records === newRecords)
+    ==(records, newRecords)
   }
 
   test("can properly set environment variables inside of a pipe") {
@@ -716,7 +716,7 @@ class AlignmentRecordRDDSuite
       )
 
     val newRecords = pipedRdd.rdd.count
-    assert(smallRecords === newRecords)
+    ==(smallRecords, newRecords)
   }
 
   ignore("read vcf from alignment record pipe") {
@@ -735,10 +735,10 @@ class AlignmentRecordRDDSuite
       )
 
     val newRecords = pipedRdd.rdd.count
-    assert(newRecords === 6)
+    ==(newRecords, 6)
 
     val tempBam = sc.loadBam(tempPath)
-    assert(tempBam.rdd.count === ardd.rdd.count)
+    ==(tempBam.rdd.count, ardd.rdd.count)
   }
 
   test("use broadcast join to pull down reads mapped to targets") {
@@ -764,7 +764,7 @@ class AlignmentRecordRDDSuite
       )
     )
 
-    assert(jRdd.rdd.count === 5)
+    ==(jRdd.rdd.count, 5)
   }
 
   test("use right outer broadcast join to pull down reads mapped to targets") {
@@ -774,8 +774,8 @@ class AlignmentRecordRDDSuite
     val jRdd = reads.rightOuterBroadcastRegionJoin(targets)
 
     val c = jRdd.rdd.collect
-    assert(c.count(_._1.isEmpty) === 1)
-    assert(c.count(_._1.isDefined) === 5)
+    ==(c.count(_._1.isEmpty), 1)
+    ==(c.count(_._1.isDefined), 5)
   }
 
   test("use shuffle join to pull down reads mapped to targets") {
@@ -789,11 +789,11 @@ class AlignmentRecordRDDSuite
 
     // we can't guarantee that we get exactly the number of partitions requested,
     // we get close though
-    assert(jRdd.rdd.partitions.length === 1)
-    assert(jRdd0.rdd.partitions.length === 5)
+    ==(jRdd.rdd.partitions.length, 1)
+    ==(jRdd0.rdd.partitions.length, 5)
 
-    assert(jRdd.rdd.count === 5)
-    assert(jRdd0.rdd.count === 5)
+    ==(jRdd.rdd.count, 5)
+    ==(jRdd0.rdd.count, 5)
   }
 
   test("use right outer shuffle join to pull down reads mapped to targets") {
@@ -807,15 +807,15 @@ class AlignmentRecordRDDSuite
 
     // we can't guarantee that we get exactly the number of partitions requested,
     // we get close though
-    assert(jRdd.rdd.partitions.length === 1)
-    assert(jRdd0.rdd.partitions.length === 5)
+    ==(jRdd.rdd.partitions.length, 1)
+    ==(jRdd0.rdd.partitions.length, 5)
 
     val c = jRdd.rdd.collect
     val c0 = jRdd0.rdd.collect
-    assert(c.count(_._1.isEmpty) === 1)
-    assert(c0.count(_._1.isEmpty) === 1)
-    assert(c.count(_._1.isDefined) === 5)
-    assert(c0.count(_._1.isDefined) === 5)
+    ==(c.count(_._1.isEmpty), 1)
+    ==(c0.count(_._1.isEmpty), 1)
+    ==(c.count(_._1.isDefined), 5)
+    ==(c0.count(_._1.isDefined), 5)
   }
 
   test("use left outer shuffle join to pull down reads mapped to targets") {
@@ -829,15 +829,15 @@ class AlignmentRecordRDDSuite
 
     // we can't guarantee that we get exactly the number of partitions requested,
     // we get close though
-    assert(jRdd.rdd.partitions.length === 1)
-    assert(jRdd0.rdd.partitions.length === 5)
+    ==(jRdd.rdd.partitions.length, 1)
+    ==(jRdd0.rdd.partitions.length, 5)
 
     val c = jRdd.rdd.collect
     val c0 = jRdd0.rdd.collect
-    assert(c.count(_._2.isEmpty) === 15)
-    assert(c0.count(_._2.isEmpty) === 15)
-    assert(c.count(_._2.isDefined) === 5)
-    assert(c0.count(_._2.isDefined) === 5)
+    ==(c.count(_._2.isEmpty), 15)
+    ==(c0.count(_._2.isEmpty), 15)
+    ==(c.count(_._2.isDefined), 5)
+    ==(c0.count(_._2.isDefined), 5)
   }
 
   test("use full outer shuffle join to pull down reads mapped to targets") {
@@ -851,19 +851,19 @@ class AlignmentRecordRDDSuite
 
     // we can't guarantee that we get exactly the number of partitions requested,
     // we get close though
-    assert(jRdd.rdd.partitions.length === 1)
-    assert(jRdd0.rdd.partitions.length === 5)
+    ==(jRdd.rdd.partitions.length, 1)
+    ==(jRdd0.rdd.partitions.length, 5)
 
     val c = jRdd.rdd.collect
     val c0 = jRdd0.rdd.collect
-    assert(c.count(t => t._1.isEmpty && t._2.isEmpty) === 0)
-    assert(c0.count(t => t._1.isEmpty && t._2.isEmpty) === 0)
-    assert(c.count(t => t._1.isDefined && t._2.isEmpty) === 15)
-    assert(c0.count(t => t._1.isDefined && t._2.isEmpty) === 15)
-    assert(c.count(t => t._1.isEmpty && t._2.isDefined) === 1)
-    assert(c0.count(t => t._1.isEmpty && t._2.isDefined) === 1)
-    assert(c.count(t => t._1.isDefined && t._2.isDefined) === 5)
-    assert(c0.count(t => t._1.isDefined && t._2.isDefined) === 5)
+    ==(c.count(t => t._1.isEmpty && t._2.isEmpty), 0)
+    ==(c0.count(t => t._1.isEmpty && t._2.isEmpty), 0)
+    ==(c.count(t => t._1.isDefined && t._2.isEmpty), 15)
+    ==(c0.count(t => t._1.isDefined && t._2.isEmpty), 15)
+    ==(c.count(t => t._1.isEmpty && t._2.isDefined), 1)
+    ==(c0.count(t => t._1.isEmpty && t._2.isDefined), 1)
+    ==(c.count(t => t._1.isDefined && t._2.isDefined), 5)
+    ==(c0.count(t => t._1.isDefined && t._2.isDefined), 5)
   }
 
   test("use shuffle join with group by to pull down reads mapped to targets") {
@@ -877,13 +877,13 @@ class AlignmentRecordRDDSuite
 
     // we can't guarantee that we get exactly the number of partitions requested,
     // we get close though
-    assert(jRdd.rdd.partitions.length === 1)
-    assert(jRdd0.rdd.partitions.length === 5)
+    ==(jRdd.rdd.partitions.length, 1)
+    ==(jRdd0.rdd.partitions.length, 5)
 
     val c = jRdd.rdd.collect
     val c0 = jRdd0.rdd.collect
-    assert(c.length === 5)
-    assert(c0.length === 5)
+    ==(c.length, 5)
+    ==(c0.length, 5)
     assert(c.forall(_._2.size == 1))
     assert(c0.forall(_._2.size == 1))
   }
@@ -897,20 +897,20 @@ class AlignmentRecordRDDSuite
 
     // we can't guarantee that we get exactly the number of partitions requested,
     // we get close though
-    assert(jRdd.rdd.partitions.length === 1)
-    assert(jRdd0.rdd.partitions.length === 5)
+    ==(jRdd.rdd.partitions.length, 1)
+    ==(jRdd0.rdd.partitions.length, 5)
 
     val c = jRdd0.rdd.collect // FIXME
     val c0 = jRdd0.rdd.collect
 
-    assert(c.count(_._1.isDefined) === 20)
-    assert(c0.count(_._1.isDefined) === 20)
-    assert(c.filter(_._1.isDefined).count(_._2.size == 1) === 5)
-    assert(c0.filter(_._1.isDefined).count(_._2.size == 1) === 5)
-    assert(c.filter(_._1.isDefined).count(_._2.isEmpty) === 15)
-    assert(c0.filter(_._1.isDefined).count(_._2.isEmpty) === 15)
-    assert(c.count(_._1.isEmpty) === 1)
-    assert(c0.count(_._1.isEmpty) === 1)
+    ==(c.count(_._1.isDefined), 20)
+    ==(c0.count(_._1.isDefined), 20)
+    ==(c.filter(_._1.isDefined).count(_._2.size == 1), 5)
+    ==(c0.filter(_._1.isDefined).count(_._2.size == 1), 5)
+    ==(c.filter(_._1.isDefined).count(_._2.isEmpty), 15)
+    ==(c0.filter(_._1.isDefined).count(_._2.isEmpty), 15)
+    ==(c.count(_._1.isEmpty), 1)
+    ==(c0.count(_._1.isEmpty), 1)
     assert(c.filter(_._1.isEmpty).forall(_._2.size == 1))
     assert(c0.filter(_._1.isEmpty).forall(_._2.size == 1))
   }

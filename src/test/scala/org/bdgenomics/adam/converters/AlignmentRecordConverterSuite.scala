@@ -22,9 +22,10 @@ import java.io.File
 import htsjdk.samtools.SamReaderFactory
 import org.bdgenomics.adam.models.{ RecordGroup, RecordGroupDictionary, SAMFileHeaderWritable, SequenceDictionary, SequenceRecord }
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Fragment }
+import org.hammerlab.cmp.CanEq
 import org.hammerlab.genomics.reference.test.ClearContigNames
 import org.hammerlab.genomics.reference.test.LociConversions.intToLocus
-import org.hammerlab.test.Suite
+import org.hammerlab.test.{ Cmp, Suite }
 
 import scala.collection.JavaConversions._
 
@@ -56,6 +57,9 @@ class AlignmentRecordConverterSuite
     builder.build()
   }
 
+  implicit def objCanEqString(implicit cmp: Cmp[String]): CanEq.Aux[Object, String, cmp.Diff] =
+    CanEq.by[Object, String](_.toString)(cmp)
+
   test("testing the fields in a converted ADAM Read") {
     val adamRead = makeRead(3L, "2M3D2M", "2^AAA2", 4)
 
@@ -71,7 +75,7 @@ class AlignmentRecordConverterSuite
     val dict = SequenceDictionary(seqRecForDict)
 
     //make read group dictionary
-    val readGroup = new RecordGroup(adamRead.getRecordGroupSample(), adamRead.getRecordGroupName())
+    val readGroup = new RecordGroup(adamRead.getRecordGroupSample, adamRead.getRecordGroupName)
     val readGroups = new RecordGroupDictionary(Seq(readGroup))
 
     // convert read
@@ -82,21 +86,21 @@ class AlignmentRecordConverterSuite
 
     // validate conversion
     val sequence = "A" * 4
-    assert(toSAM.getReadName === ("read" + 0.toString))
-    assert(toSAM.getAlignmentStart === 4)
-    assert(toSAM.getReadUnmappedFlag === false)
-    assert(toSAM.getCigarString === "2M3D2M")
-    assert(toSAM.getReadString === sequence)
-    assert(toSAM.getReadNegativeStrandFlag === false)
-    assert(toSAM.getMappingQuality === 60)
-    assert(toSAM.getBaseQualityString === sequence)
-    assert(toSAM.getAttribute("MD") === "2^AAA2")
-    assert(toSAM.getIntegerAttribute("OP") === 13)
-    assert(toSAM.getStringAttribute("OC") === "2^AAA3")
+    ==(toSAM.getReadName, "read" + 0.toString)
+    ==(toSAM.getAlignmentStart, 4)
+    ==(toSAM.getReadUnmappedFlag, false)
+    ==(toSAM.getCigarString, "2M3D2M")
+    ==(toSAM.getReadString, sequence)
+    ==(toSAM.getReadNegativeStrandFlag, false)
+    ==(toSAM.getMappingQuality, 60)
+    ==(toSAM.getBaseQualityString, sequence)
+    ==(toSAM.getAttribute("MD"), "2^AAA2")
+    ==(toSAM.getIntegerAttribute("OP"), 13)
+    ==(toSAM.getStringAttribute("OC"), "2^AAA3")
     //make sure that we didn't set the SM attribute.
     //issue #452 https://github.com/bigdatagenomics/adam/issues/452
-    assert(toSAM.getAttribute("SM") === null)
-    assert(toSAM.getHeader().getReadGroup("record_group").getSample() === "sample")
+    toSAM.getAttribute("SM") should be(null)
+    ==(toSAM.getHeader.getReadGroup("record_group").getSample, "sample")
   }
 
   test("converting a read with null quality is OK") {
@@ -114,7 +118,7 @@ class AlignmentRecordConverterSuite
     val dict = SequenceDictionary(seqRecForDict)
 
     //make read group dictionary
-    val readGroup = new RecordGroup(adamRead.getRecordGroupSample(), adamRead.getRecordGroupName())
+    val readGroup = new RecordGroup(adamRead.getRecordGroupSample, adamRead.getRecordGroupName)
     val readGroups = new RecordGroupDictionary(Seq(readGroup))
 
     // convert read
@@ -125,21 +129,21 @@ class AlignmentRecordConverterSuite
 
     // validate conversion
     val sequence = "A" * 4
-    assert(toSAM.getReadName === ("read" + 0.toString))
-    assert(toSAM.getAlignmentStart === 4)
-    assert(toSAM.getReadUnmappedFlag === false)
-    assert(toSAM.getCigarString === "2M3D2M")
-    assert(toSAM.getReadString === sequence)
-    assert(toSAM.getReadNegativeStrandFlag === false)
-    assert(toSAM.getMappingQuality === 60)
-    assert(toSAM.getBaseQualityString === "*")
-    assert(toSAM.getAttribute("MD") === "2^AAA2")
-    assert(toSAM.getIntegerAttribute("OP") === 13)
-    assert(toSAM.getStringAttribute("OC") === "2^AAA3")
+    ==(toSAM.getReadName, "read" + 0.toString)
+    ==(toSAM.getAlignmentStart, 4)
+    ==(toSAM.getReadUnmappedFlag, false)
+    ==(toSAM.getCigarString, "2M3D2M")
+    ==(toSAM.getReadString, sequence)
+    ==(toSAM.getReadNegativeStrandFlag, false)
+    ==(toSAM.getMappingQuality, 60)
+    ==(toSAM.getBaseQualityString, "*")
+    ==(toSAM.getAttribute("MD"), "2^AAA2")
+    ==(toSAM.getIntegerAttribute("OP"), 13)
+    ==(toSAM.getStringAttribute("OC"), "2^AAA3")
     //make sure that we didn't set the SM attribute.
     //issue #452 https://github.com/bigdatagenomics/adam/issues/452
-    assert(toSAM.getAttribute("SM") === null)
-    assert(toSAM.getHeader().getReadGroup("record_group").getSample() === "sample")
+    toSAM.getAttribute("SM") should be(null)
+    ==(toSAM.getHeader.getReadGroup("record_group").getSample, "sample")
   }
 
   test("convert a read to fastq") {
@@ -153,10 +157,10 @@ class AlignmentRecordConverterSuite
       .toString
       .split('\n')
 
-    assert(fastq(0) === "@thebestread")
-    assert(fastq(1) === "ACACCAACATG")
-    assert(fastq(2) === "+")
-    assert(fastq(3) === ".+**.+;:**.")
+    ==(fastq(0), "@thebestread")
+    ==(fastq(1), "ACACCAACATG")
+    ==(fastq(2), "+")
+    ==(fastq(3), ".+**.+;:**.")
   }
 
   def getSAMRecordFromReadName(readName: String): (AlignmentRecord, AlignmentRecord) = {
@@ -181,26 +185,26 @@ class AlignmentRecordConverterSuite
 
     val (firstRecord, secondRecord) = getSAMRecordFromReadName("SRR062634.10022079")
 
-    assert(firstRecord.getReadInFragment === 1)
-    assert(secondRecord.getReadInFragment === 0)
+    ==(firstRecord.getReadInFragment, 1)
+    ==(secondRecord.getReadInFragment, 0)
 
     val firstRecordFastq = adamRecordConverter.convertToFastq(firstRecord, maybeAddSuffix = true)
       .toString
       .split('\n')
 
-    assert(firstRecordFastq(0) === "@SRR062634.10022079/2")
-    assert(firstRecordFastq(1) === "CTGGAGTGCAGTGGCATGATTTCAGCTCACTGTCGTCTCTGCCTCCCTGACTCAAGTGATTCTCCTGCCTCAGCCTCCCACGTCGCTCGGACTCCACGCC")
-    assert(firstRecordFastq(2) === "+")
-    assert(firstRecordFastq(3) === "A:=D5D5E?D?DDD:.@@@@=?EE=DADDB@D=DD??ED=:CCCC?D:E=EEB=-C>C=@=EEEEB5EC-?A>=C-C?DC+34+4A>-?5:=/-A=@>>:")
+    ==(firstRecordFastq(0), "@SRR062634.10022079/2")
+    ==(firstRecordFastq(1), "CTGGAGTGCAGTGGCATGATTTCAGCTCACTGTCGTCTCTGCCTCCCTGACTCAAGTGATTCTCCTGCCTCAGCCTCCCACGTCGCTCGGACTCCACGCC")
+    ==(firstRecordFastq(2), "+")
+    ==(firstRecordFastq(3), "A:=D5D5E?D?DDD:.@@@@=?EE=DADDB@D=DD??ED=:CCCC?D:E=EEB=-C>C=@=EEEEB5EC-?A>=C-C?DC+34+4A>-?5:=/-A=@>>:")
 
     val secondRecordFastq = adamRecordConverter.convertToFastq(secondRecord, maybeAddSuffix = true)
       .toString
       .split('\n')
 
-    assert(secondRecordFastq(0) === "@SRR062634.10022079/1")
-    assert(secondRecordFastq(1) === "AATTCAAAACCAGCCTGGCCAATATGGTGAAACCTCATCTCTACTAAAAATACAAAAATTAGCCAGGCATGGTGGTGCGTGCGTGTAGTCCCAGCTACTT")
-    assert(secondRecordFastq(2) === "+")
-    assert(secondRecordFastq(3) === "?-DDBEEB=EEEDDEDEEEA:D?5?E?CEBE5ED?D:AEDEDEDED-B,BC0AC,BB6@CDBDEC?BCBAA@5,=8CA-?A>?2:&048<BB5BE#####")
+    ==(secondRecordFastq(0), "@SRR062634.10022079/1")
+    ==(secondRecordFastq(1), "AATTCAAAACCAGCCTGGCCAATATGGTGAAACCTCATCTCTACTAAAAATACAAAAATTAGCCAGGCATGGTGGTGCGTGCGTGTAGTCCCAGCTACTT")
+    ==(secondRecordFastq(2), "+")
+    ==(secondRecordFastq(3), "?-DDBEEB=EEEDDEDEEEA:D?5?E?CEBE5ED?D:AEDEDEDED-B,BC0AC,BB6@CDBDEC?BCBAA@5,=8CA-?A>?2:&048<BB5BE#####")
   }
 
   test("converting to fastq with unmapped reads where  read reverse complemented flag (Ox10) was NOT set") {
@@ -212,17 +216,17 @@ class AlignmentRecordConverterSuite
 
     val (firstRecord, secondRecord) = getSAMRecordFromReadName("SRR062634.20911784")
 
-    assert(firstRecord.getReadInFragment === 1)
-    assert(secondRecord.getReadInFragment === 0)
+    ==(firstRecord.getReadInFragment, 1)
+    ==(secondRecord.getReadInFragment, 0)
 
     val firstRecordFastq = adamRecordConverter.convertToFastq(firstRecord, maybeAddSuffix = true)
       .toString
       .split('\n')
 
-    assert(firstRecordFastq(0) === "@SRR062634.20911784/2")
-    assert(firstRecordFastq(1) === "TGTAGTGGCAGGGGCCCGTTATCCCAAACTACCTGGGGGGGGGGGGGGGGGGGAACACCTAAAACCCGGGGGGGGGGGGGTTGGTGGGGGCTTTATCGCA")
-    assert(firstRecordFastq(2) === "+")
-    assert(firstRecordFastq(3) === "GGGGGGGDGG@#########################################################################################")
+    ==(firstRecordFastq(0), "@SRR062634.20911784/2")
+    ==(firstRecordFastq(1), "TGTAGTGGCAGGGGCCCGTTATCCCAAACTACCTGGGGGGGGGGGGGGGGGGGAACACCTAAAACCCGGGGGGGGGGGGGTTGGTGGGGGCTTTATCGCA")
+    ==(firstRecordFastq(2), "+")
+    ==(firstRecordFastq(3), "GGGGGGGDGG@#########################################################################################")
   }
 
   test("converting to fastq with unmapped reads where reverse complemented flag (0x10) was set") {
@@ -234,8 +238,8 @@ class AlignmentRecordConverterSuite
 
     val (firstRecord, secondRecord) = getSAMRecordFromReadName("SRR062634.10448889")
 
-    assert(firstRecord.getReadInFragment === 0)
-    assert(secondRecord.getReadInFragment === 1)
+    ==(firstRecord.getReadInFragment, 0)
+    ==(secondRecord.getReadInFragment, 1)
 
     val firstRecordFastq = adamRecordConverter.convertToFastq(firstRecord, maybeAddSuffix = true)
       .toString
@@ -243,10 +247,10 @@ class AlignmentRecordConverterSuite
 
     assert(!firstRecord.getReadMapped)
     assert(firstRecord.getReadNegativeStrand)
-    assert(firstRecordFastq(0) === "@SRR062634.10448889/1")
-    assert(firstRecordFastq(1) === "ATATACGTGTATATATACATATATACATACATATACGTGTATATATACATATATGTGTGTGTGTGTGTGTGTGTGTGTATATATATATAAAAGAAAGAAA")
-    assert(firstRecordFastq(2) === "+")
-    assert(firstRecordFastq(3) === "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGFGGFGGGGGGFGGGFGGGGEGGGGGGGDGGGFGFGEEDFD?DDFEGDFEGGEGE=CDF;C>FD@")
+    ==(firstRecordFastq(0), "@SRR062634.10448889/1")
+    ==(firstRecordFastq(1), "ATATACGTGTATATATACATATATACATACATATACGTGTATATATACATATATGTGTGTGTGTGTGTGTGTGTGTGTATATATATATAAAAGAAAGAAA")
+    ==(firstRecordFastq(2), "+")
+    ==(firstRecordFastq(3), "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGFGGFGGGGGGFGGGFGGGGEGGGGGGGDGGGFGFGEEDFD?DDFEGDFEGGEGE=CDF;C>FD@")
   }
 
   test("converting a fragment with no alignments should yield unaligned reads") {
@@ -272,21 +276,21 @@ class AlignmentRecordConverterSuite
       .build()
 
     val reads = adamRecordConverter.convertFragment(fragment)
-    assert(reads.size === 2)
+    ==(reads.size, 2)
 
     val read1 = reads.find(_.getReadInFragment == 0)
     assert(read1.isDefined)
-    assert(read1.get.getSequence === "ACCCACAGTA")
-    assert(read1.get.getQual() === "**********")
-    assert(read1.get.getReadName === "testRead")
+    ==(read1.get.getSequence, "ACCCACAGTA")
+    ==(read1.get.getQual, "**********")
+    ==(read1.get.getReadName, "testRead")
     assert(!read1.get.getReadMapped)
     assert(read1.get.getReadPaired)
 
     val read2 = reads.find(_.getReadInFragment == 1)
     assert(read2.isDefined)
-    assert(read2.get.getSequence === "GGGAAACCCTTT")
-    assert(read2.get.getQual() === ";;;;;;......")
-    assert(read2.get.getReadName === "testRead")
+    ==(read2.get.getSequence, "GGGAAACCCTTT")
+    ==(read2.get.getQual, ";;;;;;......")
+    ==(read2.get.getReadName, "testRead")
     assert(!read2.get.getReadMapped)
     assert(read2.get.getReadPaired)
   }
@@ -309,19 +313,19 @@ class AlignmentRecordConverterSuite
       .build()
 
     val reads = adamRecordConverter.convertFragment(fragment)
-    assert(reads.size === 1)
+    ==(reads.size, 1)
     val read = reads.head
 
-    assert(read.getReadName === "testRead")
-    assert(read.getReadInFragment === 0)
+    ==(read.getReadName, "testRead")
+    ==(read.getReadInFragment, 0)
     assert(read.getReadMapped)
     assert(read.getReadNegativeStrand)
-    assert(read.getStart === 10L)
-    assert(read.getEnd === 20L)
-    assert(read.getCigar === "10M")
-    assert(read.getSequence === "TACTGTGGGT")
-    assert(read.getQual === "?????*****")
-    assert(read.getContigName === "1")
+    ==(read.getStart, 10L)
+    ==(read.getEnd, 20L)
+    ==(read.getCigar, "10M")
+    ==(read.getSequence, "TACTGTGGGT")
+    ==(read.getQual, "?????*****")
+    ==(read.getContigName, "1")
   }
 }
 

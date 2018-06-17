@@ -825,7 +825,7 @@ case class AlignmentRecordRDD(
       case SILENT ⇒
     }
 
-    val pairedRecords: RDD[AlignmentRecord] = readsByID.filter(_._2.size == 2).map(_._2).flatMap(x => x)
+    val pairedRecords: RDD[AlignmentRecord] = readsByID.filter(_._2.size == 2).values.flatMap(x => x)
     maybePersist(pairedRecords)
     val numPairedRecords = pairedRecords.count()
 
